@@ -5,12 +5,12 @@ API
 
 Auto-generated API documentation.
 
-Package: tsml_subpackage_template.package
+Package: tsml.package
 -----------------------------------------
 
 Example package function.
 
-.. currentmodule:: tsml_subpackage_template.package
+.. currentmodule:: tsml.package
 
 .. autosummary::
     :toctree: auto_generated/

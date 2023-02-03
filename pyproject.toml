@@ -3,9 +3,9 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tsml-subpackage-template"
-version = "0.0.0"
-description = "A template for tsml subpackages."
+name = "tsml"
+version = "0.0.1"
+description = "A toolkit for time series machine learning algorithms."
 authors = [
     {name = "Matthew Middlehurst", email = "m.middlehurst@uea.ac.uk"},
     {name = "Tony Bagnall", email = "ajb@uea.ac.uk"},
@@ -15,7 +15,11 @@ requires-python = ">=3.8,<3.11"
 keywords = [
     "data-science",
     "machine-learning",
+    "scikit-learn",
     "time-series",
+    "time-series-classification",
+    "time-series-regression",
+    "time-series-clustering",
 ]
 classifiers = [
     "Intended Audience :: Science/Research",
@@ -31,7 +35,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-    "tsml",
+    "scikit-learn",
 ]
 
 [project.optional-dependencies]
@@ -55,13 +59,13 @@ docs = [
 
 [project.urls]
 homepage = "https://www.timeseriesclassification.com/"
-repository = "https://github.com/time-series-machine-learning/tsml-subpackage-template/"
+repository = "https://github.com/time-series-machine-learning/tsml-py/"
 
 [project.license]
 file = "LICENSE"
 
 [tool.setuptools.packages.find]
-include = ["tsml_subpackage_template"]
+include = ["tsml"]
 
 [tool.check-manifest]
 ignore = [
@@ -84,6 +88,6 @@ addopts = '''
     --showlocals
     --doctest-modules
     --numprocesses auto
-    --cov tsml_subpackage_template
+    --cov tsml
     --cov-report xml
 '''

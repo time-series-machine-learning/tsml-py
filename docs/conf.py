@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 """Configuration file for the Sphinx documentation builder."""
 
-# tsml-subpackage-template documentation master file, created by
+# tsml documentation master file, created by
 # sphinx-quickstart on Wed Dec 14 00:20:27 2022.
 
 import inspect
 import os
 import sys
 
-import tsml_subpackage_template
+import tsml
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-version = tsml_subpackage_template.__version__
-release = tsml_subpackage_template.__version__
+version = tsml.__version__
+release = tsml.__version__
 
 github_tag = f"v{version}"
 
@@ -37,7 +37,7 @@ else:
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "tsml-subpackage-template"
+project = "tsml"
 copyright = "2022 - 2023, The tsml developers (BSD-3 License)"
 author = "Matthew Middlehurst"
 
@@ -87,8 +87,8 @@ current_file = "{{ env.doc2path(env.docname, base=None) }}"
 
 # add link to original notebook at the bottom and add Binder launch button
 # points to latest stable release, not main
-notebook_url = f"https://github.com/time-series-machine-learning/tsml-subpackage-template/tree/{github_tag}/{current_file}"  # noqa
-binder_url = f"https://mybinder.org/v2/gh/time-series-machine-learning/tsml-subpackage-template/{github_tag}?filepath={current_file}"  # noqa
+notebook_url = f"https://github.com/time-series-machine-learning/tsml-py/tree/{github_tag}/{current_file}"  # noqa
+binder_url = f"https://mybinder.org/v2/gh/time-series-machine-learning/tsml-py/{github_tag}?filepath={current_file}"  # noqa
 nbsphinx_epilog = f"""
 ----
 
@@ -120,24 +120,18 @@ def linkcode_resolve(domain, info):
             obj = getattr(obj, part)
 
         fn = inspect.getsourcefile(obj)
-        fn = os.path.relpath(
-            fn, start=os.path.dirname(tsml_subpackage_template.__file__)
-        )
+        fn = os.path.relpath(fn, start=os.path.dirname(tsml.__file__))
         source, lineno = inspect.getsourcelines(obj)
         return fn, lineno, lineno + len(source) - 1
 
     if domain != "py" or not info["module"]:
         return None
     try:
-        filename = "tsml_subpackage_template/%s#L%d-L%d" % find_source()
+        filename = "tsml/%s#L%d-L%d" % find_source()
     except Exception:
         filename = info["module"].replace(".", "/") + ".py"
 
-    return (
-        "https://github.com/time-series-machine-learning/"
-        + "tsml-subpackage-template/blob/%s/%s"
-        % (
-            version,
-            filename,
-        )
+    return "https://github.com/time-series-machine-learning/tsml-py/blob/%s/%s" % (
+        version,
+        filename,
     )

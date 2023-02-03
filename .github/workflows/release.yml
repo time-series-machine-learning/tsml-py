@@ -82,10 +82,10 @@ jobs:
 
       - if: matrix.os == 'windows-latest'
         name: Windows wheel filename
-        run: echo "WHEELNAME=$(ls ./dist/tsml_subpackage_template-*-none-any.whl)" >> $env:GITHUB_ENV
+        run: echo "WHEELNAME=$(ls ./dist/tsml-*-none-any.whl)" >> $env:GITHUB_ENV
       - if: matrix.os != 'windows-latest'
         name: Unix wheel filename
-        run: echo "WHEELNAME=$(ls ./dist/tsml_subpackage_template-*-none-any.whl)" >> $GITHUB_ENV
+        run: echo "WHEELNAME=$(ls ./dist/tsml-*-none-any.whl)" >> $GITHUB_ENV
 
       - if: matrix.os == 'windows-latest'
         name: Windows install

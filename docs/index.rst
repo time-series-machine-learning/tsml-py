@@ -1,9 +1,9 @@
 .. _index:
 
-tsml-subpackage-template's documentation
+tsml's documentation
 ========================================
 
-Example documentation for a tsml subpackage.
+Example documentation for tsml.
 
 .. grid:: 1 2 2 2
     :gutter: 3
