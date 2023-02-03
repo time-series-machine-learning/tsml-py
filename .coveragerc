@@ -1,0 +1,4 @@
+[run]
+branch = True
+source = tsml_subpackage_template
+parallel = True

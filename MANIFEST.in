@@ -1,0 +1,2 @@
+recursive-include tsml_subpackage_template *.py
+include LICENSE

@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tsml-subpackage-template"
+version = "0.0.0"
+description = "A template for tsml subpackages."
+authors = [
+    {name = "Matthew Middlehurst", email = "m.middlehurst@uea.ac.uk"},
+    {name = "Tony Bagnall", email = "ajb@uea.ac.uk"},
+]
+readme = "README.md"
+requires-python = ">=3.8,<3.11"
+keywords = [
+    "data-science",
+    "machine-learning",
+    "time-series",
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+dependencies = [
+    "tsml",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "pytest",
+    "pytest-randomly",
+    "pytest-timeout",
+    "pytest-xdist",
+    "pytest-cov",
+]
+docs = [
+    "sphinx",
+    "sphinx-design",
+    "sphinx-gallery",
+    "nbsphinx",
+    "numpydoc",
+    "jupyter",
+    "furo",
+]
+
+[project.urls]
+homepage = "https://www.timeseriesclassification.com/"
+repository = "https://github.com/time-series-machine-learning/tsml-subpackage-template/"
+
+[project.license]
+file = "LICENSE"
+
+[tool.setuptools.packages.find]
+include = ["tsml_subpackage_template"]
+
+[tool.check-manifest]
+ignore = [
+    "examples/**",
+    "docs/**",
+    "requirements.txt",
+    "*.yaml",
+    "*.yml",
+    ".coveragerc",
+]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203"]
+
+[tool.pytest.ini_options]
+addopts = '''
+    --durations 10
+    --timeout 600
+    --showlocals
+    --doctest-modules
+    --numprocesses auto
+    --cov tsml_subpackage_template
+    --cov-report xml
+'''
