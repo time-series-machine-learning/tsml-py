@@ -35,7 +35,9 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-    "scikit-learn",
+    "numba>=0.55",
+    "numpy>=1.21.0",
+    "scikit-learn>=0.24.0",
 ]
 
 [project.optional-dependencies]
@@ -87,7 +89,6 @@ addopts = '''
     --timeout 600
     --showlocals
     --doctest-modules
-    --numprocesses auto
     --cov tsml
     --cov-report xml
 '''
