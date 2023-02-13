@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+__author__ = ["MatthewMiddlehurst"]
+
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
@@ -6,7 +9,7 @@ from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from tsml.interval_based._base import BaseIntervalForest
 from tsml.sklearn import CITClassifier
 from tsml.transformations.catch22 import Catch22
-from tsml.utils.numba.stats import row_mean, row_slope, row_std
+from tsml.utils.numba_functions.stats import row_mean, row_slope, row_std
 
 
 class CIFClassifier(ClassifierMixin, BaseIntervalForest):
@@ -185,16 +188,15 @@ class DrCIFClassifier(ClassifierMixin, BaseIntervalForest):
 
         super(DrCIFClassifier, self).__init__(
             base_estimator=base_estimator,
-            estimator_type="classifier",
             n_estimators=n_estimators,
             interval_selection_method="random",
             n_intervals=n_intervals,
             min_interval_length=min_interval_length,
             max_interval_length=max_interval_length,
-            interval_features=interval_features,
-            series_transformers=series_transformers,
+            interval_features=0,
+            series_transformers=0,
             att_subsample_size=att_subsample_size,
-            replace_nan=replace_nan,
+            replace_nan=0,
             time_limit_in_minutes=time_limit_in_minutes,
             contract_max_n_estimators=contract_max_n_estimators,
             save_transformed_data=save_transformed_data,
@@ -266,10 +268,10 @@ class DrCIFRegressor(RegressorMixin, BaseIntervalForest):
             n_intervals=n_intervals,
             min_interval_length=min_interval_length,
             max_interval_length=max_interval_length,
-            interval_features=interval_features,
-            series_transformers=series_transformers,
+            interval_features=0,
+            series_transformers=0,
             att_subsample_size=att_subsample_size,
-            replace_nan=replace_nan,
+            replace_nan=0,
             time_limit_in_minutes=time_limit_in_minutes,
             contract_max_n_estimators=contract_max_n_estimators,
             save_transformed_data=save_transformed_data,

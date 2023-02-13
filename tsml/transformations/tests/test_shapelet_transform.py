@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """ShapeletTransform test code."""
+
+__author__ = ["MatthewMiddlehurst"]
+
 import numpy as np
 from numpy import testing
 from sktime.datasets import load_basic_motions, load_unit_test

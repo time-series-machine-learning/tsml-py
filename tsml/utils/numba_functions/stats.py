@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 """Numba statistic utilities."""
 
-import numpy as np
-from numba import njit
-
-import tsml.utils.numba.general as general_numba
-
 __author__ = ["MatthewMiddlehurst"]
 __all__ = [
     "mean",
@@ -37,6 +32,11 @@ __all__ = [
     "row_ppv",
     "fisher_score",
 ]
+
+import numpy as np
+from numba import njit
+
+import tsml.utils.numba_functions.general as general_numba
 
 
 @njit(fastmath=True, cache=True)

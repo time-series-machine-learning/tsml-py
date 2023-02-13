@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+
+__author__ = ["MatthewMiddlehurst"]
+
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier
 
 from tsml.interval_based._base import BaseIntervalForest
+from tsml.sklearn import CITClassifier
 
 
 class TSFClassifier(ClassifierMixin, BaseIntervalForest):
@@ -26,7 +30,7 @@ class TSFClassifier(ClassifierMixin, BaseIntervalForest):
         if base_estimator is None:
             base_estimator = DecisionTreeClassifier(criterion="entropy")
 
-        if isinstance(base_estimator, ContinuousIntervalTree):
+        if isinstance(base_estimator, CITClassifier):
             replace_nan = "nan"
         else:
             replace_nan = "zero"
@@ -98,11 +102,6 @@ class TSFRegressor(RegressorMixin, BaseIntervalForest):
         if base_estimator is None:
             base_estimator = DecisionTreeClassifier(criterion="entropy")
 
-        if isinstance(base_estimator, ContinuousIntervalTree):
-            replace_nan = "nan"
-        else:
-            replace_nan = "zero"
-
         super(TSFRegressor, self).__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
@@ -113,7 +112,7 @@ class TSFRegressor(RegressorMixin, BaseIntervalForest):
             interval_features=None,
             series_transformers=None,
             att_subsample_size=None,
-            replace_nan=replace_nan,
+            replace_nan="zero",
             time_limit_in_minutes=time_limit_in_minutes,
             contract_max_n_estimators=contract_max_n_estimators,
             save_transformed_data=save_transformed_data,

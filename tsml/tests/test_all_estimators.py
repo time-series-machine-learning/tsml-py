@@ -3,12 +3,11 @@
 
 __author__ = ["MatthewMiddlehurst"]
 
-from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from tsml.sklearn import CITClassifier, RotationForestClassifier
+from tsml.utils.testing import generate_test_estimators, parametrize_with_checks
 
 
-@parametrize_with_checks([RotationForestClassifier(n_estimators=3), CITClassifier()])
-def test_sklearn_compatible_estimator(estimator, check):
+@parametrize_with_checks(generate_test_estimators())
+def test_check_estimator(estimator, check):
     """Test that sklearn estimators adhere to sklearn conventions."""
     check(estimator)

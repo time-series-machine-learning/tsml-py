@@ -73,8 +73,8 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
     --------
     >>> from tsml.sklearn import CITClassifier
     >>> from tsml.datasets import load_minimal_chinatown
-    >>> X_train, y_train = load_minimal_chinatown(split="train", return_X_y=True)
-    >>> X_test, y_test = load_minimal_chinatown(split="test", return_X_y=True)
+    >>> X_train, y_train = load_minimal_chinatown(split="train")
+    >>> X_test, y_test = load_minimal_chinatown(split="test")
     >>> clf = CITClassifier()
     >>> clf.fit(X_train, y_train)
     CITClassifier(...)
@@ -116,6 +116,9 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
         Changes state by creating a fitted model that updates attributes
         ending in "_".
         """
+        if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
+            X = np.reshape(X, (X.shape[0], -1))
+
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, force_all_finite="allow-nan"
         )
@@ -198,6 +201,9 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
         # treat case of single class seen in fit
         if self.n_classes_ == 1:
             return np.repeat([[1]], X.shape[0], axis=0)
+
+        if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
+            X = np.reshape(X, (X.shape[0], -1))
 
         X = self._validate_data(X=X, reset=False, force_all_finite="allow-nan")
 

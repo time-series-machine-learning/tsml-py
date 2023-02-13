@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-import os
-
-import numpy as np
 
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["check_n_jobs"]
 
+import os
+
+import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 
 

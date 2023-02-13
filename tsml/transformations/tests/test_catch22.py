@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Catch22 test code."""
 
+__author__ = ["MatthewMiddlehurst"]
+
 import numpy as np
 import pytest
 from numpy import testing

@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """Rotation Forest test code."""
+
+__author__ = ["MatthewMiddlehurst"]
+
 import numpy as np
 
 from tsml.datasets import load_minimal_chinatown

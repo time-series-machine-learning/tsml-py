@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
 """General numba utilities."""
-from typing import Tuple
-
-import numpy as np
-from numba import njit
-
-import tsml.utils.numba.stats as stats
 
 __author__ = ["MatthewMiddlehurst"]
 __all__ = [
@@ -16,6 +10,13 @@ __all__ = [
     "z_normalise_series_2d",
     "z_normalise_series_3d",
 ]
+
+from typing import Tuple
+
+import numpy as np
+from numba import njit
+
+import tsml.utils.numba_functions.stats as stats
 
 
 @njit(fastmath=True, cache=True)

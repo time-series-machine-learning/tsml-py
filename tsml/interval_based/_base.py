@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """A base class for interval extracting forest estimators"""
 
+__author__ = ["MatthewMiddlehurst"]
+
 import inspect
 import time
 import warnings
@@ -14,9 +16,11 @@ from sklearn.utils import check_random_state
 
 from tsml.base import BaseTimeSeriesEstimator, clone_estimator
 from tsml.sklearn import CITClassifier
-from tsml.transformations.random_intervals import RandomIntervals
-from tsml.transformations.supervised_intervals import SupervisedIntervals
-from tsml.utils.numba.stats import row_mean, row_slope, row_std
+from tsml.transformations.interval_extraction import (
+    RandomIntervals,
+    SupervisedIntervals,
+)
+from tsml.utils.numba_functions.stats import row_mean, row_slope, row_std
 from tsml.utils.validation import check_n_jobs, is_transformer
 
 
@@ -210,7 +214,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         "capability:multithreading": True,
     }
 
-    def _fit(self, X, y):
+    def fit(self, X, y):
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, force_all_finite="allow-nan"
         )
@@ -647,7 +651,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
         return self
 
-    def _predict(self, X):
+    def predict(self, X):
         if (self.estimator_type == "regressor") or (
             hasattr(self._base_estimator, "_estimator_type")
             and self._base_estimator._estimator_type == "regressor"
@@ -674,7 +678,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 [self.classes_[int(np.argmax(prob))] for prob in self._predict_proba(X)]
             )
 
-    def _predict_proba(self, X):
+    def predict_proba(self, X):
         Xt = self._predict_setup(X)
 
         y_probas = Parallel(

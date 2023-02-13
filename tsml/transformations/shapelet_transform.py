@@ -4,30 +4,25 @@
 A transformer from the time domain into the shapelet domain.
 """
 
-__author__ = ["MatthewMiddlehurst", "jasonlines", "dguijo"]
+__author__ = ["MatthewMiddlehurst"]
 __all__ = ["RandomShapeletTransform"]
 
 import heapq
 import math
 import time
-import warnings
-from itertools import zip_longest
-from operator import itemgetter
 
 import numpy as np
-import pandas as pd
 from joblib import Parallel, delayed
 from numba import njit
 from numba.typed.typedlist import List
 from sklearn import preprocessing
+from sklearn.base import TransformerMixin
 from sklearn.utils import check_random_state
-from sklearn.utils.multiclass import class_distribution
-from sktime.transformations.base import BaseTransformer
-from sktime.utils.numba.general import z_normalise_series
-from sktime.utils.validation import check_n_jobs
+
+from tsml.base import BaseTimeSeriesEstimator
 
 
-class RandomShapeletTransform(BaseTransformer):
+class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
     """Random Shapelet Transform.
 
     Implementation of the binary shapelet transform along the lines of [1]_[2]_, with
@@ -197,7 +192,7 @@ class RandomShapeletTransform(BaseTransformer):
 
         super(RandomShapeletTransform, self).__init__()
 
-    def _fit(self, X, y=None):
+    def fit(self, X, y=None):
         """Fit the shapelet transform to a specified X and y.
 
         Parameters
@@ -343,7 +338,7 @@ class RandomShapeletTransform(BaseTransformer):
             )
         return self
 
-    def _transform(self, X, y=None):
+    def transform(self, X, y=None):
         """Transform X according to the extracted shapelets.
 
         Parameters
@@ -375,26 +370,6 @@ class RandomShapeletTransform(BaseTransformer):
             output[i] = dists
 
         return pd.DataFrame(output)
-
-    @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
-
-        Parameters
-        ----------
-        parameter_set : str, default="default"
-            Name of the set of test parameters to return, for use in tests. If no
-            special parameters are defined for a value, will return `"default"` set.
-
-        Returns
-        -------
-        params : dict or list of dict, default = {}
-            Parameters to create testing instances of the class
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`
-        """
-        return {"max_shapelets": 5, "n_shapelet_samples": 50, "batch_size": 20}
 
     def _extract_random_shapelet(self, X, y, i, shapelets, max_shapelets_per_class):
         rs = 255 if self.random_state == 0 else self.random_state
@@ -552,6 +527,26 @@ class RandomShapeletTransform(BaseTransformer):
                     to_keep[n] = False
 
         return to_keep
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        """Return testing parameter settings for the estimator.
+
+        Parameters
+        ----------
+        parameter_set : str, default="default"
+            Name of the set of test parameters to return, for use in tests. If no
+            special parameters are defined for a value, will return `"default"` set.
+
+        Returns
+        -------
+        params : dict or list of dict, default = {}
+            Parameters to create testing instances of the class
+            Each dict are parameters to construct an "interesting" test instance, i.e.,
+            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
+            `create_test_instance` uses the first (or only) dictionary in `params`
+        """
+        return {"max_shapelets": 5, "n_shapelet_samples": 50, "batch_size": 20}
 
 
 @njit(fastmath=True, cache=True)

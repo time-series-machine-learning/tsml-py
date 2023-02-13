@@ -1,12 +1,38 @@
 # -*- coding: utf-8 -*-
+
+__author__ = ["MatthewMiddlehurst"]
+__all__ = ["all_estimators"]
+
+import inspect
+import pkgutil
+from importlib import import_module
+from operator import itemgetter
+from pathlib import Path
+
+from sklearn.base import (
+    BaseEstimator,
+    ClassifierMixin,
+    ClusterMixin,
+    RegressorMixin,
+    TransformerMixin,
+)
 from sklearn.utils._testing import ignore_warnings
+
+_PACKAGES_TO_IGNORE = {
+    "tests",
+}
 
 
 def all_estimators(type_filter=None):
-    """Get a list of all estimators from `sklearn`.
+    """Get a list of all estimators from `tsml`.
+
     This function crawls the module and gets all classes that inherit
     from BaseEstimator. Classes that are defined in test-modules are not
     included.
+
+    Uses the `scikit-learn` 1.2.1 `all_estimators` function as a base.
+    See: https://scikit-learn.org/stable/modules/generated/sklearn.utils.discovery.all_estimators.html
+
     Parameters
     ----------
     type_filter : {"classifier", "regressor", "cluster", "transformer"} \
@@ -31,31 +57,24 @@ def all_estimators(type_filter=None):
         return True
 
     all_classes = []
-    root = str(Path(__file__).parent.parent)  # sklearn package
+    root = str(Path(__file__).parent.parent)  # tsml package
+
     # Ignore deprecation warnings triggered at import time and from walking
     # packages
     with ignore_warnings(category=FutureWarning):
-        for _, module_name, _ in pkgutil.walk_packages(path=[root], prefix="sklearn."):
+        for _, module_name, _ in pkgutil.walk_packages(path=[root], prefix="tsml."):
             module_parts = module_name.split(".")
             if (
-                any(part in _MODULE_TO_IGNORE for part in module_parts)
+                any(part in _PACKAGES_TO_IGNORE for part in module_parts)
                 or "._" in module_name
             ):
                 continue
+
             module = import_module(module_name)
             classes = inspect.getmembers(module, inspect.isclass)
             classes = [
                 (name, est_cls) for name, est_cls in classes if not name.startswith("_")
             ]
-
-            # TODO: Remove when FeatureHasher is implemented in PYPY
-            # Skips FeatureHasher for PYPY
-            if IS_PYPY and "feature_extraction" in module_name:
-                classes = [
-                    (name, est_cls)
-                    for name, est_cls in classes
-                    if name == "FeatureHasher"
-                ]
 
             all_classes.extend(classes)
 
@@ -64,7 +83,11 @@ def all_estimators(type_filter=None):
     estimators = [
         c
         for c in all_classes
-        if (issubclass(c[1], BaseEstimator) and c[0] != "BaseEstimator")
+        if (
+            issubclass(c[1], BaseEstimator)
+            and c[1].__module__.startswith("tsml.")
+            and c[0] != "BaseTimeSeriesEstimator"
+        )
     ]
     # get rid of abstract base classes
     estimators = [c for c in estimators if not is_abstract(c[1])]
@@ -92,8 +115,7 @@ def all_estimators(type_filter=None):
             raise ValueError(
                 "Parameter type_filter must be 'classifier', "
                 "'regressor', 'transformer', 'cluster' or "
-                "None, got"
-                f" {repr(type_filter)}."
+                f"None, got {repr(type_filter)}."
             )
 
     # drop duplicates, sort for reproducibility

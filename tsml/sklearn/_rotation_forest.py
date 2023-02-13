@@ -102,8 +102,8 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
     --------
     >>> from tsml.sklearn import RotationForestClassifier
     >>> from tsml.datasets import load_minimal_chinatown
-    >>> X_train, y_train = load_minimal_chinatown(split="train", return_X_y=True)
-    >>> X_test, y_test = load_minimal_chinatown(split="test", return_X_y=True)
+    >>> X_train, y_train = load_minimal_chinatown(split="train")
+    >>> X_test, y_test = load_minimal_chinatown(split="test")
     >>> clf = RotationForestClassifier(n_estimators=10)
     >>> clf.fit(X_train, y_train)
     RotationForestClassifier(...)
@@ -156,6 +156,9 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
         Changes state by creating a fitted model that updates attributes
         ending in "_".
         """
+        if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
+            X = np.reshape(X, (X.shape[0], -1))
+
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
 
         check_classification_targets(y)
@@ -279,6 +282,9 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
         # treat case of single class seen in fit
         if self.n_classes_ == 1:
             return np.repeat([[1]], X.shape[0], axis=0)
+
+        if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
+            X = np.reshape(X, (X.shape[0], -1))
 
         X = self._validate_data(X=X, reset=False)
 
@@ -497,3 +503,28 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
                 current_attribute += 1
 
         return groups
+
+    @classmethod
+    def get_test_params(cls, parameter_set=None):
+        """Return unit test parameter settings for the estimator.
+
+        Parameters
+        ----------
+        parameter_set : None or str, default=None
+            Name of the set of test parameters to return, for use in tests. If no
+            special parameters are defined for a value, will return `"default"` set.
+
+        Returns
+        -------
+        params : dict or list of dict, default = {}
+            Parameters to create testing instances of the class
+            Each dict are parameters to construct an "interesting" test instance, i.e.,
+            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
+            `create_test_instance` uses the first (or only) dictionary in `params`
+        """
+        if parameter_set is None:
+            return {"n_estimators": 2}
+        else:
+            raise ValueError(
+                f"No parameter set {parameter_set} defined for {cls.__name__}"
+            )

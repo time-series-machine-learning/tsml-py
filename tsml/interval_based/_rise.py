@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+
+__author__ = ["MatthewMiddlehurst"]
+
 import numpy as np
-from sklearn.base import ClassifierMixin
+from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier
 
 from tsml.interval_based._base import BaseIntervalForest
+from tsml.sklearn import CITClassifier
 
 
 class RISEClassifier(ClassifierMixin, BaseIntervalForest):
@@ -25,7 +29,7 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
         if base_estimator is None:
             base_estimator = DecisionTreeClassifier(criterion="entropy")
 
-        if isinstance(base_estimator, ContinuousIntervalTree):
+        if isinstance(base_estimator, CITClassifier):
             replace_nan = "nan"
         else:
             replace_nan = "zero"
@@ -78,7 +82,7 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
         }
 
 
-class RISERegressor(ClassifierMixin, BaseIntervalForest):
+class RISERegressor(RegressorMixin, BaseIntervalForest):
     """TODO."""
 
     def __init__(
@@ -97,11 +101,6 @@ class RISERegressor(ClassifierMixin, BaseIntervalForest):
         if base_estimator is None:
             base_estimator = DecisionTreeClassifier(criterion="entropy")
 
-        if isinstance(base_estimator, ContinuousIntervalTree):
-            replace_nan = "nan"
-        else:
-            replace_nan = "zero"
-
         interval_features = []
 
         super(RISERegressor, self).__init__(
@@ -114,7 +113,7 @@ class RISERegressor(ClassifierMixin, BaseIntervalForest):
             interval_features=interval_features,
             series_transformers=None,
             att_subsample_size=None,
-            replace_nan=replace_nan,
+            replace_nan="zero",
             time_limit_in_minutes=time_limit_in_minutes,
             contract_max_n_estimators=contract_max_n_estimators,
             save_transformed_data=save_transformed_data,
