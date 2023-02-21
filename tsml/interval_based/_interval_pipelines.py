@@ -19,7 +19,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, clone_estimator
 from tsml.sklearn import RotationForestClassifier
-from tsml.transformations.catch22 import Catch22
+from tsml.transformations.catch22 import Catch22Transformer
 from tsml.transformations.interval_extraction import RandomIntervalTransformer
 from tsml.utils.validation import check_n_jobs
 
@@ -110,7 +110,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self._n_jobs = check_n_jobs(self.n_jobs)
 
         interval_transformers = (
-            Catch22(catch24=True, outlier_norm=True, replace_nans=True)
+            Catch22Transformer(catch24=True, outlier_norm=True, replace_nans=True)
             if self.interval_transformers is None
             else self.interval_transformers
         )
@@ -210,7 +210,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return {
                 "n_intervals": 5,
                 "estimator": RandomForestClassifier(n_estimators=10),
-                "interval_transformers": Catch22(
+                "interval_transformers": Catch22Transformer(
                     catch24=True,
                     replace_nans=True,
                     features=(
@@ -224,7 +224,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return {
                 "n_intervals": 3,
                 "estimator": RandomForestClassifier(n_estimators=2),
-                "interval_transformers": Catch22(
+                "interval_transformers": Catch22Transformer(
                     catch24=True,
                     replace_nans=True,
                     features=(
@@ -317,7 +317,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self._n_jobs = check_n_jobs(self.n_jobs)
 
         interval_transformers = (
-            Catch22(catch24=True, outlier_norm=True, replace_nans=True)
+            Catch22Transformer(catch24=True, outlier_norm=True, replace_nans=True)
             if self.interval_transformers is None
             else self.interval_transformers
         )
@@ -388,7 +388,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             return {
                 "n_intervals": 5,
                 "estimator": RandomForestRegressor(n_estimators=10),
-                "interval_transformers": Catch22(
+                "interval_transformers": Catch22Transformer(
                     catch24=True,
                     replace_nans=True,
                     features=(
@@ -402,7 +402,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             return {
                 "n_intervals": 3,
                 "estimator": RandomForestRegressor(n_estimators=2),
-                "interval_transformers": Catch22(
+                "interval_transformers": Catch22Transformer(
                     catch24=True,
                     replace_nans=True,
                     features=(
@@ -500,7 +500,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self._n_jobs = check_n_jobs(self.n_jobs)
 
         interval_transformers = (
-            Catch22(catch24=True, outlier_norm=True, replace_nans=True)
+            Catch22Transformer(catch24=True, outlier_norm=True, replace_nans=True)
             if self.interval_transformers is None
             else self.interval_transformers
         )
@@ -541,7 +541,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         """
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=7)
 
         return self._estimator.predict(self._transformer.transform(X))
 
@@ -560,7 +560,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         """
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=7)
 
         m = getattr(self._estimator, "predict_proba", None)
         if callable(m):
@@ -600,7 +600,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return {
                 "n_intervals": 5,
                 "estimator": RandomForestClassifier(n_estimators=10),
-                "interval_transformers": Catch22(
+                "interval_transformers": Catch22Transformer(
                     catch24=True,
                     replace_nans=True,
                     features=(
@@ -614,7 +614,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return {
                 "n_intervals": 3,
                 "estimator": RandomForestClassifier(n_estimators=2),
-                "interval_transformers": Catch22(
+                "interval_transformers": Catch22Transformer(
                     catch24=True,
                     replace_nans=True,
                     features=(

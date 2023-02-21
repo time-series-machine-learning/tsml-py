@@ -89,7 +89,4 @@ addopts = '''
     --timeout 600
     --showlocals
     --doctest-modules
-    --numprocesses auto
-    --cov tsml
-    --cov-report xml
 '''

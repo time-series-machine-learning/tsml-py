@@ -16,7 +16,7 @@ from sklearn import clone
 from sklearn.base import is_classifier
 from sklearn.datasets import make_multilabel_classification, make_regression
 from sklearn.exceptions import DataConversionWarning, NotFittedError
-from sklearn.metrics import accuracy_score, adjusted_rand_score
+from sklearn.metrics import adjusted_rand_score
 from sklearn.metrics.pairwise import rbf_kernel
 from sklearn.model_selection import ShuffleSplit, train_test_split
 from sklearn.pipeline import make_pipeline

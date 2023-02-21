@@ -8,7 +8,6 @@ import os
 import numpy as np
 from scipy import sparse
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.utils._array_api import get_namespace
 from sklearn.utils.validation import (
     _assert_all_finite,
     _check_estimator_name,

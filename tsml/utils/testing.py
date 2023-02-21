@@ -13,8 +13,8 @@ from sklearn.utils.estimator_checks import (
     _yield_all_checks,
 )
 
+import tsml.tests.estimator_checks as ts_checks
 from tsml.base import BaseTimeSeriesEstimator
-from tsml.tests.estimator_checks import _yield_all_time_series_checks
 from tsml.utils.discovery import all_estimators
 
 
@@ -43,7 +43,7 @@ def parametrize_with_checks(estimators):
     def checks_generator():
         for estimator in estimators:
             checks = (
-                _yield_all_time_series_checks
+                ts_checks._yield_all_time_series_checks
                 if isinstance(estimator, BaseTimeSeriesEstimator)
                 else _yield_all_checks
             )

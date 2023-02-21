@@ -15,7 +15,6 @@ from sklearn.utils import check_random_state
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, clone_estimator
-from tsml.transformations.summary_features import SummaryFeatures
 from tsml.utils.numba_functions.general import z_normalise_series_3d
 from tsml.utils.numba_functions.stats import (
     fisher_score,
