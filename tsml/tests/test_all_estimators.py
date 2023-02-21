@@ -7,7 +7,7 @@ __author__ = ["MatthewMiddlehurst"]
 from tsml.utils.testing import generate_test_estimators, parametrize_with_checks
 
 
-@parametrize_with_checks(sorted(generate_test_estimators()))
+@parametrize_with_checks(sorted(generate_test_estimators(), key=lambda x: x.__class__.__name__))
 def test_check_estimator(estimator, check):
     """Test that sklearn estimators adhere to sklearn conventions."""
     check(estimator)
