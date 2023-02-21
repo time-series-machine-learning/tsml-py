@@ -35,7 +35,9 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-    "scikit-learn",
+    "numba>=0.55",
+    "numpy>=1.21.0",
+    "scikit-learn>=1.2.1",
 ]
 
 [project.optional-dependencies]
