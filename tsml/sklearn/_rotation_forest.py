@@ -312,20 +312,14 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
     def _get_train_probs(self, X, y):
         check_is_fitted(self)
 
+        # treat case of single class seen in fit
+        if self.n_classes_ == 1:
+            np.repeat([[1]], len(X), axis=0)
+
         if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], -1))
-        elif not isinstance(X, np.ndarray) or len(X.shape) > 2:
-            raise ValueError(
-                "RotationForest is not a time series classifier. "
-                "A valid sklearn input such as a 2d numpy array is required."
-                "Univariate 3d numpy arrays are accepted, but will be converted to 2d."
-                "Sparse input formats are currently not supported."
-            )
-        X = self._validate_data(X=X, reset=False)
 
-        # handle the single-class-label case
-        if len(self._class_dictionary) == 1:
-            return np.repeat([[1]], len(X), axis=0)
+        X = self._validate_data(X=X, reset=False)
 
         n_instances, n_atts = X.shape
 

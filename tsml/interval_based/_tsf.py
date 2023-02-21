@@ -5,6 +5,7 @@ __author__ = ["MatthewMiddlehurst"]
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.utils.parallel import Parallel, delayed
 
 from tsml.interval_based._base import BaseIntervalForest
 from tsml.sklearn import CITClassifier
@@ -27,9 +28,6 @@ class TSFClassifier(ClassifierMixin, BaseIntervalForest):
         n_jobs=1,
         parallel_backend=None,
     ):
-        if base_estimator is None:
-            base_estimator = DecisionTreeClassifier(criterion="entropy")
-
         if isinstance(base_estimator, CITClassifier):
             replace_nan = "nan"
         else:
@@ -53,6 +51,9 @@ class TSFClassifier(ClassifierMixin, BaseIntervalForest):
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
         )
+
+    def predict_proba(self, X):
+        return self._predict_proba(X)
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
@@ -99,9 +100,6 @@ class TSFRegressor(RegressorMixin, BaseIntervalForest):
         n_jobs=1,
         parallel_backend=None,
     ):
-        if base_estimator is None:
-            base_estimator = DecisionTreeClassifier(criterion="entropy")
-
         super(TSFRegressor, self).__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,

@@ -59,6 +59,9 @@ class CIFClassifier(ClassifierMixin, BaseIntervalForest):
             parallel_backend=parallel_backend,
         )
 
+    def predict_proba(self, X):
+        return self._predict_proba(X)
+
     @classmethod
     def get_test_params(cls, parameter_set="default"):
         """Return testing parameter settings for the estimator.

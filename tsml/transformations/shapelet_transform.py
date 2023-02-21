@@ -18,8 +18,11 @@ from numba.typed.typedlist import List
 from sklearn import preprocessing
 from sklearn.base import TransformerMixin
 from sklearn.utils import check_random_state
+from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator
+from tsml.utils.numba_functions.general import z_normalise_series
+from tsml.utils.validation import check_n_jobs
 
 
 class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
@@ -81,17 +84,17 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
 
     Attributes
     ----------
-    n_classes : int
+    n_classes_ : int
         The number of classes.
-    n_instances : int
+    n_instances_ : int
         The number of train cases.
-    n_dims : int
+    n_dims_ : int
         The number of dimensions per case.
-    series_length : int
+    series_length_ : int
         The length of each series.
     classes_ : list
         The classes labels.
-    shapelets : list
+    shapelets_ : list
         The stored shapelets and relating information after a dataset has been
         processed.
         Each item in the list is a tuple containing the following 7 items:
@@ -120,11 +123,9 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
 
     Examples
     --------
-    >>> from sktime.transformations.panel.shapelet_transform import (
-    ...     RandomShapeletTransform
-    ... )
-    >>> from sktime.datasets import load_unit_test
-    >>> X_train, y_train = load_unit_test(split="train", return_X_y=True)
+    >>> from tsml.transformations.shapelet_transform import RandomShapeletTransform
+    >>> from tsml.datasets import load_minimal_chinatown
+    >>> X_train, y_train = load_minimal_chinatown(split="train")
     >>> t = RandomShapeletTransform(
     ...     n_shapelet_samples=500,
     ...     max_shapelets=10,
@@ -134,16 +135,6 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
     RandomShapeletTransform(...)
     >>> X_t = t.transform(X_train)
     """
-
-    _tags = {
-        "scitype:transform-input": "Series",
-        "scitype:transform-output": "Primitives",
-        "scitype:instancewise": False,
-        "X_inner_mtype": "numpy3D",
-        "y_inner_mtype": "numpy1D",
-        "fit_is_empty": False,
-        "requires_y": True,
-    }
 
     def __init__(
         self,
@@ -173,23 +164,6 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
         self.batch_size = batch_size
         self.random_state = random_state
 
-        # The following set in method fit
-        self.n_classes = 0
-        self.n_instances = 0
-        self.n_dims = 0
-        self.series_length = 0
-        self.classes_ = []
-        self.shapelets = []
-
-        self._n_shapelet_samples = n_shapelet_samples
-        self._max_shapelets = max_shapelets
-        self._max_shapelet_length = max_shapelet_length
-        self._n_jobs = n_jobs
-        self._batch_size = batch_size
-        self._class_counts = []
-        self._class_dictionary = {}
-        self._sorted_indicies = []
-
         super(RandomShapeletTransform, self).__init__()
 
     def fit(self, X, y=None):
@@ -207,35 +181,40 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
         self : RandomShapeletTransform
             This estimator.
         """
-        self._n_jobs = check_n_jobs(self.n_jobs)
+        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
 
+        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         self.classes_, self._class_counts = np.unique(y, return_counts=True)
-        self.n_classes = self.classes_.shape[0]
+        self.n_classes_ = self.classes_.shape[0]
+        self.class_dictionary_ = {}
         for index, classVal in enumerate(self.classes_):
-            self._class_dictionary[classVal] = index
+            self.class_dictionary_[classVal] = index
+
+        self._n_jobs = check_n_jobs(self.n_jobs)
 
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(y)
 
-        self.n_instances, self.n_dims, self.series_length = X.shape
-
+        self._max_shapelets = self.max_shapelets
         if self.max_shapelets is None:
-            self._max_shapelets = min(10 * self.n_instances, 1000)
-        if self._max_shapelets < self.n_classes:
-            self._max_shapelets = self.n_classes
+            self._max_shapelets = min(10 * self.n_instances_, 1000)
+        if self._max_shapelets < self.n_classes_:
+            self._max_shapelets = self.n_classes_
+
+        self._max_shapelet_length = self.max_shapelet_length
         if self.max_shapelet_length is None:
-            self._max_shapelet_length = self.series_length
+            self._max_shapelet_length = self.series_length_
 
         time_limit = self.time_limit_in_minutes * 60
         start_time = time.time()
         fit_time = 0
 
-        max_shapelets_per_class = int(self._max_shapelets / self.n_classes)
+        max_shapelets_per_class = int(self._max_shapelets / self.n_classes_)
         if max_shapelets_per_class < 1:
             max_shapelets_per_class = 1
 
         shapelets = List(
-            [List([(-1.0, -1, -1, -1, -1, -1)]) for _ in range(self.n_classes)]
+            [List([(-1.0, -1, -1, -1, -1, -1)]) for _ in range(self.n_classes_)]
         )
         n_shapelets_extracted = 0
 
@@ -254,7 +233,7 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
                         shapelets,
                         max_shapelets_per_class,
                     )
-                    for i in range(self._batch_size)
+                    for i in range(self.batch_size)
                 )
 
                 for i, heap in enumerate(shapelets):
@@ -270,15 +249,15 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
                         to_keep = self._remove_self_similar_shapelets(heap)
                         shapelets[i] = List([n for (n, b) in zip(heap, to_keep) if b])
 
-                n_shapelets_extracted += self._batch_size
+                n_shapelets_extracted += self.batch_size
                 fit_time = time.time() - start_time
         else:
-            while n_shapelets_extracted < self._n_shapelet_samples:
+            while n_shapelets_extracted < self.n_shapelet_samples:
                 n_shapelets_to_extract = (
-                    self._batch_size
-                    if n_shapelets_extracted + self._batch_size
-                    <= self._n_shapelet_samples
-                    else self._n_shapelet_samples - n_shapelets_extracted
+                    self.batch_size
+                    if n_shapelets_extracted + self.batch_size
+                    <= self.n_shapelet_samples
+                    else self.n_shapelet_samples - n_shapelets_extracted
                 )
 
                 candidate_shapelets = Parallel(
@@ -309,7 +288,7 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
 
                 n_shapelets_extracted += n_shapelets_to_extract
 
-        self.shapelets = [
+        self.shapelets_ = [
             (
                 s[0],
                 s[1],
@@ -323,19 +302,20 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
             for s in class_shapelets
             if s[0] > 0
         ]
-        self.shapelets.sort(reverse=True, key=lambda s: (s[0], s[1], s[2], s[3], s[4]))
+        self.shapelets_.sort(reverse=True, key=lambda s: (s[0], s[1], s[2], s[3], s[4]))
 
-        to_keep = self._remove_identical_shapelets(List(self.shapelets))
-        self.shapelets = [n for (n, b) in zip(self.shapelets, to_keep) if b]
+        to_keep = self._remove_identical_shapelets(List(self.shapelets_))
+        self.shapelets_ = [n for (n, b) in zip(self.shapelets_, to_keep) if b]
 
         self._sorted_indicies = []
-        for s in self.shapelets:
+        for s in self.shapelets_:
             sabs = np.abs(s[6])
             self._sorted_indicies.append(
                 np.array(
                     sorted(range(s[1]), reverse=True, key=lambda j, sabs=sabs: sabs[j])
                 )
             )
+
         return self
 
     def transform(self, X, y=None):
@@ -351,7 +331,11 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
         output : pandas DataFrame
             The transformed dataframe in tabular format.
         """
-        output = np.zeros((len(X), len(self.shapelets)))
+        check_is_fitted(self)
+
+        X = self._validate_data(X=X, reset=True)
+
+        output = np.zeros((len(X), len(self.shapelets_)))
 
         for i, series in enumerate(X):
             dists = Parallel(
@@ -364,12 +348,12 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
                     shapelet[2],
                     shapelet[1],
                 )
-                for n, shapelet in enumerate(self.shapelets)
+                for n, shapelet in enumerate(self.shapelets_)
             )
 
             output[i] = dists
 
-        return pd.DataFrame(output)
+        return output
 
     def _extract_random_shapelet(self, X, y, i, shapelets, max_shapelets_per_class):
         rs = 255 if self.random_state == 0 else self.random_state
@@ -380,7 +364,7 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
         )
         rng = check_random_state(rs)
 
-        inst_idx = i % self.n_instances
+        inst_idx = i % self.n_instances_
         cls_idx = int(y[inst_idx])
         worst_quality = (
             shapelets[cls_idx][0][0]
@@ -392,8 +376,8 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
             rng.randint(0, self._max_shapelet_length - self.min_shapelet_length)
             + self.min_shapelet_length
         )
-        position = rng.randint(0, self.series_length - length)
-        dim = rng.randint(0, self.n_dims)
+        position = rng.randint(0, self.series_length_ - length)
+        dim = rng.randint(0, self.n_dims_)
 
         shapelet = z_normalise_series(X[inst_idx, dim, position : position + length])
         sabs = np.abs(shapelet)
@@ -411,7 +395,7 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
             dim,
             inst_idx,
             self._class_counts[cls_idx],
-            self.n_instances - self._class_counts[cls_idx],
+            self.n_instances_ - self._class_counts[cls_idx],
             worst_quality,
         )
 

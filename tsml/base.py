@@ -11,7 +11,10 @@ from typing import Union
 from numpy.random import RandomState
 from sklearn.base import BaseEstimator, clone
 from sklearn.ensemble._base import _set_random_states
-from sklearn.utils.validation import _check_y, check_array, check_X_y
+from sklearn.utils.validation import _check_y
+
+from tsml.utils._tags import _DEFAULT_TAGS, _safe_tags
+from tsml.utils.validation import _num_features, check_X, check_X_y
 
 
 class BaseTimeSeriesEstimator(BaseEstimator):
@@ -20,12 +23,11 @@ class BaseTimeSeriesEstimator(BaseEstimator):
         X="no_validation",
         y="no_validation",
         reset=True,
-        validate_separately=False,
         **check_params,
     ):
         """Validate input data and set or check the `n_features_in_` attribute.
 
-        Uses the `scikit-learn` 1.2.1 `all_estimators` function as a base.
+        Uses the `scikit-learn` 1.2.1 `_validate_data` function as a base.
 
         Parameters
         ----------
@@ -82,16 +84,14 @@ class BaseTimeSeriesEstimator(BaseEstimator):
             The validated input. A tuple is returned if both `X` and `y` are
             validated.
         """
-        self._check_feature_names(X, reset=reset)
-
         if y is None and self._get_tags()["requires_y"]:
             raise ValueError(
                 f"This {self.__class__.__name__} estimator "
                 "requires y to be passed, but the target y is None."
             )
 
-        no_val_X = isinstance(X, str) and X == "no_validation"
-        no_val_y = y is None or isinstance(y, str) and y == "no_validation"
+        no_val_X = X is None or (isinstance(X, str) and X == "no_validation")
+        no_val_y = y is None or (isinstance(y, str) and y == "no_validation")
 
         default_check_params = {"estimator": self}
         check_params = {**default_check_params, **check_params}
@@ -99,32 +99,76 @@ class BaseTimeSeriesEstimator(BaseEstimator):
         if no_val_X and no_val_y:
             raise ValueError("Validation should be done on X, y or both.")
         elif not no_val_X and no_val_y:
-            X = check_array(X, input_name="X", **check_params)
-            out = X
+            out = check_X(X, **check_params)
         elif no_val_X and not no_val_y:
-            y = _check_y(y, **check_params)
-            out = y
+            out = _check_y(y, multi_output=False, **check_params)
         else:
-            if validate_separately:
-                # We need this because some estimators validate X and y
-                # separately, and in general, separately calling check_array()
-                # on X and y isn't equivalent to just calling check_X_y()
-                # :(
-                check_X_params, check_y_params = validate_separately
-                if "estimator" not in check_X_params:
-                    check_X_params = {**default_check_params, **check_X_params}
-                X = check_array(X, input_name="X", **check_X_params)
-                if "estimator" not in check_y_params:
-                    check_y_params = {**default_check_params, **check_y_params}
-                y = check_array(y, input_name="y", **check_y_params)
-            else:
-                X, y = check_X_y(X, y, **check_params)
-            out = X, y
+            out = check_X_y(X, y, **check_params)
 
-        if not no_val_X and check_params.get("ensure_2d", True):
-            self._check_n_features(X, reset=reset)
+        if not no_val_X:
+            self._check_n_features(
+                out[0] if isinstance(out, tuple) else out, reset=reset
+            )
 
         return out
+
+    def _check_n_features(self, X, reset):
+        """Set the `n_features_in_` attribute, or check against it.
+
+        Uses the `scikit-learn` 1.2.1 `_check_n_features` function as a base.
+
+        Parameters
+        ----------
+        X : {ndarray, sparse matrix} of shape (n_samples, n_features)
+            The input samples.
+        reset : bool
+            If True, the `n_features_in_` attribute is set to `X.shape[1]`.
+            If False and the attribute exists, then check that it is equal to
+            `X.shape[1]`. If False and the attribute does *not* exist, then
+            the check is skipped.
+            .. note::
+               It is recommended to call reset=True in `fit` and in the first
+               call to `partial_fit`. All other methods that validate `X`
+               should set `reset=False`.
+        """
+        try:
+            n_features = _num_features(X)
+        except TypeError as e:
+            if not reset and hasattr(self, "n_features_in_"):
+                raise ValueError(
+                    "X does not contain any features to extract, but "
+                    f"{self.__class__.__name__} is expecting "
+                    f"{self.n_features_in_[0]} dimensions as input."
+                ) from e
+            # If the number of features is not defined and reset=True,
+            # then we skip this check
+            return
+
+        if reset:
+            self.n_features_in_ = n_features
+            return
+
+        if not hasattr(self, "n_features_in_"):
+            # Skip this check if the expected number of expected input features
+            # was not recorded by calling fit first. This is typically the case
+            # for stateless transformers.
+            return
+
+        if n_features[0] != self.n_features_in_[0]:
+            raise ValueError(
+                f"X has {n_features[0]} dimensions, but {self.__class__.__name__} "
+                f"is expecting {self.n_features_in_[0]} dimensions as input."
+            )
+
+        tags = _safe_tags(self)
+        if tags["equal_length_only"] and n_features[1] != self.n_features_in_[1]:
+            raise ValueError(
+                f"X has {n_features[1]} series length, but {self.__class__.__name__} "
+                f"is expecting {self.n_features_in_[1]} series length as input."
+            )
+
+    def _more_tags(self):
+        return _DEFAULT_TAGS
 
     @classmethod
     def get_test_params(cls, parameter_set=None):

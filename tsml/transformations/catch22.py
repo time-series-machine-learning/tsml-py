@@ -8,12 +8,12 @@ __author__ = ["MatthewMiddlehurst"]
 __all__ = ["Catch22", "Catch22Wrapper"]
 
 import math
-import warnings
 
 import numpy as np
 from joblib import Parallel, delayed
 from numba import njit
 from sklearn.base import TransformerMixin
+from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator
 from tsml.utils.validation import check_n_jobs
@@ -55,7 +55,7 @@ class Catch22(TransformerMixin, BaseTimeSeriesEstimator):
         Replace NaN or inf values from the Catch22 transform with 0.
     n_jobs : int, optional, default=1
         The number of jobs to run in parallel for transform. Requires multiple input
-        cases. A value of -1 uses all CPU cores.
+        cases. ``-1`` means using all processors.
 
     See Also
     --------
@@ -80,15 +80,6 @@ class Catch22(TransformerMixin, BaseTimeSeriesEstimator):
     Journal of the Royal Society Interface, 10(83), 20130048.
     """
 
-    _tags = {
-        "scitype:transform-input": "Series",
-        "scitype:transform-output": "Primitives",
-        "scitype:instancewise": True,
-        "X_inner_mtype": "nested_univ",
-        "y_inner_mtype": "None",
-        "fit_is_empty": True,
-    }
-
     def __init__(
         self,
         features="all",
@@ -103,44 +94,34 @@ class Catch22(TransformerMixin, BaseTimeSeriesEstimator):
         self.replace_nans = replace_nans
         self.n_jobs = n_jobs
 
-        self.features_arguments = (
-            features
-            if features != "all"
+        super(Catch22, self).__init__()
+
+    def fit(self, X, y=None):
+        self._validate_data(X=X)
+
+        self.features_arguments_ = (
+            self.features
+            if self.features != "all"
             else (
                 feature_names + ["Mean", "StandardDeviation"]
-                if catch24
+                if self.catch24
                 else feature_names
             )
         )
 
-        if isinstance(features, str):
-            if features == "all":
-                self.n_transformed_features = 24 if catch24 else 22
+        if isinstance(self.features, str):
+            if self.features == "all":
+                self.n_transformed_features_ = 24 if self.catch24 else 22
             else:
-                self.n_transformed_features = 1
-        elif isinstance(features, (list, tuple)):
-            self.n_transformed_features = len(features)
+                self.n_transformed_features_ = 1
+        elif isinstance(self.features, (list, tuple)):
+            self.n_transformed_features_ = len(self.features)
         else:
             raise ValueError("features must be a str, list or tuple")
 
         self._transform_features = None
 
-        # todo remove in v0.16
-        self._case_id = None
-        self._st_n_instances = 0
-        self._st_series_length = 0
-        self._outlier_series = None
-        self._smin = None
-        self._smax = None
-        self._smean = None
-        self._fft = None
-        self._ac = None
-        self._acfz = None
-
-        super(Catch22, self).__init__()
-
-    def fit(self, X, y=None):
-        pass
+        return self
 
     def transform(self, X, y=None):
         """Transform data into the Catch22 features.
@@ -156,25 +137,46 @@ class Catch22(TransformerMixin, BaseTimeSeriesEstimator):
         c22 : Pandas DataFrame of shape [n_instances, c*n_dimensions] where c is the
              number of features requested, containing Catch22 features for X.
         """
+        check_is_fitted(self)
+
+        X = self._validate_data(X=X, reset=False)
+
         n_instances = X.shape[0]
 
         f_idx = _verify_features(self.features, self.catch24)
 
         threads_to_use = check_n_jobs(self.n_jobs)
 
-        # todo remove in v0.16 and add to docstring: ``-1`` means using all processors.
-        if self.n_jobs == -1:
-            threads_to_use = 1
-            warnings.warn(
-                "``n_jobs`` default was changed to 1 from -1 in version 0.14.0. "
-                "In version 0.16.0 a value of -1 will use all CPU cores instead of the "
-                "current 1 CPU core."
-            )
+        features = [
+            Catch22._DN_HistogramMode_5,
+            Catch22._DN_HistogramMode_10,
+            Catch22._SB_BinaryStats_diff_longstretch0,
+            Catch22._DN_OutlierInclude_p_001_mdrmd,
+            Catch22._DN_OutlierInclude_n_001_mdrmd,
+            Catch22._CO_f1ecac,
+            Catch22._CO_FirstMin_ac,
+            Catch22._SP_Summaries_welch_rect_area_5_1,
+            Catch22._SP_Summaries_welch_rect_centroid,
+            Catch22._FC_LocalSimple_mean3_stderr,
+            Catch22._CO_trev_1_num,
+            Catch22._CO_HistogramAMI_even_2_5,
+            Catch22._IN_AutoMutualInfoStats_40_gaussian_fmmi,
+            Catch22._MD_hrv_classic_pnn40,
+            Catch22._SB_BinaryStats_mean_longstretch1,
+            Catch22._SB_MotifThree_quantile_hh,
+            Catch22._FC_LocalSimple_mean1_tauresrat,
+            Catch22._CO_Embed2_Dist_tau_d_expfit_meandiff,
+            Catch22._SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1,
+            Catch22._SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1,
+            Catch22._SB_TransitionMatrix_3ac_sumdiagcov,
+            Catch22._PD_PeriodicityWang_th0_01,
+        ]
 
         c22_list = Parallel(n_jobs=threads_to_use)(
             delayed(self._transform_case)(
-                X.iloc[i],
+                X[i],
                 f_idx,
+                features,
             )
             for i in range(n_instances)
         )
@@ -182,9 +184,9 @@ class Catch22(TransformerMixin, BaseTimeSeriesEstimator):
         if self.replace_nans:
             c22_list = np.nan_to_num(c22_list, False, 0, 0, 0)
 
-        return pd.DataFrame(c22_list)
+        return np.array(c22_list)
 
-    def _transform_case(self, X, f_idx):
+    def _transform_case(self, X, f_idx, features):
         c22 = np.zeros(len(f_idx) * len(X))
 
         if self._transform_features is not None and len(
@@ -195,8 +197,7 @@ class Catch22(TransformerMixin, BaseTimeSeriesEstimator):
             transform_feature = [True] * len(c22)
 
         f_count = -1
-        for i in range(len(X)):
-            series = np.array(X[i])
+        for i, series in enumerate(X):
             dim = i * len(f_idx)
             outlier_series = None
             smin = None
@@ -275,177 +276,8 @@ class Catch22(TransformerMixin, BaseTimeSeriesEstimator):
 
         return c22
 
-    def _transform_single_feature(self, X, feature, case_id=None):
-        if isinstance(feature, (int, np.integer)) or isinstance(
-            feature, (float, float)
-        ):
-            if feature > 21 or feature < 0:
-                raise ValueError("Invalid catch22 feature ID")
-        elif isinstance(feature, str):
-            if feature in feature_names:
-                feature = feature_names.index(feature)
-            else:
-                raise ValueError("Invalid catch22 feature name")
-        else:
-            raise ValueError("catch22 feature name or ID required")
-
-        if isinstance(X, pd.DataFrame):
-            X = convert_to(X, "numpy3D")
-
-        if len(X.shape) > 2:
-            n_instances, n_dims, series_length = X.shape
-
-            if n_dims > 1:
-                raise ValueError(
-                    "transform_single_feature can only handle univariate series "
-                    "currently."
-                )
-
-            X = np.reshape(X, (n_instances, -1))
-        else:
-            n_instances, series_length = X.shape
-
-        if case_id is not None:
-            if case_id != self._case_id:
-                self._case_id = case_id
-                self._st_n_instances = n_instances
-                self._st_series_length = series_length
-                self._outlier_series = [None] * n_instances
-                self._smin = [None] * n_instances
-                self._smax = [None] * n_instances
-                self._smean = [None] * n_instances
-                self._fft = [None] * n_instances
-                self._ac = [None] * n_instances
-                self._acfz = [None] * n_instances
-            else:
-                if (
-                    n_instances != self._st_n_instances
-                    or series_length != self._st_series_length
-                ):
-                    raise ValueError(
-                        "Catch22: case_is the same, but n_instances and "
-                        "series_length do not match last seen for single "
-                        "feature transform."
-                    )
-
-        threads_to_use = check_n_jobs(self.n_jobs)
-
-        if self.n_jobs == -1:
-            threads_to_use = 1
-            warnings.warn(
-                "``n_jobs`` default was changed to 1 from -1 in version 0.13.4. "
-                "In version 0.15 a value of -1 will use all CPU cores instead of the "
-                "current 1 CPU core."
-            )
-
-        c22_list = Parallel(n_jobs=threads_to_use)(
-            delayed(self._transform_case_single)(
-                X[i],
-                feature,
-                case_id,
-                i,
-            )
-            for i in range(n_instances)
-        )
-
-        if self.replace_nans:
-            c22_list = np.nan_to_num(c22_list, False, 0, 0, 0)
-
-        return np.asarray(c22_list)
-
-    def _transform_case_single(self, series, feature, case_id, inst_idx):
-        args = [series]
-
-        if case_id is None:
-            if feature == 0 or feature == 1 or feature == 11:
-                smin = np.min(series)
-                smax = np.max(series)
-                args = [series, smin, smax]
-            elif feature == 2:
-                smean = np.mean(series)
-                args = [series, smean]
-            elif feature == 3 or feature == 4:
-                if self.outlier_norm:
-                    std = np.std(series)
-                    if std > 0:
-                        series = (series - np.mean(series)) / std
-                args = [series]
-            elif feature == 7 or feature == 8:
-                smean = np.mean(series)
-                nfft = int(np.power(2, np.ceil(np.log(len(series)) / np.log(2))))
-                fft = np.fft.fft(series - smean, n=nfft)
-                args = [series, fft]
-            elif feature == 5 or feature == 6 or feature == 12:
-                smean = np.mean(series)
-                nfft = int(np.power(2, np.ceil(np.log(len(series)) / np.log(2))))
-                fft = np.fft.fft(series - smean, n=nfft)
-                ac = _autocorr(series, fft)
-                args = [ac]
-            elif feature == 16 or feature == 17 or feature == 20:
-                smean = np.mean(series)
-                nfft = int(np.power(2, np.ceil(np.log(len(series)) / np.log(2))))
-                fft = np.fft.fft(series - smean, n=nfft)
-                ac = _autocorr(series, fft)
-                acfz = _ac_first_zero(ac)
-                args = [series, acfz]
-        else:
-            if feature == 0 or feature == 1 or feature == 11:
-                if self._smin[inst_idx] is None:
-                    self._smin[inst_idx] = np.min(series)
-                if self._smax[inst_idx] is None:
-                    self._smax[inst_idx] = np.max(series)
-                args = [series, self._smin[inst_idx], self._smax[inst_idx]]
-            elif feature == 2:
-                if self._smean[inst_idx] is None:
-                    self._smean[inst_idx] = np.mean(series)
-                args = [series, self._smean[inst_idx]]
-            elif feature == 3 or feature == 4:
-                if self.outlier_norm:
-                    if self._outlier_series[inst_idx] is None:
-                        std = np.std(series)
-                        if std > 0:
-                            self._outlier_series[inst_idx] = (
-                                series - np.mean(series)
-                            ) / std
-                        else:
-                            self._outlier_series[inst_idx] = series
-                    series = self._outlier_series[inst_idx]
-                args = [series]
-            elif feature == 7 or feature == 8:
-                if self._smean[inst_idx] is None:
-                    self._smean[inst_idx] = np.mean(series)
-                if self._fft[inst_idx] is None:
-                    nfft = int(np.power(2, np.ceil(np.log(len(series)) / np.log(2))))
-                    self._fft[inst_idx] = np.fft.fft(
-                        series - self._smean[inst_idx], n=nfft
-                    )
-                args = [series, self._fft[inst_idx]]
-            elif feature == 5 or feature == 6 or feature == 12:
-                if self._smean[inst_idx] is None:
-                    self._smean[inst_idx] = np.mean(series)
-                if self._fft[inst_idx] is None:
-                    nfft = int(np.power(2, np.ceil(np.log(len(series)) / np.log(2))))
-                    self._fft[inst_idx] = np.fft.fft(
-                        series - self._smean[inst_idx], n=nfft
-                    )
-                if self._ac[inst_idx] is None:
-                    self._ac[inst_idx] = _autocorr(series, self._fft[inst_idx])
-                args = [self._ac[inst_idx]]
-            elif feature == 16 or feature == 17 or feature == 20:
-                if self._smean[inst_idx] is None:
-                    self._smean[inst_idx] = np.mean(series)
-                if self._fft[inst_idx] is None:
-                    nfft = int(np.power(2, np.ceil(np.log(len(series)) / np.log(2))))
-                    self._fft[inst_idx] = np.fft.fft(
-                        series - self._smean[inst_idx], n=nfft
-                    )
-                if self._ac[inst_idx] is None:
-                    self._ac[inst_idx] = _autocorr(series, self._fft[inst_idx])
-                if self._acfz[inst_idx] is None:
-                    self._acfz[inst_idx] = _ac_first_zero(self._ac[inst_idx])
-                args = [series, self._acfz[inst_idx]]
-
-        return features[feature](*args)
+    def _more_tags(self):
+        return {"stateless": True}
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
@@ -465,9 +297,7 @@ class Catch22(TransformerMixin, BaseTimeSeriesEstimator):
             `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
             `create_test_instance` uses the first (or only) dictionary in `params`
         """
-        param1 = {}
-        param2 = {"features": "DN_HistogramMode_5"}
-        return [param1, param2]
+        return {}
 
     @staticmethod
     def _DN_HistogramMode_5(X, smin, smax):
@@ -559,7 +389,7 @@ class Catch22(TransformerMixin, BaseTimeSeriesEstimator):
         histogram = np.zeros((5, 5))
         sumx = np.zeros(5)
         sumy = np.zeros(5)
-        v = 1.0 / (len(X) - 2)
+        v = 1.0 / (len(X) - 2) if len(X) > 2 else 0.0
         for i in range(len(X) - 2):
             idx1 = int((X[i] - new_min) / bin_width)
             idx2 = int((X[i + 2] - new_min) / bin_width)
@@ -1214,7 +1044,7 @@ def _spline_fit(X):
 
         for j in range(k + 1):
             for u in range(32):
-                coeffs[u][j] /= fmax[u]
+                coeffs[u][j] /= max(1e-16, fmax[u])
 
         for i in range(29):
             for j in range(k + 1):
@@ -1226,7 +1056,7 @@ def _spline_fit(X):
     scale = np.ones(32)
     for k in range(3):
         for i in range(32):
-            scale[i] /= H[i]
+            scale[i] /= max(1e-16, H[i])
 
         for i in range(32):
             coeffs[i][3 - (k + 1)] *= scale[i]
@@ -1296,7 +1126,7 @@ def _spline_fit(X):
 
     for i in range(5):
         for j in range(i + 1, 5):
-            factor = AElim[j][i] / AElim[i][i]
+            factor = AElim[j][i] / max(1e-16, AElim[i][i])
             ATb[j] = ATb[j] - factor * ATb[i]
 
             for k in range(i, 5):
@@ -1308,7 +1138,7 @@ def _spline_fit(X):
         for j in range(i + 1, 5):
             bMinusATemp -= x[j] * AElim[i][j]
 
-        x[i] = bMinusATemp / AElim[i][i]
+        x[i] = bMinusATemp / max(1e-16, AElim[i][i])
 
     C = np.zeros((5, 8))
     for i in range(32):
@@ -1454,16 +1284,6 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
     Journal of the Royal Society Interface, 10(83), 20130048.
     """
 
-    _tags = {
-        "scitype:transform-input": "Series",
-        "scitype:transform-output": "Primitives",
-        "scitype:instancewise": True,
-        "X_inner_mtype": "nested_univ",
-        "y_inner_mtype": "None",
-        "fit_is_empty": True,
-        "python_dependencies": "pycatch22",
-    }
-
     def __init__(
         self,
         features="all",
@@ -1478,32 +1298,34 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
         self.replace_nans = replace_nans
         self.n_jobs = n_jobs
 
-        self.features_arguments = (
-            features
-            if features != "all"
+        super(Catch22Wrapper, self).__init__()
+
+    def fit(self, X, y=None):
+        self._validate_data(X=X)
+
+        self.features_arguments_ = (
+            self.features
+            if self.features != "all"
             else (
                 feature_names + ["Mean", "StandardDeviation"]
-                if catch24
+                if self.catch24
                 else feature_names
             )
         )
 
-        if isinstance(features, str):
-            if features == "all":
-                self.n_transformed_features = 24 if catch24 else 22
+        if isinstance(self.features, str):
+            if self.features == "all":
+                self.n_transformed_features_ = 24 if self.catch24 else 22
             else:
-                self.n_transformed_features = 1
-        elif isinstance(features, (list, tuple)):
-            self.n_transformed_features = len(features)
+                self.n_transformed_features_ = 1
+        elif isinstance(self.features, (list, tuple)):
+            self.n_transformed_features_ = len(self.features)
         else:
             raise ValueError("features must be a str, list or tuple")
 
         self._transform_features = None
 
-        super(Catch22Wrapper, self).__init__()
-
-    def fit(self, X, y=None):
-        pass
+        return self
 
     def transform(self, X, y=None):
         """Transform data into the Catch22 features.
@@ -1519,9 +1341,13 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
         c22 : Pandas DataFrame of shape [n_instances, c*n_dimensions] where c is the
              number of features requested, containing Catch22 features for X.
         """
-        n_instances, n_dims = X.shape
+        check_is_fitted(self)
 
-        f_idx = catch22._verify_features(self.features, self.catch24)
+        X = self._validate_data(X=X, reset=False)
+
+        n_instances = X.shape[0]
+
+        f_idx = _verify_features(self.features, self.catch24)
 
         import pycatch22
 
@@ -1554,7 +1380,7 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
 
         c22_list = Parallel(n_jobs=threads_to_use)(
             delayed(self._transform_case)(
-                X.iloc[i],
+                X[i],
                 f_idx,
                 features,
             )
@@ -1564,7 +1390,7 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
         if self.replace_nans:
             c22_list = np.nan_to_num(c22_list, False, 0, 0, 0)
 
-        return pd.DataFrame(c22_list)
+        return np.array(c22_list)
 
     def _transform_case(self, X, f_idx, features):
         c22 = np.zeros(len(f_idx) * len(X))
@@ -1584,7 +1410,7 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
             if self.outlier_norm and (3 in f_idx or 4 in f_idx):
                 outlier_series = np.array(series)
                 outlier_series = list(
-                    catch22._normalise_series(outlier_series, np.mean(outlier_series))
+                    _normalise_series(outlier_series, np.mean(outlier_series))
                 )
 
             for n, feature in enumerate(f_idx):
@@ -1602,6 +1428,9 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
                     c22[dim + n] = features[feature](series)
 
         return c22
+
+    def _more_tags(self):
+        return {"stateless": True}
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
@@ -1621,9 +1450,7 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
             `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
             `create_test_instance` uses the first (or only) dictionary in `params`
         """
-        param1 = {"catch24": True}
-        param2 = {"features": [1, 3, 7]}
-        return [param1, param2]
+        return {"catch24": True}
 
 
 feature_names = [
@@ -1649,29 +1476,4 @@ feature_names = [
     "SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1",
     "SB_TransitionMatrix_3ac_sumdiagcov",
     "PD_PeriodicityWang_th0_01",
-]
-
-features = [
-    Catch22._DN_HistogramMode_5,
-    Catch22._DN_HistogramMode_10,
-    Catch22._SB_BinaryStats_diff_longstretch0,
-    Catch22._DN_OutlierInclude_p_001_mdrmd,
-    Catch22._DN_OutlierInclude_n_001_mdrmd,
-    Catch22._CO_f1ecac,
-    Catch22._CO_FirstMin_ac,
-    Catch22._SP_Summaries_welch_rect_area_5_1,
-    Catch22._SP_Summaries_welch_rect_centroid,
-    Catch22._FC_LocalSimple_mean3_stderr,
-    Catch22._CO_trev_1_num,
-    Catch22._CO_HistogramAMI_even_2_5,
-    Catch22._IN_AutoMutualInfoStats_40_gaussian_fmmi,
-    Catch22._MD_hrv_classic_pnn40,
-    Catch22._SB_BinaryStats_mean_longstretch1,
-    Catch22._SB_MotifThree_quantile_hh,
-    Catch22._FC_LocalSimple_mean1_tauresrat,
-    Catch22._CO_Embed2_Dist_tau_d_expfit_meandiff,
-    Catch22._SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1,
-    Catch22._SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1,
-    Catch22._SB_TransitionMatrix_3ac_sumdiagcov,
-    Catch22._PD_PeriodicityWang_th0_01,
 ]

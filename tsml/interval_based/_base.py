@@ -6,25 +6,25 @@ __author__ = ["MatthewMiddlehurst"]
 import inspect
 import time
 import warnings
-from abc import ABCMeta
 
 import numpy as np
-from joblib import Parallel, delayed
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, is_classifier, is_regressor
 from sklearn.tree import BaseDecisionTree, DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.utils import check_random_state
+from sklearn.utils.parallel import Parallel, delayed
+from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, clone_estimator
 from tsml.sklearn import CITClassifier
 from tsml.transformations.interval_extraction import (
-    RandomIntervals,
-    SupervisedIntervals,
+    RandomIntervalTransformer,
+    SupervisedIntervalTransformer,
 )
 from tsml.utils.numba_functions.stats import row_mean, row_slope, row_std
 from tsml.utils.validation import check_n_jobs, is_transformer
 
 
-class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
+class BaseIntervalForest(BaseTimeSeriesEstimator):
     """A base class for interval extracting forest estimators.
 
     Allows the implementation of classifiers and regressors along the lines of [1][2][3]
@@ -170,42 +170,14 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         self.n_jobs = n_jobs
         self.parallel_backend = parallel_backend
 
-        # The following set in method fit
-        self.n_instances_ = 0
-        self.n_dims_ = 0
-        self.series_length_ = 0
-        self.total_intervals_ = 0
-        self.estimators_ = []
-        self.intervals_ = []
-        self.atts_ = []
-        self.transformed_data_ = []
-
-        self._base_estimator = base_estimator
-        self._n_estimators = n_estimators
-        self._interval_selection_method = []
-        self._n_intervals = []
-        self._min_interval_length = []
-        self._max_interval_length = []
-        self._interval_features = []
-        self._series_transformers = []
-        self._att_subsample_size = []
-        self._threads_to_use = 0
-        self._interval_transformer = []
-        self._interval_function = []
-        self._transformer_feature_selection = []
-        self._transformer_feature_names = []
-
-        self._test_flag = False
-        self._efficient_predictions = True
-
     # if subsampling attributes, an interval_features transformer must contain a
     # parameter name from transformer_feature_selection and an attribute name from
     # transformer_feature_names to allow features to be subsampled
     transformer_feature_selection = ["features"]
-    transformer_feature_names = ["features_arguments"]
+    transformer_feature_names = ["features_arguments_"]
     # an interval_features transformer must contain one of these attribute names to
     # be able to skip transforming features in predict
-    transformer_feature_skip = ["transform_features", "_transform_features"]
+    transformer_feature_skip = ["transform_features_", "_transform_features"]
 
     _tags = {
         "capability:multivariate": True,
@@ -215,27 +187,25 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
     }
 
     def fit(self, X, y):
-        X, y = self._validate_data(
-            X=X, y=y, ensure_min_samples=2, force_all_finite="allow-nan"
-        )
+        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
-        self.classes_ = np.unique(y)
-        self.n_classes_ = self.classes_.shape[0]
-
-        # currently supported estimator types are classifier and regressor
-        if isinstance(self.estimator_type, str):
-            if self.estimator_type not in ["classifier", "regressor"]:
-                raise ValueError()  # todo error for invalid self.estimator_type
-        else:
-            raise ValueError()  # todo error for invalid self.estimator_type
+        if is_classifier(self):
+            self.classes_ = np.unique(y)
+            self.n_classes_ = self.classes_.shape[0]
+            self.class_dictionary_ = {}
+            for index, classVal in enumerate(self.classes_):
+                self.class_dictionary_[classVal] = index
 
         # default base_estimators for classification and regression
+        self._base_estimator = self.base_estimator
         if self.base_estimator is None:
-            if self.estimator_type == "classifier":
+            if is_classifier(self):
                 self._base_estimator = DecisionTreeClassifier(criterion="entropy")
-            else:
+            elif is_regressor(self):
                 self._base_estimator = DecisionTreeRegressor(criterion="absolute_error")
+            else:
+                raise ValueError()  # todo error for invalid self.base_estimator
         # base_estimator must be an sklearn estimator
         elif not isinstance(self.base_estimator, BaseEstimator):
             raise ValueError()  # todo error for invalid self.base_estimator
@@ -255,6 +225,8 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         # is in the list
         elif isinstance(self.series_transformers, (list, tuple)):
             Xt = []
+            self._series_transformers = []
+
             for transformer in self.series_transformers:
                 if transformer is None:
                     Xt.append(X)
@@ -561,10 +533,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 if any(self._interval_transformer):
                     raise ValueError()  # todo error for invalid invalid self.interval_selection_method
 
-                if (self.estimator_type == "regressor") or (
-                    hasattr(self._base_estimator, "_estimator_type")
-                    and self._base_estimator._estimator_type == "regressor"
-                ):
+                if is_regressor(self):
                     raise ValueError()  # todo error for invalid invalid self.interval_selection_method
             # RandomIntervals
             elif not self.interval_selection_method.lower() == "random":
@@ -578,16 +547,18 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         if isinstance(self.replace_nan, str):
             if (
                 not self.replace_nan.lower() == "zero"
-                or not self.replace_nan.lower() == "nan"
+                and not self.replace_nan.lower() == "nan"
             ):
                 raise ValueError()  # todo error for invalid self.replace_nan
         # other inputs are invalid except for None
         elif self.replace_nan is not None:
             raise ValueError()  # todo error for invalid self.replace_nan
 
-        self._threads_to_use = check_n_jobs(self.n_jobs)
-        self._efficient_predictions = True
+        self._n_jobs = check_n_jobs(self.n_jobs)
+        self._efficient_predictions = True  # todo
+        self._test_flag = False  # todo
 
+        self._n_estimators = self.n_estimators
         if self.time_limit_in_minutes is not None and self.time_limit_in_minutes > 0:
             time_limit = self.time_limit_in_minutes * 60
             start_time = time.time()
@@ -596,7 +567,6 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             self._n_estimators = 0
             self.estimators_ = []
             self.intervals_ = []
-            self.atts_ = []
             self.transformed_data_ = []
 
             while (
@@ -604,7 +574,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 and self._n_estimators < self.contract_max_n_estimators
             ):
                 fit = Parallel(
-                    n_jobs=self._threads_to_use,
+                    n_jobs=self._n_jobs,
                     backend=self.parallel_backend,
                     prefer="threads",
                 )(
@@ -613,13 +583,12 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                         y,
                         i,
                     )
-                    for i in range(self._threads_to_use)
+                    for i in range(self._n_jobs)
                 )
 
                 (
                     estimators,
                     intervals,
-                    atts,
                     transformed_data,
                 ) = zip(*fit)
 
@@ -627,11 +596,11 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 self.intervals_ += intervals
                 self.transformed_data_ += transformed_data
 
-                self._n_estimators += self._threads_to_use
+                self._n_estimators += self._n_jobs
                 train_time = time.time() - start_time
         else:
             fit = Parallel(
-                n_jobs=self._threads_to_use,
+                n_jobs=self._n_jobs,
                 backend=self.parallel_backend,
                 prefer="threads",
             )(
@@ -652,14 +621,11 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         return self
 
     def predict(self, X):
-        if (self.estimator_type == "regressor") or (
-            hasattr(self._base_estimator, "_estimator_type")
-            and self._base_estimator._estimator_type == "regressor"
-        ):
+        if is_regressor(self):
             Xt = self._predict_setup(X)
 
             y_preds = Parallel(
-                n_jobs=self._threads_to_use,
+                n_jobs=self._n_jobs,
                 backend=self.parallel_backend,
                 prefer="threads",
             )(
@@ -678,11 +644,11 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 [self.classes_[int(np.argmax(prob))] for prob in self._predict_proba(X)]
             )
 
-    def predict_proba(self, X):
+    def _predict_proba(self, X):
         Xt = self._predict_setup(X)
 
         y_probas = Parallel(
-            n_jobs=self._threads_to_use, backend=self.parallel_backend, prefer="threads"
+            n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
         )(
             delayed(self._predict_for_estimator)(
                 Xt,
@@ -808,7 +774,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
             # create the selected interval selector and set its parameters
             if self.interval_selection_method == "random":
-                selector = RandomIntervals(
+                selector = RandomIntervalTransformer(
                     n_intervals=self._n_intervals[r],
                     min_interval_length=self._min_interval_length[r],
                     max_interval_length=self._max_interval_length[r],
@@ -816,7 +782,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                     random_state=rs,
                 )
             elif self.interval_selection_method == "supervised":
-                selector = SupervisedIntervals(
+                selector = SupervisedIntervalTransformer(
                     n_intervals=self._n_intervals[r],
                     min_interval_length=self._min_interval_length[r],
                     features=features,
@@ -824,7 +790,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                     random_state=rs,
                 )
             elif self.interval_selection_method == "random-supervised":
-                selector = SupervisedIntervals(
+                selector = SupervisedIntervalTransformer(
                     n_intervals=self._n_intervals[r],
                     min_interval_length=self._min_interval_length[r],
                     features=features,
@@ -901,7 +867,9 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         ]
 
     def _predict_setup(self, X):
-        X = self._validate_data(X=X, reset=False, force_all_finite="allow-nan")
+        check_is_fitted(self)
+
+        X = self._validate_data(X=X, reset=False)
 
         n_instances, n_dims, series_length = X.shape
 

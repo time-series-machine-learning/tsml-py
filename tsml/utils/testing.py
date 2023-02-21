@@ -58,12 +58,14 @@ def parametrize_with_checks(estimators):
 
 
 def generate_test_data(
-    n_samples=10, n_dims=1, series_length=8, random_state=None
+    n_samples=10, n_dims=1, series_length=8, n_classes=2, random_state=None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Generate data for testing."""
     rng = np.random.RandomState(random_state)
-    X = 2 * rng.uniform(size=(n_samples, n_dims, series_length))
-    y = X[:, 0].astype(int)
-    rng.shuffle(y)
-
+    X = n_classes * rng.uniform(size=(n_samples, n_dims, series_length))
+    y = X[:, 0, 0].astype(int)
+    for i in range(n_classes):
+        if len(y) > i:
+            X[i, 0, 0] = i
+            y[i] = i
     return X, y
