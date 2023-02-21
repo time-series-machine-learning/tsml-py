@@ -476,7 +476,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
             `create_test_instance` uses the first (or only) dictionary in `params`
         """
-        return {"n_intervals": 2, "features": row_mean}
+        return {"n_intervals": 2}
 
 
 class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
@@ -948,5 +948,4 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return {
             "n_intervals": 1,
             "randomised_split_point": False,
-            "features": row_median,
         }
