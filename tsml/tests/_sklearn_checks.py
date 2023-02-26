@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""Patched estimator checks originating from scikit-learn"""
+
+__author__ = ["MatthewMiddlehurst"]
+
 import pickle
 import warnings
 from copy import deepcopy
@@ -426,7 +430,6 @@ def check_methods_subset_invariance(name, estimator_orig):
         "score_samples",
         "predict_proba",
     ]:
-
         msg = f"{method} of {name} is not invariant when applied to a subset."
 
         if hasattr(estimator, method):
@@ -682,7 +685,6 @@ def _check_transformer(name, transformer_orig, X, y):
             and X.ndim == 2
             and X.shape[1] > 1
         ):
-
             # If it's not an array, it does not have a 'T' property
             with raises(
                 ValueError,
@@ -1247,7 +1249,7 @@ def check_classifiers_train(
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X_m, y_m = test_utils.generate_test_data(n_samples=15, n_classes=3)
+    X_m, y_m = test_utils.generate_test_data(n_samples=15, n_labels=3)
 
     X_m = X_m.astype(X_dtype)
     # generate binary problem from multi-class one
@@ -1713,7 +1715,7 @@ def check_classifiers_classes(name, classifier_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X_multiclass, y_multiclass = test_utils.generate_test_data(n_classes=3)
+    X_multiclass, y_multiclass = test_utils.generate_test_data(n_labels=3)
     X_multiclass, y_multiclass = shuffle(X_multiclass, y_multiclass, random_state=7)
 
     X_binary = X_multiclass[y_multiclass != 2]
@@ -1840,7 +1842,7 @@ def check_class_weight_classifiers(name, classifier_orig):
 
     for n_classes in problems:
         # create a very noisy dataset
-        X, y = test_utils.generate_test_data(n_samples=15, n_classes=n_classes)
+        X, y = test_utils.generate_test_data(n_samples=15, n_labels=n_classes)
         rng = np.random.RandomState(0)
         X += 20 * rng.uniform(size=X.shape)
         X_train, X_test, y_train, y_test = train_test_split(
@@ -2050,7 +2052,6 @@ def check_decision_proba_consistency(name, estimator_orig):
     estimator = clone(estimator_orig)
 
     if hasattr(estimator, "decision_function") and hasattr(estimator, "predict_proba"):
-
         estimator.fit(X_train, y_train)
         # Since the link function from decision_function() to predict_proba()
         # is sometimes not precise enough (typically expit), we round to the

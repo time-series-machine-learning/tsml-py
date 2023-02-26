@@ -7,6 +7,7 @@ conventions.
 """
 
 __author__ = ["MatthewMiddlehurst"]
+__all__ = ["CITClassifier"]
 
 import math
 import sys

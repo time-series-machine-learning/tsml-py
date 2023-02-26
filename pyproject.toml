@@ -41,6 +41,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+optional_dependencies = [
+    "pycatch22",
+]
 dev = [
     "pre-commit",
     "pytest",
@@ -90,6 +93,4 @@ addopts = '''
     --showlocals
     --doctest-modules
     --numprocesses auto
-    --cov tsml
-    --cov-report xml
 '''

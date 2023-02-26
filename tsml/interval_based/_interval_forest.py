@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = ["MatthewMiddlehurst"]
+__all__ = ["IntervalForestClassifier", "IntervalForestRegressor"]
 
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin

@@ -17,7 +17,7 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.utils.validation import check_is_fitted
 
-from tsml.base import BaseTimeSeriesEstimator, clone_estimator
+from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
 from tsml.sklearn import RotationForestClassifier
 from tsml.transformations.catch22 import Catch22Transformer
 from tsml.transformations.interval_extraction import RandomIntervalTransformer
@@ -122,7 +122,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             n_jobs=self._n_jobs,
         )
 
-        self._estimator = clone_estimator(
+        self._estimator = _clone_estimator(
             RotationForestClassifier() if self.estimator is None else self.estimator,
             self.random_state,
         )
@@ -329,7 +329,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             n_jobs=self._n_jobs,
         )
 
-        self._estimator = clone_estimator(
+        self._estimator = _clone_estimator(
             RandomForestRegressor() if self.estimator is None else self.estimator,
             self.random_state,
         )
@@ -512,7 +512,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             n_jobs=self._n_jobs,
         )
 
-        self._estimator = clone_estimator(
+        self._estimator = _clone_estimator(
             RotationForestClassifier() if self.estimator is None else self.estimator,
             self.random_state,
         )

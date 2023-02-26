@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Utilities for discovering estimators in tsml."""
 
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["all_estimators"]
@@ -8,6 +9,7 @@ import pkgutil
 from importlib import import_module
 from operator import itemgetter
 from pathlib import Path
+from typing import Union
 
 from sklearn.base import (
     BaseEstimator,
@@ -23,7 +25,7 @@ _PACKAGES_TO_IGNORE = {
 }
 
 
-def all_estimators(type_filter=None):
+def all_estimators(type_filter: Union[str, list[str]] = None):
     """Get a list of all estimators from `tsml`.
 
     This function crawls the module and gets all classes that inherit
@@ -31,22 +33,28 @@ def all_estimators(type_filter=None):
     included.
 
     Uses the `scikit-learn` 1.2.1 `all_estimators` function as a base.
-    See: https://scikit-learn.org/stable/modules/generated/sklearn.utils.discovery.all_estimators.html
 
     Parameters
     ----------
-    type_filter : {"classifier", "regressor", "cluster", "transformer"} \
+    type_filter : {"classifier", "regressor", "clusterer", "transformer"} \
             or list of such str, default=None
         Which kind of estimators should be returned. If None, no filter is
         applied and all estimators are returned.  Possible values are
-        'classifier', 'regressor', 'cluster' and 'transformer' to get
+        'classifier', 'regressor', 'clusterer' and 'transformer' to get
         estimators only of these specific types, or a list of these to
         get the estimators that fit at least one of the types.
+
     Returns
     -------
     estimators : list of tuples
         List of (name, class), where ``name`` is the class name as string
         and ``class`` is the actual type of the class.
+
+    Examples
+    --------
+    >>> from tsml.utils.discovery import all_estimators
+    >>> estimators = all_estimators()
+    >>> classifiers = all_estimators(type_filter="classifier")
     """
 
     def is_abstract(c):
@@ -102,6 +110,8 @@ def all_estimators(type_filter=None):
             "classifier": ClassifierMixin,
             "regressor": RegressorMixin,
             "transformer": TransformerMixin,
+            # accept both clusterer inputs
+            "clusterer": ClusterMixin,
             "cluster": ClusterMixin,
         }
         for name, mixin in filters.items():

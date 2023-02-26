@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
+"""Utilities for testing estimators."""
 
 __author__ = ["MatthewMiddlehurst"]
-__all__ = []
+__all__ = [
+    "generate_test_estimators",
+    "parametrize_with_checks",
+    "generate_test_data",
+]
 
 from functools import partial
-from typing import Tuple
+from typing import Callable, Tuple, Union
 
 import numpy as np
+from sklearn.base import BaseEstimator
 from sklearn.utils.estimator_checks import (
     _get_check_estimator_ids,
     _maybe_mark_xfail,
@@ -18,7 +24,16 @@ from tsml.base import BaseTimeSeriesEstimator
 from tsml.utils.discovery import all_estimators
 
 
-def generate_test_estimators():
+def generate_test_estimators() -> list[BaseEstimator]:
+    """Generate a list of all estimators in tsml with test parameters.
+
+    Uses estimator parameters from `get_test_params` if available.
+
+    Returns
+    -------
+    estimators : list
+        A list of estimators using test parameters.
+    """
     classes = all_estimators()
     estimators = []
     for i, c in enumerate(classes):
@@ -36,8 +51,44 @@ def generate_test_estimators():
     return estimators
 
 
-def parametrize_with_checks(estimators):
-    """scikit-learn 1.2.1 as a base"""
+def parametrize_with_checks(estimators: list[BaseEstimator]) -> Callable:
+    """Pytest specific decorator for parametrizing estimator checks.
+
+    If the estimator is a `BaseTimeSeriesEstimator` then the `tsml` checks are used,
+    otherwise the `scikit-learn` checks are used.
+
+    The `id` of each check is set to be a pprint version of the estimator
+    and the name of the check with its keyword arguments.
+
+    This allows to use `pytest -k` to specify which tests to run::
+        pytest test_check_estimators.py -k check_estimators_fit_returns_self
+
+    Uses the `scikit-learn` 1.2.1 `parametrize_with_checks` function as a base.
+
+    Parameters
+    ----------
+    estimators : list of estimators instances
+        Estimators to generated checks for.
+
+    Returns
+    -------
+    decorator : `pytest.mark.parametrize`
+
+    See Also
+    --------
+    check_estimator : Check if estimator adheres to tsml or scikit-learn conventions.
+
+    Examples
+    --------
+    >>> from tsml.utils.testing import parametrize_with_checks
+    >>> from tsml.interval_based import DrCIFRegressor
+    >>> from tsml.sklearn import RotationForestClassifier
+    >>> @parametrize_with_checks(
+    ...     [DrCIFRegressor(), RotationForestClassifier()]
+    ... )
+    ... def test_sklearn_compatible_estimator(estimator, check):
+    ...     check(estimator)
+    """
     import pytest
 
     def checks_generator():
@@ -58,14 +109,52 @@ def parametrize_with_checks(estimators):
 
 
 def generate_test_data(
-    n_samples=10, n_dims=1, series_length=8, n_classes=2, random_state=None
+    n_samples: int = 10,
+    n_dims: int = 1,
+    series_length: int = 8,
+    n_labels: int = 2,
+    random_state: Union[int, None] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Generate data for testing."""
+    """Randomly generate 3D data for testing.
+
+    Will ensure there is at least one sample per label.
+
+    Parameters
+    ----------
+    n_samples : int
+        The number of samples to generate.
+    n_dims : int
+        The number of series dimensions to generate.
+    series_length : int
+        The number of features/series length to generate.
+    n_labels : int
+        The number of unique labels to generate.
+    random_state : int or None
+        Seed for random number generation.
+
+    Returns
+    -------
+    X : np.ndarray
+        Randomly generated 3D data.
+    y : np.ndarray
+        Randomly generated labels.
+
+    Examples
+    --------
+    >>> from tsml.utils.testing import generate_test_data
+    >>> data, labels = generate_test_data(
+    ...     n_samples=20,
+    ...     n_dims=2,
+    ...     series_length=10,
+    ...     n_labels=3,
+    ... )
+    """
     rng = np.random.RandomState(random_state)
-    X = n_classes * rng.uniform(size=(n_samples, n_dims, series_length))
+    X = n_labels * rng.uniform(size=(n_samples, n_dims, series_length))
     y = X[:, 0, 0].astype(int)
-    for i in range(n_classes):
+    for i in range(n_labels):
         if len(y) > i:
             X[i, 0, 0] = i
             y[i] = i
+    X = X * (y[:, None, None] + 1)
     return X, y

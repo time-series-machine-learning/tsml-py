@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
+"""Utilities for tsml tags."""
+
+__author__ = ["MatthewMiddlehurst"]
+
+from typing import Union
+
 import numpy as np
+from sklearn.base import BaseEstimator
 
 _DEFAULT_TAGS = {
     # sklearn tags
@@ -22,28 +29,32 @@ _DEFAULT_TAGS = {
     "requires_y": False,
     "pairwise": False,
     # tsml tags
+    "optional_dependency": False,
     "univariate_only": False,
     "equal_length_only": True,
 }
 
 
-def _safe_tags(estimator, key=None):
-    """Safely get estimator tags. todo
+def _safe_tags(
+    estimator: BaseEstimator, key: Union[str, None] = None
+) -> Union[dict, str]:
+    """Safely get estimator tags.
 
     :class:`~sklearn.BaseEstimator` provides the estimator tags machinery.
     However, if an estimator does not inherit from this base class, we should
     fall-back to the default tags.
 
-    For scikit-learn built-in estimators, we should still rely on
+    For tsml built-in estimators, we should still rely on
     `self._get_tags()`. `_safe_tags(est)` should be used when we are not sure
     where `est` comes from: typically `_safe_tags(self.base_estimator)` where
     `self` is a meta-estimator, or in the common checks.
+
+    Uses the `scikit-learn` 1.2.1 `_safe_tags` function as a base.
 
     Parameters
     ----------
     estimator : estimator object
         The estimator from which to get the tag.
-
     key : str, default=None
         Tag name to get. By default (`None`), all tags are returned.
 

@@ -1,7 +1,7 @@
 % This is a cut down version of the problem JapaneseVowels, useful for code examples and unit tests
 % http://www.timeseriesclassification.com/description.php?Dataset=JapaneseVowels
 % The train set is reduced from 270 cases to 20 cases and the test set is reduced from 370 to 20
-% The dataset has been transformed into an equal length version, with 24 length
+% The dataset has been transformed into an equal length version, with 25 length
 %
 @problemName EqualMinimalJapaneseVowels
 @timestamps false

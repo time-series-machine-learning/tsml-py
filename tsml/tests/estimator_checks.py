@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Checks for all estimators in tsml."""
 
 __author__ = ["MatthewMiddlehurst"]
 

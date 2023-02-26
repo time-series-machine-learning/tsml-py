@@ -52,6 +52,13 @@ def mean(X: np.ndarray) -> float:
     -------
     mean : float
         The mean of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import mean
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> m = mean(X)
     """
     s = 0
     for i in range(X.shape[0]):
@@ -72,6 +79,13 @@ def row_mean(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The means for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_mean
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> m = row_mean(X)
     """
     arr = np.zeros(X.shape[0])
     for i in range(X.shape[0]):
@@ -92,6 +106,13 @@ def count_mean_crossing(X: np.ndarray) -> float:
     -------
     mean_crossing_count : float
         The count above mean of first order differences of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import count_mean_crossing
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> c = count_mean_crossing(X)
     """
     m = mean(X)
     d = general_numba.first_order_differences(X > m)
@@ -115,6 +136,13 @@ def row_count_mean_crossing(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The count above mean of first order differences for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_count_mean_crossing
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> c = row_count_mean_crossing(X)
     """
     arr = np.zeros(X.shape[0])
     for i in range(X.shape[0]):
@@ -135,6 +163,13 @@ def count_above_mean(X: np.ndarray) -> float:
     -------
     mean_crossing_count : float
         The count above mean of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import count_above_mean
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> c = count_above_mean(X)
     """
     m = mean(X)
     d = X > m
@@ -158,6 +193,13 @@ def row_count_above_mean(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The count above mean for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_count_above_mean
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> c = row_count_above_mean(X)
     """
     arr = np.zeros(X.shape[0])
     for i in range(X.shape[0]):
@@ -180,6 +222,13 @@ def quantile(X: np.ndarray, q: float) -> float:
     -------
     quantile : float
         The quantile of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import quantile
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> q = quantile(X, 0.5)
     """
     if q < 0 or q > 1:
         raise ValueError("q must be between 0 and 1")
@@ -208,6 +257,13 @@ def row_quantile(X: np.ndarray, q: float) -> np.ndarray:
     -------
     arr : 1d numpy array
         The quantiles for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_quantile
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> q = row_quantile(X, 0.5)
     """
     arr = np.zeros(X.shape[0])
     for i in range(X.shape[0]):
@@ -228,6 +284,13 @@ def median(X: np.ndarray) -> float:
     -------
     median : float
         The median of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import median
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> m = median(X)
     """
     return quantile(X, 0.5)
 
@@ -245,6 +308,13 @@ def row_median(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The medians for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_median
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> m = row_median(X)
     """
     return row_quantile(X, 0.5)
 
@@ -262,6 +332,13 @@ def quantile25(X: np.ndarray) -> float:
     -------
     quantile : float
         The 0.25 quantile of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import quantile25
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> q = quantile25(X)
     """
     return quantile(X, 0.25)
 
@@ -279,6 +356,13 @@ def row_quantile25(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The 0.25 quantiles for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_quantile25
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> q = row_quantile25(X)
     """
     return row_quantile(X, 0.25)
 
@@ -296,6 +380,13 @@ def quantile75(X: np.ndarray) -> float:
     -------
     quantile : float
         The 0.75 quantile of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import quantile75
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> q = quantile75(X)
     """
     return quantile(X, 0.75)
 
@@ -313,6 +404,13 @@ def row_quantile75(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The 0.75 quantiles for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_quantile75
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> q = row_quantile75(X)
     """
     return row_quantile(X, 0.75)
 
@@ -330,6 +428,13 @@ def std(X: np.ndarray) -> float:
     -------
     std : float
         The standard deviation of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import std
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> s = std(X)
     """
     m = mean(X)
     s = 0
@@ -353,6 +458,13 @@ def std2(X: np.ndarray, X_mean: float) -> float:
     -------
     std : float
         The standard deviation of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import std2
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> s = std2(X, 3)
     """
     s = 0
     for i in range(X.shape[0]):
@@ -373,6 +485,13 @@ def row_std(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The standard deviation for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_std
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> s = row_std(X)
     """
     arr = np.zeros(X.shape[0])
     for i in range(X.shape[0]):
@@ -393,6 +512,13 @@ def numba_min(X: np.ndarray) -> float:
     -------
     min : float
         The min of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import numba_min
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> m = numba_min(X)
     """
     m = X[0]
     for i in range(1, X.shape[0]):
@@ -414,6 +540,13 @@ def row_numba_min(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The min for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_numba_min
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> m = row_numba_min(X)
     """
     arr = np.zeros(X.shape[0])
     for i in range(X.shape[0]):
@@ -434,6 +567,13 @@ def numba_max(X: np.ndarray) -> float:
     -------
     max : float
         The max of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import numba_max
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> m = numba_max(X)
     """
     m = X[0]
     for i in range(1, X.shape[0]):
@@ -455,6 +595,13 @@ def row_numba_max(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The max for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_numba_max
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> m = row_numba_max(X)
     """
     arr = np.zeros(X.shape[0])
     for i in range(X.shape[0]):
@@ -475,6 +622,13 @@ def slope(X: np.ndarray) -> float:
     -------
     slope : float
         The slope of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import slope
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> s = slope(X)
     """
     sum_y = 0
     sum_x = 0
@@ -503,6 +657,13 @@ def row_slope(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The slope for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_slope
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> s = row_slope(X)
     """
     arr = np.zeros(X.shape[0])
     for i in range(X.shape[0]):
@@ -523,6 +684,13 @@ def iqr(X: np.ndarray) -> float:
     -------
     iqr : float
         The interquartile range of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import iqr
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> i = iqr(X)
     """
     p75, p25 = np.percentile(X, [75, 25])
     return p75 - p25
@@ -541,6 +709,13 @@ def row_iqr(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The interquartile range for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_iqr
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> i = row_iqr(X)
     """
     arr = np.zeros(X.shape[0])
     for i in range(X.shape[0]):
@@ -561,6 +736,13 @@ def ppv(X: np.ndarray) -> float:
     -------
     ppv : float
         The proportion of positive values range of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import ppv
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> p = ppv(X)
     """
     count = 0
     for i in range(X.shape[0]):
@@ -582,6 +764,13 @@ def row_ppv(X: np.ndarray) -> np.ndarray:
     -------
     arr : 1d numpy array
         The proportion of positive values for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_ppv
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> p = row_ppv(X)
     """
     arr = np.zeros(X.shape[0])
     for i in range(X.shape[0]):
@@ -604,6 +793,14 @@ def fisher_score(X: np.ndarray, y: np.ndarray) -> float:
     -------
     score : float
         The Fisher score for the given array of attribute values and class values
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import fisher_score
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> y = np.array([1, 1, 1, 1, 1, 2, 2, 2, 2, 2])
+    >>> f = fisher_score(X, y)
     """
     unique_labels = np.unique(y)
     mu_feat = mean(X)

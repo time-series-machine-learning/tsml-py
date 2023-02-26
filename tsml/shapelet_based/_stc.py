@@ -12,7 +12,7 @@ import numpy as np
 from sklearn.base import ClassifierMixin
 from sklearn.utils.validation import check_is_fitted
 
-from tsml.base import BaseTimeSeriesEstimator, clone_estimator
+from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
 from tsml.sklearn import RotationForestClassifier
 from tsml.transformations.shapelet_transform import RandomShapeletTransform
 from tsml.utils.validation import check_n_jobs
@@ -195,7 +195,7 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             random_state=self.random_state,
         )
 
-        self._estimator = clone_estimator(
+        self._estimator = _clone_estimator(
             RotationForestClassifier() if self.estimator is None else self.estimator,
             self.random_state,
         )

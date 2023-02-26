@@ -1,11 +1,23 @@
 # -*- coding: utf-8 -*-
+"""Utilities for input validation"""
 
 __author__ = ["MatthewMiddlehurst"]
-__all__ = ["check_n_jobs"]
+__all__ = [
+    "check_n_jobs",
+    "is_transformer",
+    "is_clusterer",
+    "check_X_y",
+    "check_X",
+]
 
 import os
+import warnings
+from importlib import import_module
+from typing import Tuple, Union
 
 import numpy as np
+from packaging.requirements import InvalidRequirement, Requirement
+from packaging.specifiers import SpecifierSet
 from scipy import sparse
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import (
@@ -35,6 +47,11 @@ def check_n_jobs(n_jobs: int) -> int:
     -------
     n_jobs : int
         The number of threads to be used.
+
+    Examples
+    --------
+    >>> from tsml.utils.validation import check_n_jobs
+    >>> checked_n_jobs = check_n_jobs(-1)
     """
     if n_jobs is None or n_jobs == 0:
         return 1
@@ -46,41 +63,49 @@ def check_n_jobs(n_jobs: int) -> int:
         return n_jobs
 
 
-def is_transformer(estimator):
-    """Check if an estimator is a transformer. todo
+def is_transformer(estimator: BaseEstimator) -> bool:
+    """Check if an estimator is a transformer.
 
     Parameters
     ----------
-    estimator : object
+    estimator : BaseEstimator
         The estimator to check.
 
     Returns
     -------
     is_transformer : bool
-        True if the estimator is a transformer, False otherwise.
+        True if estimator is a transformer and False otherwise.
     """
     return isinstance(estimator, TransformerMixin) and isinstance(
         estimator, BaseEstimator
     )
 
 
-def is_clusterer(estimator):
-    """Return True if the given estimator is (probably) a classifier.  #todo
+def is_clusterer(estimator: BaseEstimator) -> bool:
+    """Check if an estimator is a clusterer.
 
     Parameters
     ----------
-    estimator : object
-        Estimator object to test.
+    estimator : BaseEstimator
+        The estimator to check.
 
     Returns
     -------
-    out : bool
-        True if estimator is a classifier and False otherwise.
+    is_clusterer : bool
+        True if estimator is a clusterer and False otherwise.
     """
     return getattr(estimator, "_estimator_type", None) == "clusterer"
 
 
-def _num_features(X):
+def _num_features(X: Union[np.ndarray, list[np.ndarray]]) -> tuple[int]:
+    """Return the number of features of a 3D numpy array or a list of 2D numpy arrays.
+
+    Returns
+    -------
+    num_features : tuple
+        A tuple containing the number of dimensions, the minimum series length and the
+        maximum series length of X.
+    """
     if isinstance(X, np.ndarray) and X.ndim == 3:
         return X.shape[1], X.shape[2], X.shape[2]
     elif isinstance(X, list) and isinstance(X[0], np.ndarray) and X[0].ndim == 2:
@@ -91,110 +116,88 @@ def _num_features(X):
 
 
 def check_X_y(
-    X,
-    y,
-    dtype="numeric",
-    copy=False,
-    force_all_finite=True,
-    convert_2d=True,
-    ensure_min_samples=1,
-    ensure_min_dimensions=1,
-    ensure_min_series_length=2,
-    estimator=None,
-    y_numeric=False,
-):
+    X: object,
+    y: object,
+    dtype: Union[str, type, None] = "numeric",
+    copy: bool = False,
+    force_all_finite: bool = True,
+    convert_2d: bool = True,
+    ensure_min_samples: int = 1,
+    ensure_min_dimensions: int = 1,
+    ensure_min_series_length: int = 2,
+    estimator: Union[str, BaseEstimator, None] = None,
+    y_numeric: bool = False,
+) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[list[np.ndarray], np.ndarray]]:
     """Input validation for standard estimators.
 
-    Checks X and y for consistent length, enforces X to be 2D and y 1D. By
-    default, X is checked to be non-empty and containing only finite values.
-    Standard input checks are also applied to y, such as checking that y
-    does not have np.nan or np.inf targets. For multi-label y, set
-    multi_output=True to allow 2D and sparse y. If the dtype of X is
-    object, attempt converting to float, raising on failure.
+    Checks X and y for consistent length, enforces X to be 3D and y 1D. By default,
+    the input is checked to be a non-empty 2D numpy array, 3D numpy array or list of
+    2D numpy arrays containing only finite values. If the dtype of the array is
+    object, attempt converting to float, raising on failure. Standard input checks are
+    also applied to y, such as checking that y does not have np.nan or np.inf targets.
+
+    If X input is array-like but not a 3D array or list of 2D arrays, the function
+    will attempt to convert the input into a numpy array and validate it as such. 2D
+    numpy arrays will be converted to a 3D numpy array of shape (n,1,m).
+
+    Uses the `scikit-learn` 1.2.1 `check_X_y` function as a base.
 
     Parameters
     ----------
-    X : {ndarray, list, sparse matrix}
-        Input data.
-
-    y : {ndarray, list, sparse matrix}
-        Labels.
-
-    accept_sparse : str, bool or list of str, default=False
-        String[s] representing allowed sparse matrix formats, such as 'csc',
-        'csr', etc. If the input is sparse but not in the allowed format,
-        it will be converted to the first listed format. True allows the input
-        to be any format. False means that a sparse matrix input will
-        raise an error.
-
-    accept_large_sparse : bool, default=True
-        If a CSR, CSC, COO or BSR sparse matrix is supplied and accepted by
-        accept_sparse, accept_large_sparse will cause it to be accepted only
-        if its indices are stored with a 32-bit dtype.
-
-        .. versionadded:: 0.20
-
+    X : object
+        Input dataset to check/convert. Ideally a 3D numpy array or a list of 2D numpy
+        arrays.
+    y : object
+        Input labels to check/convert. Ideally a 1D numpy array..
     dtype : 'numeric', type, list of type or None, default='numeric'
         Data type of result. If None, the dtype of the input is preserved.
         If "numeric", dtype is preserved unless array.dtype is object.
         If dtype is a list of types, conversion on the first type is only
         performed if the dtype of the input is not in the list.
-
-    order : {'F', 'C'}, default=None
-        Whether an array will be forced to be fortran or c-style.
-
     copy : bool, default=False
         Whether a forced copy will be triggered. If copy=False, a copy might
         be triggered by a conversion.
-
     force_all_finite : bool or 'allow-nan', default=True
-        Whether to raise an error on np.inf, np.nan, pd.NA in X. This parameter
-        does not influence whether y can have np.inf, np.nan, pd.NA values.
-        The possibilities are:
+        Whether to raise an error on np.inf, np.nan, pd.NA in array. The
+        possibilities are:
 
-        - True: Force all values of X to be finite.
-        - False: accepts np.inf, np.nan, pd.NA in X.
-        - 'allow-nan': accepts only np.nan or pd.NA values in X. Values cannot
-          be infinite.
-
-        .. versionadded:: 0.20
-           ``force_all_finite`` accepts the string ``'allow-nan'``.
-
-        .. versionchanged:: 0.23
-           Accepts `pd.NA` and converts it into `np.nan`
-
-    ensure_2d : bool, default=True
-        Whether to raise a value error if X is not 2D.
-
-    allow_nd : bool, default=False
-        Whether to allow X.ndim > 2.
-
+        - True: Force all values of array to be finite.
+        - False: accepts np.inf, np.nan, pd.NA in array.
+        - 'allow-nan': accepts only np.nan and pd.NA values in array. Values
+          cannot be infinite.
     ensure_min_samples : int, default=1
-        Make sure that X has a minimum number of samples in its first
-        axis (rows for a 2D array).
-
-    ensure_min_features : int, default=1
-        Make sure that the 2D array has some minimum number of features
-        (columns). The default value of 1 rejects empty datasets.
-        This check is only enforced when X has effectively 2 dimensions or
-        is originally 1D and ``ensure_2d`` is True. Setting to 0 disables
+        Make sure that the array has a minimum number of samples in its first
+        axis (number of items for list of 2D numpy array). Setting to 0 disables this
+        check.
+    ensure_min_dimensions : int, default=1
+        Make sure that the array has a minimum number of dimensions in its second
+        axis (first axis of all items for list of 2D numpy array). Setting to 0 disables
         this check.
-
+    ensure_min_series_length : int, default=1
+        Make sure that the array has some minimum number of features/series length in
+        its third axis (second axis of all items for list of 2D numpy array). Setting
+        to 0 disables this check.
+        The default value of 2 rejects empty datasets and non-series.
     y_numeric : bool, default=False
         Whether to ensure that y has a numeric type. If dtype of y is object,
         it is converted to float64. Should only be used for regression
         algorithms.
-
-    estimator : str or estimator instance, default=None
+    estimator : str, estimator instance or None, default=None
         If passed, include the name of the estimator in warning messages.
 
     Returns
     -------
     X_converted : object
         The converted and validated X.
-
     y_converted : object
         The converted and validated y.
+
+    Examples
+    --------
+    >>> from tsml.utils.validation import check_X_y
+    >>> from tsml.datasets import load_minimal_chinatown
+    >>> X, y = load_minimal_chinatown()
+    >>> X, y = check_X_y(X, y, dtype=np.float32, ensure_min_series_length=8)
     """
     if y is None:
         if estimator is None:
@@ -225,37 +228,41 @@ def check_X_y(
 
 
 def check_X(
-    X,
-    dtype="numeric",
-    copy=False,
-    force_all_finite=True,
-    convert_2d=True,
-    ensure_min_samples=1,
-    ensure_min_dimensions=1,
-    ensure_min_series_length=2,
-    estimator=None,
-):
-    """Input validation on an array, list, sparse matrix or similar.
+    X: object,
+    dtype: Union[str, type, None] = "numeric",
+    copy: bool = False,
+    force_all_finite: bool = True,
+    convert_2d: bool = True,
+    ensure_min_samples: int = 1,
+    ensure_min_dimensions: int = 1,
+    ensure_min_series_length: int = 2,
+    estimator: Union[str, BaseEstimator, None] = None,
+) -> Union[np.ndarray, list]:
+    """Input validation on a numpy array or list dataset.
 
-    By default, the input is checked to be a non-empty 2D array containing
-    only finite values. If the dtype of the array is object, attempt
-    converting to float, raising on failure.
+    By default, the input is checked to be a non-empty 2D numpy array, 3D numpy array or
+    list of 2D numpy arrays containing only finite values. If the dtype of the array is
+    object, attempt converting to float, raising on failure.
+
+    If the input is array-like but not a 3D array or list of 2D arrays, the function
+    will attempt to convert the input into a numpy array and validate it as such. 2D
+    numpy arrays will be converted to a 3D numpy array of shape (n,1,m).
+
+    Uses the `scikit-learn` 1.2.1 `check_array` function as a base.
 
     Parameters
     ----------
     X : object
-        Input object to check / convert.
-
+        Input object to check/convert. Ideally a 3D numpy array or a list of 2D numpy
+        arrays.
     dtype : 'numeric', type, list of type or None, default='numeric'
         Data type of result. If None, the dtype of the input is preserved.
         If "numeric", dtype is preserved unless array.dtype is object.
         If dtype is a list of types, conversion on the first type is only
         performed if the dtype of the input is not in the list.
-
     copy : bool, default=False
         Whether a forced copy will be triggered. If copy=False, a copy might
         be triggered by a conversion.
-
     force_all_finite : bool or 'allow-nan', default=True
         Whether to raise an error on np.inf, np.nan, pd.NA in array. The
         possibilities are:
@@ -264,34 +271,33 @@ def check_X(
         - False: accepts np.inf, np.nan, pd.NA in array.
         - 'allow-nan': accepts only np.nan and pd.NA values in array. Values
           cannot be infinite.
-
-        .. versionadded:: 0.20
-           ``force_all_finite`` accepts the string ``'allow-nan'``.
-
-        .. versionchanged:: 0.23
-           Accepts `pd.NA` and converts it into `np.nan`
-
     ensure_min_samples : int, default=1
         Make sure that the array has a minimum number of samples in its first
-        axis (rows for a 2D array). Setting to 0 disables this check.
-
+        axis (number of items for list of 2D numpy array). Setting to 0 disables this
+        check.
     ensure_min_dimensions : int, default=1
-        pass
-
+        Make sure that the array has a minimum number of dimensions in its second
+        axis (first axis of all items for list of 2D numpy array). Setting to 0 disables
+        this check.
     ensure_min_series_length : int, default=1
-        Make sure that the 2D array has some minimum number of features
-        (columns). The default value of 1 rejects empty datasets.
-        This check is only enforced when the input data has effectively 2
-        dimensions or is originally 1D and ``ensure_2d`` is True. Setting to 0
-        disables this check.
-
-    estimator : str or estimator instance, default=None
+        Make sure that the array has some minimum number of features/series length in
+        its third axis (second axis of all items for list of 2D numpy array). Setting
+        to 0 disables this check.
+        The default value of 2 rejects empty datasets and non-series.
+    estimator : str, estimator instance or None, default=None
         If passed, include the name of the estimator in warning messages.
 
     Returns
     -------
     X_converted : object
         The converted and validated X.
+
+    Examples
+    --------
+    >>> from tsml.utils.validation import check_X
+    >>> from tsml.datasets import load_minimal_chinatown
+    >>> X, _ = load_minimal_chinatown()
+    >>> X = check_X(X, dtype=np.float32, ensure_min_series_length=8)
     """
     if isinstance(X, np.matrix):
         raise TypeError(
@@ -310,8 +316,10 @@ def check_X(
     # function returns
     X_orig = X
 
+    # we check numpy arrays later
     if isinstance(X, np.ndarray):
         pass
+    # assume this is a list of numpy arrays
     elif isinstance(X, list) and not isinstance(X[0], list):
         for i, x in enumerate(X):
             _ensure_no_complex_data(x)
@@ -326,18 +334,18 @@ def check_X(
                     "X is a list of np.ndarray objects, but not all arrays are 2D. "
                     f"Found {x.ndim} dimensions at index {i}."
                 )
-            if x.shape[0] != X[0].shape[0]:
+            if x.shape[0] < 2:
+                raise ValueError(
+                    "X must have a series length of at least 2. Found series length "
+                    f"{x.shape[1]} at index {i}."
+                )
+            elif x.shape[0] != X[0].shape[0]:
                 raise ValueError(
                     "X is a list of np.ndarray objects, but not all arrays have "
                     "the same number of dimensions. "
                     f"Found {x.shape[0]} dimensions at index {i} and "
                     f"{X[0].shape[0]} at index 0."
                 )
-
-            raise ValueError(
-                "X must have a series length of at least 2. Found series length "
-                f"{x.shape[1]} at index {i}."
-            )
 
         dtype_orig = [getattr(x, "dtype", None) for x in X]
 
@@ -351,6 +359,7 @@ def check_X(
             dtype_orig = None
             if dtype is None:
                 dtype = v[np.argmax(c)]
+    # attempt to convert unknown array-like objects or nested lists to numpy arrays
     elif isinstance(X, list) or hasattr(X, "__array__"):
         try:
             X = np.array(X)
@@ -367,12 +376,13 @@ def check_X(
             f"Found {type(X)}."
         )
 
+    # check numpy arrays, these may have been converted from list-like objects above
     is_np = False
     if isinstance(X, np.ndarray):
         _ensure_no_complex_data(X)
 
+        # convert 2D numpy arrays to univariate 3D data.
         if X.ndim == 2 and convert_2d:
-            # convert 2D numpy arrays to univariate 3D data.
             X = X.reshape((X.shape[0], 1, -1))
         elif X.ndim == 1:
             raise ValueError(
@@ -488,3 +498,76 @@ def check_X(
             ]
 
     return X
+
+
+def _check_optional_dependency(
+    package_name: str,
+    package_import_name: str,
+    source_name: Union[str, BaseEstimator],
+):
+    """Check if an optional dependency is installed and raise error if not.
+
+    If the dependency is installed but the version is outdated, a warning is raised.
+
+    Parameters
+    ----------
+    package_name : str
+        Name of the package to perform an installation check for. Can include version
+        requirements i.e. tsfresh or tsfresh>=0.17.0.
+    package_import_name : str
+        The import name of the package. i.e. for the package `scikit-learn` the import
+        name is `sklearn`, while for the package `tsfresh` the import name is the same
+        as the package name `tsfresh`.
+    source_name : str or BaseEstimator
+        Source of the check i.e. an estimator or function. If a BaseEstimator is passed
+        the class name of the estimator is used.
+
+    Raises
+    ------
+    ModuleNotFoundError
+        Error with informative message, asking to install required the dependency.
+
+    Examples
+    --------
+    >>> from tsml.utils.validation import _check_optional_dependency
+    >>> _check_optional_dependency(
+    ...     "scikit-learn",
+    ...     "sklearn",
+    ...     "_check_optional_dependency",
+    ... )
+    """
+    if isinstance(source_name, BaseEstimator):
+        source_name = source_name.__class__.__name__
+
+    try:
+        req = Requirement(package_name)
+    except InvalidRequirement:
+        msg_version = (
+            f"Unable to find requirements from input {package_name}.Input should be a "
+            f'valid package requirements str e.g. "tsfresh" or "tsfresh>=0.17.0".'
+        )
+        raise InvalidRequirement(msg_version)
+
+    package_version_req = req.specifier
+
+    try:
+        # attempt to import package
+        pkg_ref = import_module(package_import_name)
+    except ModuleNotFoundError as e:
+        # package cannot be imported
+        raise ModuleNotFoundError(
+            f'{source_name} has an optional dependency and requires "{package_name}" '
+            f'to be installed. Run: "pip install {package_name}" or "pip install '
+            f'tsml[optional_dependencies]" to install all optional dependencies.'
+        ) from e
+
+    # check installed version is compatible
+    if package_version_req != SpecifierSet(""):
+        pkg_env_version = pkg_ref.__version__
+
+        if pkg_env_version not in package_version_req:
+            warnings.warn(
+                f'{source_name} requires "{package_name}", but found version '
+                f"{pkg_env_version}.",
+                stacklevel=2,
+            )
