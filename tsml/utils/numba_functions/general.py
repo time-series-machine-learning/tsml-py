@@ -60,7 +60,7 @@ def unique_count(X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
             else:
                 counts[uc] += 1
         return unique[: uc + 1], counts[: uc + 1]
-    return np.zeros(0, dtype=np.int32), np.zeros(0, dtype=np.int32)
+    return np.zeros(0), np.zeros(0, dtype=np.int32)
 
 
 @njit(fastmath=True, cache=True)

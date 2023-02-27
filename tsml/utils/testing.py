@@ -36,7 +36,7 @@ def generate_test_estimators() -> list[BaseEstimator]:
     """
     classes = all_estimators()
     estimators = []
-    for i, c in enumerate(classes):
+    for c in classes:
         m = getattr(c[1], "get_test_params", None)
         if callable(m):
             params = c[1].get_test_params()
@@ -81,10 +81,10 @@ def parametrize_with_checks(estimators: list[BaseEstimator]) -> Callable:
     Examples
     --------
     >>> from tsml.utils.testing import parametrize_with_checks
-    >>> from tsml.interval_based import DrCIFRegressor
+    >>> from tsml.interval_based import TSFRegressor
     >>> from tsml.sklearn import RotationForestClassifier
     >>> @parametrize_with_checks(
-    ...     [DrCIFRegressor(), RotationForestClassifier()]
+    ...     [TSFRegressor(), RotationForestClassifier()]
     ... )
     ... def test_sklearn_compatible_estimator(estimator, check):
     ...     check(estimator)

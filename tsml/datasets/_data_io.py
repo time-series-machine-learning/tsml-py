@@ -58,7 +58,12 @@ def load_from_ts_file(
     Examples
     --------
     >>> from tsml.datasets import load_from_ts_file
-    >>> X, y = load_from_ts_file("MinimalChinatown/MinimalChinatown_TRAIN.ts")
+    >>> path = (
+    ... "MinimalChinatown/MinimalChinatown_TRAIN.ts"
+    ...  if os.path.exists("MinimalChinatown/MinimalChinatown_TRAIN.ts") else
+    ... "tsml/datasets/MinimalChinatown/MinimalChinatown_TRAIN.ts"
+    ... )
+    >>> X, y = load_from_ts_file(path)
     """
     # Initialize flags and variables used when parsing the file
     timestamps = False
@@ -100,7 +105,8 @@ def load_from_ts_file(
                 tokens = line.split(" ")
                 if len(tokens) == 1:
                     raise IOError(
-                        "Invalid .ts file. @problemname tag requires str value (the problems name)."
+                        "Invalid .ts file. @problemname tag requires str value "
+                        "(the problems name)."
                     )
             elif line.startswith("@timestamps"):
                 tokens = line.split(" ")
@@ -154,14 +160,16 @@ def load_from_ts_file(
                 tokens = line.split(" ")
                 if len(tokens) != 2:
                     raise IOError(
-                        "Invalid .ts file. @dimension tag requires a int value (the number of dimensions for the problem)."
+                        "Invalid .ts file. @dimension tag requires a int value "
+                        "(the number of dimensions for the problem)."
                     )
 
                 try:
                     dimensions = int(tokens[1])
                 except ValueError:
                     raise IOError(
-                        "Invalid .ts file. @dimension tag requires a int value (the number of dimensions for the problem)."
+                        "Invalid .ts file. @dimension tag requires a int value "
+                        "(the number of dimensions for the problem)."
                     )
 
                 dimensions_tag = True
@@ -185,21 +193,24 @@ def load_from_ts_file(
                 tokens = line.split(" ")
                 if len(tokens) != 2:
                     raise IOError(
-                        "Invalid .ts file. @serieslength tag requires a int value (the number of dimensions for the problem)."
+                        "Invalid .ts file. @serieslength tag requires a int value "
+                        "(the number of dimensions for the problem)."
                     )
 
                 try:
                     serieslength = int(tokens[1])
                 except ValueError:
                     raise IOError(
-                        "Invalid .ts file. @serieslength tag requires a int value (the number of dimensions for the problem)."
+                        "Invalid .ts file. @serieslength tag requires a int value "
+                        "(the number of dimensions for the problem)."
                     )
 
                 serieslength_tag = True
             elif line.startswith("@targetlabel"):
                 if classlabels_tag:
                     raise IOError(
-                        "Invalid .ts file. @targetlabel tag cannot be used with @classlabel tag."
+                        "Invalid .ts file. @targetlabel tag cannot be used with "
+                        "@classlabel tag."
                     )
 
                 tokens = line.split(" ")
@@ -219,14 +230,16 @@ def load_from_ts_file(
 
                 if token_len > 2:
                     raise IOError(
-                        f"Invalid .ts file. @targetlabel tag should not be accompanied with info apart from True/False, but found {tokens}."
+                        f"Invalid .ts file. @targetlabel tag should not be accompanied "
+                        f"with info apart from True/False, but found {tokens}."
                     )
 
                 targetlabels_tag = True
             elif line.startswith("@classlabel"):
                 if targetlabels_tag:
                     raise IOError(
-                        "Invalid .ts file. @classlabel tag cannot be used with @targetlabel tag."
+                        "Invalid .ts file. @classlabel tag cannot be used with "
+                        "@targetlabel tag."
                     )
 
                 tokens = line.split(" ")
@@ -246,12 +259,14 @@ def load_from_ts_file(
 
                 if not classlabel and token_len > 2:
                     raise IOError(
-                        f"Invalid .ts file. @classlabel tag should not be accompanied with additional info when False, but found {tokens}."
+                        f"Invalid .ts file. @classlabel tag should not be accompanied "
+                        f"with additional info when False, but found {tokens}."
                     )
 
                 elif classlabel and token_len == 2:
                     raise IOError(
-                        "Invalid .ts file. @classlabel tag is true but no Class values are supplied."
+                        "Invalid .ts file. @classlabel tag is true but no Class values "
+                        "are supplied."
                     )
 
                 class_label_list = [token.strip() for token in tokens[2:]]
@@ -272,7 +287,8 @@ def load_from_ts_file(
 
             if len(lines) == data_start_line + 1:
                 raise IOError(
-                    "Invalid .ts file. A @data tag is present but no subsequent data is present."
+                    "Invalid .ts file. A @data tag is present but no subsequent data "
+                    "is present."
                 )
             else:
                 first_line = lines[data_start_line].split(":")
@@ -284,7 +300,8 @@ def load_from_ts_file(
                 has_labels = classlabel
             else:
                 raise IOError(
-                    "Unable to read .ts file. A @classlabel or @targetlabel tag is required."
+                    "Unable to read .ts file. A @classlabel or @targetlabel tag is "
+                    "required."
                 )
 
             # Equal length tag is required.
@@ -309,7 +326,8 @@ def load_from_ts_file(
                 not timestamps_tag or (timestamps_tag and not timestamps)
             ) and has_timestamps:
                 raise IOError(
-                    "Value mismatch in .ts file. @timestamps tag is missing or False but data has timestamps. Timestamps are currently not supported."
+                    "Value mismatch in .ts file. @timestamps tag is missing or False "
+                    "but data has timestamps. Timestamps are currently not supported."
                 )
             elif has_timestamps:
                 raise IOError(
@@ -322,17 +340,20 @@ def load_from_ts_file(
                 not univariate_tag or (univariate_tag and univariate)
             ) and data_dims > 1:
                 raise IOError(
-                    "Value mismatch in .ts file. @univariate tag is missing or True but data has more than one dimension."
+                    "Value mismatch in .ts file. @univariate tag is missing or True "
+                    "but data has more than one dimension."
                 )
 
             if dimensions_tag and dimensions != data_dims:
                 raise IOError(
-                    f"Value mismatch in .ts file. @dimensions tag value {dimensions} and read number of dimensions {data_dims} do not match."
+                    f"Value mismatch in .ts file. @dimensions tag value {dimensions} "
+                    f"and read number of dimensions {data_dims} do not match."
                 )
 
             if serieslength_tag and serieslength != data_length:
                 raise IOError(
-                    f"Value mismatch in .ts file. @serieslength tag value {serieslength} and read series length {data_length} do not match."
+                    f"Value mismatch in .ts file. @serieslength tag value "
+                    f"{serieslength} and read series length {data_length} do not match."
                 )
 
             if equallength:
@@ -390,7 +411,8 @@ def load_from_ts_file(
 
     if not data_started:
         raise IOError(
-            "Invalid .ts file. File contains metadata but no @data tag to signal the start of data."
+            "Invalid .ts file. File contains metadata but no @data tag to signal the "
+            "start of data."
         )
 
     if has_labels:
