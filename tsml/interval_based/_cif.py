@@ -118,7 +118,12 @@ class CIFRegressor(ClassifierMixin, BaseIntervalForest):
         if base_estimator is None:
             base_estimator = DecisionTreeRegressor()
 
-        interval_features = [Catch22(outlier_norm=True), row_mean, row_std, row_slope]
+        interval_features = [
+            Catch22Transformer(outlier_norm=True),
+            row_mean,
+            row_std,
+            row_slope,
+        ]
 
         super(CIFRegressor, self).__init__(
             base_estimator=base_estimator,

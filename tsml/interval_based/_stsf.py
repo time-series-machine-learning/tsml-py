@@ -94,10 +94,10 @@ class RSTSFClassifier(ClassifierMixin, BaseIntervalForest):
         # min interval length
         # check defaults for others
 
-        per_X = _getPeriodogramRepr(X)
-        diff_X = np.diff(X)
-        ar_X = _ar_coefs(X)
-        ar_X[np.isnan(ar_X)] = 0
+        # per_X = _getPeriodogramRepr(X)
+        # diff_X = np.diff(X)
+        # ar_X = _ar_coefs(X)
+        # ar_X[np.isnan(ar_X)] = 0
 
         def _getPeriodogramRepr(X):
             nfeats = X.shape[1]
@@ -137,8 +137,6 @@ class RSTSFClassifier(ClassifierMixin, BaseIntervalForest):
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
         )
-
-        super(RSTSFClassifier, self).__init__()
 
     def predict_proba(self, X):
         return self._predict_proba(X)
