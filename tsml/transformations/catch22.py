@@ -5,7 +5,7 @@ A transformer for the Catch22 features.
 """
 
 __author__ = ["MatthewMiddlehurst"]
-__all__ = ["Catch22Transformer", "Catch22Wrapper"]
+__all__ = ["Catch22Transformer", "Catch22WrapperTransformer"]
 
 import math
 
@@ -16,7 +16,7 @@ from sklearn.base import TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator
-from tsml.utils.validation import check_n_jobs
+from tsml.utils.validation import _check_optional_dependency, check_n_jobs
 
 
 class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
@@ -137,8 +137,6 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         c22 : Pandas DataFrame of shape [n_instances, c*n_dimensions] where c is the
              number of features requested, containing Catch22 features for X.
         """
-        check_is_fitted(self)
-
         X = self._validate_data(X=X, reset=False)
 
         n_instances = X.shape[0]
@@ -1229,7 +1227,7 @@ def _verify_features(features, catch24):
     return f_idx
 
 
-class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
+class Catch22WrapperTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     """Canonical Time-series Characteristics (Catch22) C Wrapper.
 
     Wraps the pycatch22 implementation for sktime
@@ -1298,7 +1296,9 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
         self.replace_nans = replace_nans
         self.n_jobs = n_jobs
 
-        super(Catch22Wrapper, self).__init__()
+        _check_optional_dependency("pycatch22", "pycatch22", self)
+
+        super(Catch22WrapperTransformer, self).__init__()
 
     def fit(self, X, y=None):
         self._validate_data(X=X)
@@ -1341,8 +1341,6 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
         c22 : Pandas DataFrame of shape [n_instances, c*n_dimensions] where c is the
              number of features requested, containing Catch22 features for X.
         """
-        check_is_fitted(self)
-
         X = self._validate_data(X=X, reset=False)
 
         n_instances = X.shape[0]
@@ -1430,7 +1428,7 @@ class Catch22Wrapper(TransformerMixin, BaseTimeSeriesEstimator):
         return c22
 
     def _more_tags(self):
-        return {"stateless": True}
+        return {"stateless": True, "optional_dependency": True}
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):

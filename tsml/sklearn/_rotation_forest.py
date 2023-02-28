@@ -6,6 +6,7 @@ conventions.
 """
 
 __author__ = ["MatthewMiddlehurst"]
+__all__ = ["RotationForestClassifier"]
 
 import time
 
@@ -18,7 +19,7 @@ from sklearn.utils import check_random_state
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted
 
-from tsml.base import clone_estimator
+from tsml.base import _clone_estimator
 from tsml.utils.validation import check_n_jobs
 
 
@@ -159,7 +160,7 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
         if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], -1))
 
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2, dtype=np.float32)
 
         check_classification_targets(y)
 
@@ -286,7 +287,7 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
         if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], -1))
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, dtype=np.float32)
 
         # replace missing values with 0 and remove useless attributes
         X = X[:, self._useful_atts]
@@ -412,7 +413,7 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
             [pcas[i].transform(X[:, group]) for i, group in enumerate(groups)], axis=1
         )
         X_t = np.nan_to_num(X_t, False, 0, 0, 0)
-        tree = clone_estimator(self._base_estimator, random_state=rs)
+        tree = _clone_estimator(self._base_estimator, random_state=rs)
         tree.fit(X_t, y)
 
         return tree, pcas, groups, X_t if self.save_transformed_data else None
@@ -450,7 +451,7 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
         if len(oob) == 0:
             return [results, oob]
 
-        clf = clone_estimator(self._base_estimator, rs)
+        clf = _clone_estimator(self._base_estimator, rs)
         clf.fit(self.transformed_data_[idx][subsample], y[subsample])
         probas = clf.predict_proba(self.transformed_data_[idx][oob])
 

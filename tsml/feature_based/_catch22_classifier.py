@@ -12,7 +12,7 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.utils.validation import check_is_fitted
 
-from tsml.base import BaseTimeSeriesEstimator, clone_estimator
+from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
 from tsml.transformations.catch22 import Catch22Transformer
 from tsml.utils.validation import check_n_jobs
 
@@ -130,7 +130,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
             n_jobs=self._n_jobs,
         )
 
-        self._estimator = clone_estimator(
+        self._estimator = _clone_estimator(
             RandomForestClassifier(n_estimators=200)
             if self.estimator is None
             else self.estimator,
@@ -345,7 +345,7 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
             n_jobs=self._n_jobs,
         )
 
-        self._estimator = clone_estimator(
+        self._estimator = _clone_estimator(
             RandomForestRegressor(n_estimators=200)
             if self.estimator is None
             else self.estimator,

@@ -1,25 +1,23 @@
 # -*- coding: utf-8 -*-
 
 __author__ = ["MatthewMiddlehurst"]
-__all__ = ["TSFClassifier", "TSFRegressor"]
+__all__ = ["RISEClassifier", "RISERegressor"]
 
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.utils.parallel import Parallel, delayed
 
 from tsml.interval_based._base import BaseIntervalForest
 from tsml.sklearn import CITClassifier
 
 
-class TSFClassifier(ClassifierMixin, BaseIntervalForest):
+class RISEClassifier(ClassifierMixin, BaseIntervalForest):
     """TODO."""
 
     def __init__(
         self,
         base_estimator=None,
         n_estimators=200,
-        n_intervals="sqrt",
         min_interval_length=3,
         max_interval_length=np.inf,
         time_limit_in_minutes=None,
@@ -29,19 +27,24 @@ class TSFClassifier(ClassifierMixin, BaseIntervalForest):
         n_jobs=1,
         parallel_backend=None,
     ):
+        if base_estimator is None:
+            base_estimator = DecisionTreeClassifier(criterion="entropy")
+
         if isinstance(base_estimator, CITClassifier):
             replace_nan = "nan"
         else:
             replace_nan = "zero"
 
-        super(TSFClassifier, self).__init__(
+        interval_features = []
+
+        super(RISEClassifier, self).__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
-            n_intervals=n_intervals,
+            n_intervals=1,
             min_interval_length=min_interval_length,
             max_interval_length=max_interval_length,
-            interval_features=None,
+            interval_features=interval_features,
             series_transformers=None,
             att_subsample_size=None,
             replace_nan=replace_nan,
@@ -80,18 +83,16 @@ class TSFClassifier(ClassifierMixin, BaseIntervalForest):
         """
         return {
             "n_estimators": 2,
-            "n_intervals": 2,
         }
 
 
-class TSFRegressor(RegressorMixin, BaseIntervalForest):
+class RISERegressor(RegressorMixin, BaseIntervalForest):
     """TODO."""
 
     def __init__(
         self,
         base_estimator=None,
         n_estimators=200,
-        n_intervals="sqrt",
         min_interval_length=3,
         max_interval_length=np.inf,
         time_limit_in_minutes=None,
@@ -101,14 +102,19 @@ class TSFRegressor(RegressorMixin, BaseIntervalForest):
         n_jobs=1,
         parallel_backend=None,
     ):
-        super(TSFRegressor, self).__init__(
+        if base_estimator is None:
+            base_estimator = DecisionTreeClassifier(criterion="entropy")
+
+        interval_features = []
+
+        super(RISERegressor, self).__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
-            n_intervals=n_intervals,
+            n_intervals=1,
             min_interval_length=min_interval_length,
             max_interval_length=max_interval_length,
-            interval_features=None,
+            interval_features=interval_features,
             series_transformers=None,
             att_subsample_size=None,
             replace_nan="zero",
@@ -144,5 +150,4 @@ class TSFRegressor(RegressorMixin, BaseIntervalForest):
         """
         return {
             "n_estimators": 2,
-            "n_intervals": 2,
         }

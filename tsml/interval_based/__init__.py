@@ -14,6 +14,7 @@ __all__ = [
     # "RISEClassifier",
     # "RISERegressor",
     # "STSFClassifier",
+    # "RSTSFClassifier",
     "TSFClassifier",
     "TSFRegressor",
 ]

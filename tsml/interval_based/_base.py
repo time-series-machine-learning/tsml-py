@@ -2,6 +2,7 @@
 """A base class for interval extracting forest estimators"""
 
 __author__ = ["MatthewMiddlehurst"]
+__all__ = ["BaseIntervalForest"]
 
 import inspect
 import time
@@ -14,7 +15,7 @@ from sklearn.utils import check_random_state
 from sklearn.utils.parallel import Parallel, delayed
 from sklearn.utils.validation import check_is_fitted
 
-from tsml.base import BaseTimeSeriesEstimator, clone_estimator
+from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
 from tsml.sklearn import CITClassifier
 from tsml.transformations.interval_extraction import (
     RandomIntervalTransformer,
@@ -216,7 +217,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
             self._series_transformers = [None]
         # clone series_transformers if it is a transformer and transform the input data
         elif is_transformer(self.series_transformers):
-            t = clone_estimator(
+            t = _clone_estimator(
                 self.series_transformers, random_state=self.random_state
             )
             Xt = [t.fit_transform(X, y)]
@@ -232,7 +233,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
                     Xt.append(X)
                     self._series_transformers.append(None)
                 elif is_transformer(transformer):
-                    t = clone_estimator(transformer, random_state=self.random_state)
+                    t = _clone_estimator(transformer, random_state=self.random_state)
                     Xt.append(t.fit_transform(X, y))
                     self._series_transformers.append(t)
                 else:
@@ -743,7 +744,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
 
                         # tell this transformer to only transform the selected features
                         if len(t_features) > 0:
-                            new_transformer = clone_estimator(transformer, rs)
+                            new_transformer = _clone_estimator(transformer, rs)
                             setattr(
                                 new_transformer,
                                 self._transformer_feature_selection[r][n],
@@ -760,7 +761,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
                     )
                     for feature in self._interval_features[r]:
                         if is_transformer(feature):
-                            features.append(clone_estimator(feature, rs))
+                            features.append(_clone_estimator(feature, rs))
                         else:
                             features.append(feature)
             # add all features while cloning estimators if not subsampling
@@ -768,7 +769,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
                 features = []
                 for feature in self._interval_features[r]:
                     if is_transformer(feature):
-                        features.append(clone_estimator(feature, rs))
+                        features.append(_clone_estimator(feature, rs))
                     else:
                         features.append(feature)
 
@@ -818,7 +819,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
             )
 
         # clone and fit the base estimator using the transformed data
-        tree = clone_estimator(self._base_estimator, random_state=rs)
+        tree = _clone_estimator(self._base_estimator, random_state=rs)
         tree.fit(interval_features, y)
 
         # find the features used in the tree and inform the interval selectors to not

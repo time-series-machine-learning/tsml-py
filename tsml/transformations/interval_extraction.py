@@ -14,7 +14,7 @@ from sklearn.base import TransformerMixin
 from sklearn.utils import check_random_state
 from sklearn.utils.validation import check_is_fitted
 
-from tsml.base import BaseTimeSeriesEstimator, clone_estimator
+from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
 from tsml.utils.numba_functions.general import z_normalise_series_3d
 from tsml.utils.numba_functions.stats import (
     fisher_score,
@@ -288,7 +288,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         for feature in self._features:
             if is_transformer(feature):
                 li.append(
-                    clone_estimator(
+                    _clone_estimator(
                         feature,
                         self.random_state,
                     )
@@ -353,7 +353,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         for feature in self._features:
             if is_transformer(feature):
                 if transform:
-                    feature = clone_estimator(
+                    feature = _clone_estimator(
                         feature,
                         rs,
                     )
@@ -552,6 +552,8 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     .. [2] Cabello, N., Naghizade, E., Qi, J. and Kulik, L., 2021. Fast, accurate and
         interpretable time series classification through randomization. arXiv preprint
         arXiv:2105.14876.
+
+    Examples
     """
 
     def __init__(

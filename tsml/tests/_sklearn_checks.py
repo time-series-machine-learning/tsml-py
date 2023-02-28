@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""Patched estimator checks originating from scikit-learn"""
+
+__author__ = ["MatthewMiddlehurst"]
+
 import pickle
 import warnings
 from copy import deepcopy
@@ -41,7 +45,6 @@ from sklearn.utils.estimator_checks import (
     _is_public_parameter,
     _NotAnArray,
     _regression_dataset,
-    check_classifiers_predictions,
     check_estimators_data_not_an_array,
 )
 from sklearn.utils.metaestimators import _safe_split
@@ -426,7 +429,6 @@ def check_methods_subset_invariance(name, estimator_orig):
         "score_samples",
         "predict_proba",
     ]:
-
         msg = f"{method} of {name} is not invariant when applied to a subset."
 
         if hasattr(estimator, method):
@@ -682,7 +684,6 @@ def _check_transformer(name, transformer_orig, X, y):
             and X.ndim == 2
             and X.shape[1] > 1
         ):
-
             # If it's not an array, it does not have a 'T' property
             with raises(
                 ValueError,
@@ -1247,7 +1248,7 @@ def check_classifiers_train(
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X_m, y_m = test_utils.generate_test_data(n_samples=15, n_classes=3)
+    X_m, y_m = test_utils.generate_test_data(n_samples=15, n_labels=3)
 
     X_m = X_m.astype(X_dtype)
     # generate binary problem from multi-class one
@@ -1713,7 +1714,7 @@ def check_classifiers_classes(name, classifier_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X_multiclass, y_multiclass = test_utils.generate_test_data(n_classes=3)
+    X_multiclass, y_multiclass = test_utils.generate_test_data(n_labels=3)
     X_multiclass, y_multiclass = shuffle(X_multiclass, y_multiclass, random_state=7)
 
     X_binary = X_multiclass[y_multiclass != 2]
@@ -1741,6 +1742,65 @@ def check_classifiers_classes(name, classifier_orig):
     y_names_binary = np.take(labels_binary, y_binary)
     y_binary = _choose_check_classifiers_labels(name, y_binary, y_names_binary)
     check_classifiers_predictions(X_binary, y_binary, name, classifier_orig)
+
+
+@ignore_warnings
+def check_classifiers_predictions(X, y, name, classifier_orig):
+    classes = np.unique(y)
+    classifier = clone(classifier_orig)
+    if name == "BernoulliNB":
+        X = X > X.mean()
+    set_random_state(classifier)
+
+    classifier.fit(X, y)
+    y_pred = classifier.predict(X)
+
+    if hasattr(classifier, "decision_function"):
+        decision = classifier.decision_function(X)
+        assert isinstance(decision, np.ndarray)
+        if len(classes) == 2:
+            dec_pred = (decision.ravel() > 0).astype(int)
+            dec_exp = classifier.classes_[dec_pred]
+            assert_array_equal(
+                dec_exp,
+                y_pred,
+                err_msg=(
+                    "decision_function does not match "
+                    "classifier for %r: expected '%s', got '%s'"
+                )
+                % (
+                    classifier,
+                    ", ".join(map(str, dec_exp)),
+                    ", ".join(map(str, y_pred)),
+                ),
+            )
+        elif getattr(classifier, "decision_function_shape", "ovr") == "ovr":
+            decision_y = np.argmax(decision, axis=1).astype(int)
+            y_exp = classifier.classes_[decision_y]
+            assert_array_equal(
+                y_exp,
+                y_pred,
+                err_msg=(
+                    "decision_function does not match "
+                    "classifier for %r: expected '%s', got '%s'"
+                )
+                % (
+                    classifier,
+                    ", ".join(map(str, y_exp)),
+                    ", ".join(map(str, y_pred)),
+                ),
+            )
+
+    assert_array_equal(
+        classes,
+        classifier.classes_,
+        err_msg="Unexpected classes_ attribute for %r: expected '%s', got '%s'"
+        % (
+            classifier,
+            ", ".join(map(str, classes)),
+            ", ".join(map(str, classifier.classes_)),
+        ),
+    )
 
 
 @ignore_warnings(category=FutureWarning)
@@ -1840,7 +1900,7 @@ def check_class_weight_classifiers(name, classifier_orig):
 
     for n_classes in problems:
         # create a very noisy dataset
-        X, y = test_utils.generate_test_data(n_samples=15, n_classes=n_classes)
+        X, y = test_utils.generate_test_data(n_samples=15, n_labels=n_classes)
         rng = np.random.RandomState(0)
         X += 20 * rng.uniform(size=X.shape)
         X_train, X_test, y_train, y_test = train_test_split(
@@ -2050,7 +2110,6 @@ def check_decision_proba_consistency(name, estimator_orig):
     estimator = clone(estimator_orig)
 
     if hasattr(estimator, "decision_function") and hasattr(estimator, "predict_proba"):
-
         estimator.fit(X_train, y_train)
         # Since the link function from decision_function() to predict_proba()
         # is sometimes not precise enough (typically expit), we round to the

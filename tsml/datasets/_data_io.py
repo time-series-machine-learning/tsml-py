@@ -24,28 +24,46 @@ def load_from_ts_file(
     X_dtype: Union[None, type] = None,
     y_dtype: Union[None, type] = None,
 ) -> Union[np.ndarray, list, Tuple[np.ndarray, np.ndarray], Tuple[list, np.ndarray]]:
-    """Load data from a .ts file into a Pandas DataFrame.
+    """Load data from a .ts file into a 3D numpy array or list of 2D numpy arrays.
 
-    req equallength and (targetlabels or classlabels)
+    If the data to be loaded is equal length, a 3D numpy array will be returned. If the
+    data is unequal length, a list of 2D numpy arrays will be returned. If labels are
+    present, they will be returned as well as the data.
+
+    The only mandatory tags in the loaded file are @equallength and one of
+    @targetlabels or @classlabels. Other details can be inferred, though some error
+    checking will be done if they are present.
 
     Parameters
     ----------
     file_path: str
         The full pathname of the .ts file to read.
-    replace_missing_vals_with: None, int or float, default=None
-       The value that missing values in the text file should be replaced
-       with prior to parsing.
+    replace_missing_vals_with: str, int or float, default="NaN"
+        The value that missing values reprented by '?' in the text file should be
+        replaced with.
+    X_dtype: type or None, default=None
+        The data type of the loaded data X.
+    y_dtype: type or None, default=None
+        The data type of the loaded labels y if present.
 
     Returns
     -------
-    DataFrame (default) or ndarray (i
-        If return_separate_X_and_y then a tuple containing a DataFrame and a
-        numpy array containing the relevant time-series and corresponding
-        class values.
-    DataFrame
-        If not return_separate_X_and_y then a single DataFrame containing
-        all time-series and (if relevant) a column "class_vals" the
-        associated class values.
+    X: np.ndarray or list
+        The data from the file. If the data is equal length, a 3D numpy array will be
+        returned, else a list of 2D numpy arrays.
+    y: np.ndarray
+        If labels are present in the file, a numpy array containing the label values
+        will also be returned.
+
+    Examples
+    --------
+    >>> from tsml.datasets import load_from_ts_file
+    >>> path = (
+    ... "MinimalChinatown/MinimalChinatown_TRAIN.ts"
+    ...  if os.path.exists("MinimalChinatown/MinimalChinatown_TRAIN.ts") else
+    ... "tsml/datasets/MinimalChinatown/MinimalChinatown_TRAIN.ts"
+    ... )
+    >>> X, y = load_from_ts_file(path)
     """
     # Initialize flags and variables used when parsing the file
     timestamps = False
@@ -87,7 +105,8 @@ def load_from_ts_file(
                 tokens = line.split(" ")
                 if len(tokens) == 1:
                     raise IOError(
-                        "Invalid .ts file. @problemname tag requires str value (the problems name)."
+                        "Invalid .ts file. @problemname tag requires str value "
+                        "(the problems name)."
                     )
             elif line.startswith("@timestamps"):
                 tokens = line.split(" ")
@@ -141,14 +160,16 @@ def load_from_ts_file(
                 tokens = line.split(" ")
                 if len(tokens) != 2:
                     raise IOError(
-                        "Invalid .ts file. @dimension tag requires a int value (the number of dimensions for the problem)."
+                        "Invalid .ts file. @dimension tag requires a int value "
+                        "(the number of dimensions for the problem)."
                     )
 
                 try:
                     dimensions = int(tokens[1])
                 except ValueError:
                     raise IOError(
-                        "Invalid .ts file. @dimension tag requires a int value (the number of dimensions for the problem)."
+                        "Invalid .ts file. @dimension tag requires a int value "
+                        "(the number of dimensions for the problem)."
                     )
 
                 dimensions_tag = True
@@ -172,21 +193,24 @@ def load_from_ts_file(
                 tokens = line.split(" ")
                 if len(tokens) != 2:
                     raise IOError(
-                        "Invalid .ts file. @serieslength tag requires a int value (the number of dimensions for the problem)."
+                        "Invalid .ts file. @serieslength tag requires a int value "
+                        "(the number of dimensions for the problem)."
                     )
 
                 try:
                     serieslength = int(tokens[1])
                 except ValueError:
                     raise IOError(
-                        "Invalid .ts file. @serieslength tag requires a int value (the number of dimensions for the problem)."
+                        "Invalid .ts file. @serieslength tag requires a int value "
+                        "(the number of dimensions for the problem)."
                     )
 
                 serieslength_tag = True
             elif line.startswith("@targetlabel"):
                 if classlabels_tag:
                     raise IOError(
-                        "Invalid .ts file. @targetlabel tag cannot be used with @classlabel tag."
+                        "Invalid .ts file. @targetlabel tag cannot be used with "
+                        "@classlabel tag."
                     )
 
                 tokens = line.split(" ")
@@ -206,14 +230,16 @@ def load_from_ts_file(
 
                 if token_len > 2:
                     raise IOError(
-                        f"Invalid .ts file. @targetlabel tag should not be accompanied with info apart from True/False, but found {tokens}."
+                        f"Invalid .ts file. @targetlabel tag should not be accompanied "
+                        f"with info apart from True/False, but found {tokens}."
                     )
 
                 targetlabels_tag = True
             elif line.startswith("@classlabel"):
                 if targetlabels_tag:
                     raise IOError(
-                        "Invalid .ts file. @classlabel tag cannot be used with @targetlabel tag."
+                        "Invalid .ts file. @classlabel tag cannot be used with "
+                        "@targetlabel tag."
                     )
 
                 tokens = line.split(" ")
@@ -233,12 +259,14 @@ def load_from_ts_file(
 
                 if not classlabel and token_len > 2:
                     raise IOError(
-                        f"Invalid .ts file. @classlabel tag should not be accompanied with additional info when False, but found {tokens}."
+                        f"Invalid .ts file. @classlabel tag should not be accompanied "
+                        f"with additional info when False, but found {tokens}."
                     )
 
                 elif classlabel and token_len == 2:
                     raise IOError(
-                        "Invalid .ts file. @classlabel tag is true but no Class values are supplied."
+                        "Invalid .ts file. @classlabel tag is true but no Class values "
+                        "are supplied."
                     )
 
                 class_label_list = [token.strip() for token in tokens[2:]]
@@ -259,7 +287,8 @@ def load_from_ts_file(
 
             if len(lines) == data_start_line + 1:
                 raise IOError(
-                    "Invalid .ts file. A @data tag is present but no subsequent data is present."
+                    "Invalid .ts file. A @data tag is present but no subsequent data "
+                    "is present."
                 )
             else:
                 first_line = lines[data_start_line].split(":")
@@ -271,7 +300,8 @@ def load_from_ts_file(
                 has_labels = classlabel
             else:
                 raise IOError(
-                    "Unable to read .ts file. A @classlabel or @targetlabel tag is required."
+                    "Unable to read .ts file. A @classlabel or @targetlabel tag is "
+                    "required."
                 )
 
             # Equal length tag is required.
@@ -296,7 +326,8 @@ def load_from_ts_file(
                 not timestamps_tag or (timestamps_tag and not timestamps)
             ) and has_timestamps:
                 raise IOError(
-                    "Value mismatch in .ts file. @timestamps tag is missing or False but data has timestamps. Timestamps are currently not supported."
+                    "Value mismatch in .ts file. @timestamps tag is missing or False "
+                    "but data has timestamps. Timestamps are currently not supported."
                 )
             elif has_timestamps:
                 raise IOError(
@@ -309,17 +340,20 @@ def load_from_ts_file(
                 not univariate_tag or (univariate_tag and univariate)
             ) and data_dims > 1:
                 raise IOError(
-                    "Value mismatch in .ts file. @univariate tag is missing or True but data has more than one dimension."
+                    "Value mismatch in .ts file. @univariate tag is missing or True "
+                    "but data has more than one dimension."
                 )
 
             if dimensions_tag and dimensions != data_dims:
                 raise IOError(
-                    f"Value mismatch in .ts file. @dimensions tag value {dimensions} and read number of dimensions {data_dims} do not match."
+                    f"Value mismatch in .ts file. @dimensions tag value {dimensions} "
+                    f"and read number of dimensions {data_dims} do not match."
                 )
 
             if serieslength_tag and serieslength != data_length:
                 raise IOError(
-                    f"Value mismatch in .ts file. @serieslength tag value {serieslength} and read series length {data_length} do not match."
+                    f"Value mismatch in .ts file. @serieslength tag value "
+                    f"{serieslength} and read series length {data_length} do not match."
                 )
 
             if equallength:
@@ -377,7 +411,8 @@ def load_from_ts_file(
 
     if not data_started:
         raise IOError(
-            "Invalid .ts file. File contains metadata but no @data tag to signal the start of data."
+            "Invalid .ts file. File contains metadata but no @data tag to signal the "
+            "start of data."
         )
 
     if has_labels:
@@ -389,62 +424,33 @@ def load_from_ts_file(
 def load_minimal_chinatown(
     split: Union[None, str] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Load MinimalChinatown data.
+    """Load MinimalChinatown time series classification problem.
 
     This is an equal length univariate time series classification problem. It is a
     stripped down version of the ChinaTown problem that is used in correctness tests
-    for classification. It loads a two class classification problem with number of
-    cases, n, where n = 42 (if split is None) or 20/22 (if split is "train"/"test")
-    of series length m = 24
+    for classification. It loads a two class classification problem with 20 cases
+    for both the train and test split and a series length of 24.
+
+    For the full dataset see
+    http://timeseriesclassification.com/description.php?Dataset=Chinatown
 
     Parameters
     ----------
-    split: None or one of "TRAIN", "TEST", optional (default=None)
-        Whether to load the train or test instances of the problem.
-        By default it loads both train and test instances (in a single container).
-    return_X_y: bool, optional (default=True)
-        If True, returns (features, target) separately instead of a single
-        dataframe with columns for features and the target.
-    return_type: valid Panel mtype str or None, optional (default=None="nested_univ")
-        Memory data format specification to return X in, None = "nested_univ" type.
-        str can be any supported sktime Panel mtype,
-            for list of mtypes, see datatypes.MTYPE_REGISTER
-            for specifications, see examples/AA_datatypes_and_datasets.ipynb
-        commonly used specifications:
-            "nested_univ: nested pd.DataFrame, pd.Series in cells
-            "numpy3D"/"numpy3d"/"np3D": 3D np.ndarray (instance, variable, time index)
-            "numpy2d"/"np2d"/"numpyflat": 2D np.ndarray (instance, time index)
-            "pd-multiindex": pd.DataFrame with 2-level (instance, time) MultiIndex
-        Exception is raised if the data cannot be stored in the requested type.
+    split: "TRAIN", "TEST" or None, default=None
+        Whether to load the train or test instances of the problem. If None, loads
+        both train and test instances (in a single container).
 
     Returns
     -------
-    X:  The time series data for the problem. If return_type is either
-        "numpy2d"/"numpyflat", it returns 2D numpy array of shape (n,m), if "numpy3d" it
-        returns 3D numpy array of shape (n,1,m) and if "nested_univ" or None it returns
-        a nested pandas DataFrame of shape (n,1), where each cell is a pd.Series of
-        length m.
-    y: (optional) numpy array shape (n,1). The class labels for each case in X.
-        If return_X_y is False, y is appended to X.
+    X: np.ndarray
+        The time series data for the problem of shape (20,1,24).
+    y: np.ndarray
+        The class labels for each case in X.
 
     Examples
     --------
     >>> from tsml.datasets import load_minimal_chinatown
     >>> X, y = load_minimal_chinatown()
-
-    Details
-    -------
-    This is the Chinatown problem with a smaller test set, useful for rapid tests.
-    Dimensionality:     univariate
-    Series length:      24
-    Train cases:        20
-    Test cases:         20 (full dataset has 345)
-    Number of classes:  2
-
-     See
-    http://timeseriesclassification.com/description.php?Dataset=Chinatown
-    for the full dataset
     """
     return _load_provided_dataset("MinimalChinatown", split)
 
@@ -452,48 +458,35 @@ def load_minimal_chinatown(
 def load_unequal_minimal_chinatown(
     split: Union[None, str] = None
 ) -> Tuple[list, np.ndarray]:
-    """
-    Load MinimalChinatown data.
+    """Load UnequalMinimalChinatown time series classification problem.
 
-    This is an equal length univariate time series classification problem. It is a
+    This is an unequal length univariate time series classification problem. It is a
     stripped down version of the ChinaTown problem that is used in correctness tests
-    for classification. It loads a two class classification problem with number of
-    cases, n, where n = 42 (if split is None) or 20/22 (if split is "train"/"test")
-    of series length m = 24
+    for classification. Parts of the original series have been randomly removed. It
+    loads a two class classification problem with 20 cases for both the train and test
+    split.
+
+    For the full dataset see
+    http://timeseriesclassification.com/description.php?Dataset=Chinatown
 
     Parameters
     ----------
-    split: None or one of "TRAIN", "TEST", optional (default=None)
-        Whether to load the train or test instances of the problem.
-        By default it loads both train and test instances (in a single container).
+    split: "TRAIN", "TEST" or None, default=None
+        Whether to load the train or test instances of the problem. If None, loads
+        both train and test instances (in a single container).
 
     Returns
     -------
-    X:  The time series data for the problem. If return_type is either
-        "numpy2d"/"numpyflat", it returns 2D numpy array of shape (n,m), if "numpy3d" it
-        returns 3D numpy array of shape (n,1,m) and if "nested_univ" or None it returns
-        a nested pandas DataFrame of shape (n,1), where each cell is a pd.Series of
-        length m.
-    y: (optional) numpy array shape (n,1). The class labels for each case in X.
-        If return_X_y is False, y is appended to X.
+    X: list of np.ndarray
+        The time series data for the problem in a list of size 20 containing 2D
+        ndarrays.
+    y: np.ndarray
+        The class labels for each case in X.
 
     Examples
     --------
     >>> from tsml.datasets import load_unequal_minimal_chinatown
     >>> X, y = load_unequal_minimal_chinatown()
-
-    Details
-    -------
-    This is the Chinatown problem with a smaller test set, useful for rapid tests.
-    Dimensionality:     univariate
-    Series length:      24
-    Train cases:        20
-    Test cases:         20 (full dataset has 345)
-    Number of classes:  2
-
-     See
-    http://timeseriesclassification.com/description.php?Dataset=Chinatown
-    for the full dataset
     """
     return _load_provided_dataset("UnequalMinimalChinatown", split)
 
@@ -501,53 +494,34 @@ def load_unequal_minimal_chinatown(
 def load_equal_minimal_japanese_vowels(
     split: Union[None, str] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Load the JapaneseVowels time series classification problem.
+    """Load the EqualMinimalJapaneseVowels time series classification problem.
 
-    Example of a multivariate problem with unequal length series.
+    This is an equal length multivariate time series classification problem. It is a
+    stripped down version of the JapaneseVowels problem that is used in correctness
+    tests for classification. It has been altered so all series are equal length. It
+    loads a nine class classification problem with 20 cases for both the train and test
+    split, 12 dimensions and a series length of 25.
+
+    For the full dataset see
+    http://www.timeseriesclassification.com/description.php?Dataset=JapaneseVowels
 
     Parameters
     ----------
-    split: None or one of "TRAIN", "TEST", optional (default=None)
-        Whether to load the train or test instances of the problem.
-        By default it loads both train and test instances (in a single container).
+    split: "TRAIN", "TEST" or None, default=None
+        Whether to load the train or test instances of the problem. If None, loads
+        both train and test instances (in a single container).
 
     Returns
     -------
-    X: pd.DataFrame with m rows and c columns
-        The time series data for the problem with m cases and c dimensions
-    y: numpy array
-        The class labels for each case in X
+    X: np.ndarray
+        The time series data for the problem of shape (20,12,25).
+    y: np.ndarray
+        The class labels for each case in X.
 
     Examples
     --------
     >>> from tsml.datasets import load_equal_minimal_japanese_vowels
     >>> X, y = load_equal_minimal_japanese_vowels()
-
-    Notes
-    -----
-    Dimensionality:     multivariate, 12
-    Series length:      7-29
-    Train cases:        270
-    Test cases:         370
-    Number of classes:  9
-
-    A UCI Archive dataset. 9 Japanese-male speakers were recorded saying
-    the vowels 'a' and 'e'. A '12-degree
-    linear prediction analysis' is applied to the raw recordings to
-    obtain time-series with 12 dimensions and series lengths between 7 and 29.
-    The classification task is to predict the speaker. Therefore,
-    each instance is a transformed utterance,
-    12*29 values with a single class label attached, [1...9]. The given
-    training set is comprised of 30
-    utterances for each speaker, however the test set has a varied
-    distribution based on external factors of
-    timing and experimental availability, between 24 and 88 instances per
-    speaker. Reference: M. Kudo, J. Toyama
-    and M. Shimbo. (1999). "Multidimensional Curve Classification Using
-    Passing-Through Regions". Pattern
-    Recognition Letters, Vol. 20, No. 11--13, pages 1103--1111.
-    Dataset details: http://timeseriesclassification.com/description.php
-    ?Dataset=JapaneseVowels
     """
     return _load_provided_dataset("EqualMinimalJapaneseVowels", split)
 
@@ -555,53 +529,34 @@ def load_equal_minimal_japanese_vowels(
 def load_minimal_japanese_vowels(
     split: Union[None, str] = None
 ) -> Tuple[list, np.ndarray]:
-    """Load the JapaneseVowels time series classification problem.
+    """Load the MinimalJapaneseVowels time series classification problem.
 
-    Example of a multivariate problem with unequal length series.
+    This is an unequal length multivariate time series classification problem. It is a
+    stripped down version of the JapaneseVowels problem that is used in correctness
+    tests for classification. It loads a nine class classification problem with 20 cases
+    for both the train and test split and 12 dimensions.
+
+    For the full dataset see
+    http://www.timeseriesclassification.com/description.php?Dataset=JapaneseVowels
 
     Parameters
     ----------
-    split: None or one of "TRAIN", "TEST", optional (default=None)
-        Whether to load the train or test instances of the problem.
-        By default it loads both train and test instances (in a single container).
+    split: "TRAIN", "TEST" or None, default=None
+        Whether to load the train or test instances of the problem. If None, loads
+        both train and test instances (in a single container).
 
     Returns
     -------
-    X: pd.DataFrame with m rows and c columns
-        The time series data for the problem with m cases and c dimensions
-    y: numpy array
-        The class labels for each case in X
+    X: list of np.ndarray
+        The time series data for the problem in a list of size 20 containing 2D
+        ndarrays.
+    y: np.ndarray
+        The class labels for each case in X.
 
     Examples
     --------
     >>> from tsml.datasets import load_minimal_japanese_vowels
     >>> X, y = load_minimal_japanese_vowels()
-
-    Notes
-    -----
-    Dimensionality:     multivariate, 12
-    Series length:      7-29
-    Train cases:        270
-    Test cases:         370
-    Number of classes:  9
-
-    A UCI Archive dataset. 9 Japanese-male speakers were recorded saying
-    the vowels 'a' and 'e'. A '12-degree
-    linear prediction analysis' is applied to the raw recordings to
-    obtain time-series with 12 dimensions and series lengths between 7 and 29.
-    The classification task is to predict the speaker. Therefore,
-    each instance is a transformed utterance,
-    12*29 values with a single class label attached, [1...9]. The given
-    training set is comprised of 30
-    utterances for each speaker, however the test set has a varied
-    distribution based on external factors of
-    timing and experimental availability, between 24 and 88 instances per
-    speaker. Reference: M. Kudo, J. Toyama
-    and M. Shimbo. (1999). "Multidimensional Curve Classification Using
-    Passing-Through Regions". Pattern
-    Recognition Letters, Vol. 20, No. 11--13, pages 1103--1111.
-    Dataset details: http://timeseriesclassification.com/description.php
-    ?Dataset=JapaneseVowels
     """
     return _load_provided_dataset("MinimalJapaneseVowels", split)
 
@@ -609,43 +564,30 @@ def load_minimal_japanese_vowels(
 def load_minimal_gas_prices(
     split: Union[None, str] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Load dataset of last three months confirmed covid cases.
+    """Load the MinimalGasPrices time series extrinsic regression problem.
+
+    This is an equal length univariate time series regression problem. It is a
+    stripped down version of the GasPricesSentiment problem that is used in correctness
+    tests for regression. It loads a regression problem with 20 cases for both the train
+    and test split and a series length of 20.
 
     Parameters
     ----------
-    split: None or str{"train", "test"}, optional (default=None)
-        Whether to load the train or test partition of the problem. By
-        default, it loads both.
+    split: "TRAIN", "TEST" or None, default=None
+        Whether to load the train or test instances of the problem. If None, loads
+        both train and test instances (in a single container).
 
     Returns
     -------
-    X: pd.DataFrame with m rows and c columns
-        The time series data for the problem with m cases and c dimensions
-    y: numpy array
-        The regression values for each case in X
+    X: np.ndarray
+        The time series data for the problem of shape (20,1,20).
+    y: np.ndarray
+        The labels for each case in X.
 
     Examples
     --------
     >>> from tsml.datasets import load_minimal_gas_prices
     >>> X, y = load_minimal_gas_prices()
-
-    Notes
-    -----
-    Dimensionality:     univariate
-    Series length:      84
-    Train cases:        140
-    Test cases:         61
-    Number of classes:  -
-
-    The goal of this dataset is to predict COVID-19's death rate on 1st April 2020 for
-    each country using daily confirmed cases for the last three months. This dataset
-    contains 201 time series with no missing values, where each time series is
-    the daily confirmed cases for a country.
-    The data was obtained from WHO's COVID-19 database.
-    Please refer to https://covid19.who.int/ for more details
-
-    Dataset details: https://zenodo.org/record/3902690#.Yy1z_HZBxEY
-    =Covid3Month
     """
     return _load_provided_dataset("MinimalGasPrices", split)
 
@@ -653,43 +595,31 @@ def load_minimal_gas_prices(
 def load_unequal_minimal_gas_prices(
     split: Union[None, str] = None
 ) -> Tuple[list, np.ndarray]:
-    """Load dataset of last three months confirmed covid cases.
+    """Load the UnequalMinimalGasPrices time series extrinsic regression problem.
+
+    This is an unequal length univariate time series regression problem. It is a
+    stripped down version of the GasPricesSentiment problem that is used in correctness
+    tests for regression. Parts of the original series have been randomly removed. It
+    loads a regression problem with 20 cases for both the train  and test split.
 
     Parameters
     ----------
-    split: None or str{"train", "test"}, optional (default=None)
-        Whether to load the train or test partition of the problem. By
-        default, it loads both.
+    split: "TRAIN", "TEST" or None, default=None
+        Whether to load the train or test instances of the problem. If None, loads
+        both train and test instances (in a single container).
 
     Returns
     -------
-    X: pd.DataFrame with m rows and c columns
-        The time series data for the problem with m cases and c dimensions
-    y: numpy array
-        The regression values for each case in X
+    X: list of np.ndarray
+        The time series data for the problem in a list of size 20 containing 2D
+        ndarrays.
+    y: np.ndarray
+        The labels for each case in X.
 
     Examples
     --------
     >>> from tsml.datasets import load_unequal_minimal_gas_prices
     >>> X, y = load_unequal_minimal_gas_prices()
-
-    Notes
-    -----
-    Dimensionality:     univariate
-    Series length:      84
-    Train cases:        140
-    Test cases:         61
-    Number of classes:  -
-
-    The goal of this dataset is to predict COVID-19's death rate on 1st April 2020 for
-    each country using daily confirmed cases for the last three months. This dataset
-    contains 201 time series with no missing values, where each time series is
-    the daily confirmed cases for a country.
-    The data was obtained from WHO's COVID-19 database.
-    Please refer to https://covid19.who.int/ for more details
-
-    Dataset details: https://zenodo.org/record/3902690#.Yy1z_HZBxEY
-    =Covid3Month
     """
     return _load_provided_dataset("UnequalMinimalGasPrices", split)
 
@@ -698,24 +628,25 @@ def _load_provided_dataset(
     name: str,
     split: Union[None, str] = None,
 ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[list, np.ndarray]]:
-    """Load baked in time series classification datasets (helper function).
+    """Load baked in time series datasets.
 
-    Loads data from the provided files from sktime/datasets/data only.
+    Loads data from the provided tsml dataset files only.
 
     Parameters
     ----------
-    name : string, file name to load from
-    split: None or one of "TRAIN", "TEST", optional (default=None)
-        Whether to load the train or test instances of the problem.
-        By default it loads both train and test instances (in a single container).
+    name : str
+        File name to load from.
+    split: "TRAIN", "TEST" or None, default=None
+        Whether to load the train or test instances of the problem. If None, loads
+        both train and test instances (in a single container).
 
     Returns
     -------
-    X: sktime data container, following mtype specification `return_type`
-        The time series data for the problem, with n instances
-    y: 1D numpy array of length n, only returned if return_X_y if True
-        The class labels for each time series instance in X
-        If return_X_y is False, y is appended to X instead.
+    X: np.ndarray or list of np.ndarray
+        The time series data for the problem in a 3D array if the data is equal length
+        or a list containing 2D arrays if it is unequal.
+    y: np.ndarray
+        The labels for each case in X.
     """
     if isinstance(split, str):
         split = split.upper()
