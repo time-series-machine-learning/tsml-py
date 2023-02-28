@@ -45,7 +45,6 @@ from sklearn.utils.estimator_checks import (
     _is_public_parameter,
     _NotAnArray,
     _regression_dataset,
-    check_classifiers_predictions,
     check_estimators_data_not_an_array,
 )
 from sklearn.utils.metaestimators import _safe_split
@@ -1743,6 +1742,65 @@ def check_classifiers_classes(name, classifier_orig):
     y_names_binary = np.take(labels_binary, y_binary)
     y_binary = _choose_check_classifiers_labels(name, y_binary, y_names_binary)
     check_classifiers_predictions(X_binary, y_binary, name, classifier_orig)
+
+
+@ignore_warnings
+def check_classifiers_predictions(X, y, name, classifier_orig):
+    classes = np.unique(y)
+    classifier = clone(classifier_orig)
+    if name == "BernoulliNB":
+        X = X > X.mean()
+    set_random_state(classifier)
+
+    classifier.fit(X, y)
+    y_pred = classifier.predict(X)
+
+    if hasattr(classifier, "decision_function"):
+        decision = classifier.decision_function(X)
+        assert isinstance(decision, np.ndarray)
+        if len(classes) == 2:
+            dec_pred = (decision.ravel() > 0).astype(int)
+            dec_exp = classifier.classes_[dec_pred]
+            assert_array_equal(
+                dec_exp,
+                y_pred,
+                err_msg=(
+                    "decision_function does not match "
+                    "classifier for %r: expected '%s', got '%s'"
+                )
+                % (
+                    classifier,
+                    ", ".join(map(str, dec_exp)),
+                    ", ".join(map(str, y_pred)),
+                ),
+            )
+        elif getattr(classifier, "decision_function_shape", "ovr") == "ovr":
+            decision_y = np.argmax(decision, axis=1).astype(int)
+            y_exp = classifier.classes_[decision_y]
+            assert_array_equal(
+                y_exp,
+                y_pred,
+                err_msg=(
+                    "decision_function does not match "
+                    "classifier for %r: expected '%s', got '%s'"
+                )
+                % (
+                    classifier,
+                    ", ".join(map(str, y_exp)),
+                    ", ".join(map(str, y_pred)),
+                ),
+            )
+
+    assert_array_equal(
+        classes,
+        classifier.classes_,
+        err_msg="Unexpected classes_ attribute for %r: expected '%s', got '%s'"
+        % (
+            classifier,
+            ", ".join(map(str, classes)),
+            ", ".join(map(str, classifier.classes_)),
+        ),
+    )
 
 
 @ignore_warnings(category=FutureWarning)

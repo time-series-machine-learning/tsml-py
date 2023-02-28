@@ -552,6 +552,8 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     .. [2] Cabello, N., Naghizade, E., Qi, J. and Kulik, L., 2021. Fast, accurate and
         interpretable time series classification through randomization. arXiv preprint
         arXiv:2105.14876.
+
+    Examples
     """
 
     def __init__(

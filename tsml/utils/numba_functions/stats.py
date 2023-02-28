@@ -115,7 +115,7 @@ def count_mean_crossing(X: np.ndarray) -> float:
     >>> c = count_mean_crossing(X)
     """
     m = mean(X)
-    d = general_numba.first_order_differences(X > m)
+    d = general_numba.first_order_differences((X > m).astype(np.int32))
     count = 0
     for i in range(d.shape[0]):
         if d[i] != 0:
