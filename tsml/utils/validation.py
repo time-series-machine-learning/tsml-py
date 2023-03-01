@@ -97,7 +97,7 @@ def is_clusterer(estimator: BaseEstimator) -> bool:
     return getattr(estimator, "_estimator_type", None) == "clusterer"
 
 
-def _num_features(X: Union[np.ndarray, List[np.ndarray]]) -> tuple[int]:
+def _num_features(X: Union[np.ndarray, List[np.ndarray]]) -> Tuple[int]:
     """Return the number of features of a 3D numpy array or a list of 2D numpy arrays.
 
     Returns
