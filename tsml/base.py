@@ -7,7 +7,7 @@ __all__ = [
     "_clone_estimator",
 ]
 
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 from numpy.random import RandomState
@@ -30,9 +30,9 @@ class BaseTimeSeriesEstimator(BaseEstimator):
         **check_params,
     ) -> Union[
         Tuple[np.ndarray, object],
-        Tuple[list[np.ndarray], object],
+        Tuple[List[np.ndarray], object],
         np.ndarray,
-        list[np.ndarray],
+        List[np.ndarray],
     ]:
         """Validate input data and set or check the `n_features_in_` attribute.
 
@@ -109,7 +109,7 @@ class BaseTimeSeriesEstimator(BaseEstimator):
 
         return out
 
-    def _check_n_features(self, X: Union[np.ndarray, list[np.ndarray]], reset: bool):
+    def _check_n_features(self, X: Union[np.ndarray, List[np.ndarray]], reset: bool):
         """Set the `n_features_in_` attribute, or check against it.
 
         Uses the `scikit-learn` 1.2.1 `_check_n_features` function as a base.
@@ -172,7 +172,7 @@ class BaseTimeSeriesEstimator(BaseEstimator):
     @classmethod
     def get_test_params(
         cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, list[dict]]:
+    ) -> Union[dict, List[dict]]:
         """Return unit test parameter settings for the estimator.
 
         Parameters

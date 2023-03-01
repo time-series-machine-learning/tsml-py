@@ -13,7 +13,7 @@ __all__ = [
 import os
 import warnings
 from importlib import import_module
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 from packaging.requirements import InvalidRequirement, Requirement
@@ -97,7 +97,7 @@ def is_clusterer(estimator: BaseEstimator) -> bool:
     return getattr(estimator, "_estimator_type", None) == "clusterer"
 
 
-def _num_features(X: Union[np.ndarray, list[np.ndarray]]) -> tuple[int]:
+def _num_features(X: Union[np.ndarray, List[np.ndarray]]) -> tuple[int]:
     """Return the number of features of a 3D numpy array or a list of 2D numpy arrays.
 
     Returns
@@ -127,7 +127,7 @@ def check_X_y(
     ensure_min_series_length: int = 2,
     estimator: Union[str, BaseEstimator, None] = None,
     y_numeric: bool = False,
-) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[list[np.ndarray], np.ndarray]]:
+) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[List[np.ndarray], np.ndarray]]:
     """Input validation for standard estimators.
 
     Checks X and y for consistent length, enforces X to be 3D and y 1D. By default,

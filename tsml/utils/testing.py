@@ -9,7 +9,7 @@ __all__ = [
 ]
 
 from functools import partial
-from typing import Callable, Tuple, Union
+from typing import Callable, List, Tuple, Union
 
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -24,7 +24,7 @@ from tsml.base import BaseTimeSeriesEstimator
 from tsml.utils.discovery import all_estimators
 
 
-def generate_test_estimators() -> list[BaseEstimator]:
+def generate_test_estimators() -> List[BaseEstimator]:
     """Generate a list of all estimators in tsml with test parameters.
 
     Uses estimator parameters from `get_test_params` if available.
@@ -51,7 +51,7 @@ def generate_test_estimators() -> list[BaseEstimator]:
     return estimators
 
 
-def parametrize_with_checks(estimators: list[BaseEstimator]) -> Callable:
+def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
     """Pytest specific decorator for parametrizing estimator checks.
 
     If the estimator is a `BaseTimeSeriesEstimator` then the `tsml` checks are used,

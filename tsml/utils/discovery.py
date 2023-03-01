@@ -9,7 +9,7 @@ import pkgutil
 from importlib import import_module
 from operator import itemgetter
 from pathlib import Path
-from typing import Union
+from typing import List, Union
 
 from sklearn.base import (
     BaseEstimator,
@@ -25,7 +25,7 @@ _PACKAGES_TO_IGNORE = {
 }
 
 
-def all_estimators(type_filter: Union[str, list[str]] = None):
+def all_estimators(type_filter: Union[str, List[str]] = None):
     """Get a list of all estimators from `tsml`.
 
     This function crawls the module and gets all classes that inherit
