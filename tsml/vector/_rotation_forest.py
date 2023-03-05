@@ -11,11 +11,12 @@ __all__ = ["RotationForestClassifier"]
 import time
 
 import numpy as np
-from joblib import Parallel, delayed
+from joblib import Parallel
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.decomposition import PCA
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils import check_random_state
+from sklearn.utils.fixes import delayed
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted
 
@@ -101,7 +102,7 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
 
     Examples
     --------
-    >>> from tsml.sklearn import RotationForestClassifier
+    >>> from tsml.vector import RotationForestClassifier
     >>> from tsml.datasets import load_minimal_chinatown
     >>> X_train, y_train = load_minimal_chinatown(split="train")
     >>> X_test, y_test = load_minimal_chinatown(split="test")

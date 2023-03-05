@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tsml"
-version = "0.0.2"
+version = "0.0.3"
 description = "A toolkit for time series machine learning algorithms."
 authors = [
     {name = "Matthew Middlehurst", email = "m.middlehurst@uea.ac.uk"},
@@ -37,7 +37,7 @@ classifiers = [
 dependencies = [
     "numba>=0.55",
     "numpy>=1.21.0",
-    "scikit-learn>=1.2.1",
+    "scikit-learn>=1.0.2",
 ]
 
 [project.optional-dependencies]
@@ -76,7 +76,6 @@ include = ["tsml"]
 ignore = [
     "examples/**",
     "docs/**",
-    "requirements.txt",
     "*.yaml",
     "*.yml",
     ".coveragerc",
@@ -88,6 +87,8 @@ extend-ignore = ["E203"]
 
 [tool.pytest.ini_options]
 addopts = '''
+    --ignore examples
+    --ignore docs
     --durations 10
     --timeout 600
     --showlocals

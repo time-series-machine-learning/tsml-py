@@ -8,7 +8,7 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier
 
 from tsml.interval_based._base import BaseIntervalForest
-from tsml.sklearn import CITClassifier
+from tsml.vector import CITClassifier
 
 
 class RISEClassifier(ClassifierMixin, BaseIntervalForest):

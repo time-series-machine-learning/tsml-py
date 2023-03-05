@@ -72,7 +72,7 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
 
     Examples
     --------
-    >>> from tsml.sklearn import CITClassifier
+    >>> from tsml.vector import CITClassifier
     >>> from tsml.datasets import load_minimal_chinatown
     >>> X_train, y_train = load_minimal_chinatown(split="train")
     >>> X_test, y_test = load_minimal_chinatown(split="test")

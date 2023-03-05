@@ -10,12 +10,13 @@ __all__ = ["ShapeletTransformClassifier"]
 
 import numpy as np
 from sklearn.base import ClassifierMixin
+from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
-from tsml.sklearn import RotationForestClassifier
 from tsml.transformations.shapelet_transform import RandomShapeletTransform
 from tsml.utils.validation import check_n_jobs
+from tsml.vector import RotationForestClassifier
 
 
 class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
@@ -161,6 +162,8 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         ending in "_".
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+
+        check_classification_targets(y)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         self.classes_ = np.unique(y)

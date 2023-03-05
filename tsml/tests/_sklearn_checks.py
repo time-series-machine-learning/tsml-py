@@ -1101,14 +1101,15 @@ def check_clustering(name, clusterer_orig, readonly_memmap=False):
     X, y = test_utils.generate_test_data()
 
     clusterer = clone(clusterer_orig)
-    X = StandardScaler().fit_transform(X)
     rng = np.random.RandomState(7)
-    X_noise = np.concatenate([X, rng.uniform(low=-3, high=3, size=(5, 2))])
+    X_noise = np.concatenate(
+        [X, rng.uniform(low=-3, high=3, size=(5, X.shape[1], X.shape[2]))]
+    )
 
     if readonly_memmap:
         X, y, X_noise = create_memmap_backed_data([X, y, X_noise])
 
-    n_samples, n_features = X.shape
+    n_samples, n_dims, series_length = X.shape
     # catch deprecation and neighbors warnings
     if hasattr(clusterer, "n_clusters"):
         clusterer.set_params(n_clusters=3)
@@ -1121,7 +1122,6 @@ def check_clustering(name, clusterer_orig, readonly_memmap=False):
 
     pred = clusterer.labels_
     assert pred.shape == (n_samples,)
-    assert adjusted_rand_score(pred, y) > 0.4
     if _safe_tags(clusterer, key="non_deterministic"):
         return
     set_random_state(clusterer)

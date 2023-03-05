@@ -10,6 +10,7 @@ __all__ = ["Catch22Classifier", "Catch22Regressor"]
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
@@ -112,6 +113,8 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, ensure_min_series_length=3
         )
+
+        check_classification_targets(y)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         self.classes_ = np.unique(y)

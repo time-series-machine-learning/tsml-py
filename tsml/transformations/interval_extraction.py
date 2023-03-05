@@ -8,10 +8,11 @@ __author__ = ["MatthewMiddlehurst"]
 __all__ = ["RandomIntervalTransformer", "SupervisedIntervalTransformer"]
 
 import numpy as np
-from joblib import Parallel, delayed
+from joblib import Parallel
 from sklearn import preprocessing
 from sklearn.base import TransformerMixin
 from sklearn.utils import check_random_state
+from sklearn.utils.fixes import delayed
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
