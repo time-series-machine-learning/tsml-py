@@ -238,9 +238,9 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
     >>> from tsml.datasets import load_minimal_chinatown
     >>> X_train, _ = load_minimal_chinatown(split="train")
     >>> X_test, _ = load_minimal_chinatown(split="test")
-    >>> clu = DummyClusterer(random_state=0)
+    >>> clu = DummyClusterer(strategy="random", random_state=0)
     >>> clu.fit(X_train)
-    DummyClusterer(random_state=0)
+    DummyClusterer(random_state=0, strategy='random')
     >>> clu.labels_
     array([0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1])
     >>> clu.predict(X_test)
