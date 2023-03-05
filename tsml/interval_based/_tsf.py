@@ -5,11 +5,9 @@ __all__ = ["TSFClassifier", "TSFRegressor"]
 
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.utils.parallel import Parallel, delayed
 
 from tsml.interval_based._base import BaseIntervalForest
-from tsml.sklearn import CITClassifier
+from tsml.vector import CITClassifier
 
 
 class TSFClassifier(ClassifierMixin, BaseIntervalForest):

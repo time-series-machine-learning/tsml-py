@@ -8,9 +8,9 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from tsml.interval_based._base import BaseIntervalForest
-from tsml.sklearn import CITClassifier
 from tsml.transformations.catch22 import Catch22Transformer
 from tsml.utils.numba_functions.stats import row_mean, row_slope, row_std
+from tsml.vector import CITClassifier
 
 
 class CIFClassifier(ClassifierMixin, BaseIntervalForest):
@@ -199,6 +199,8 @@ class DrCIFClassifier(ClassifierMixin, BaseIntervalForest):
         # ((4, "sqrt-div"), (4, "sqrt-div"), (4, "sqrt-div"))
 
         # interval_features = [Catch22(outlier_norm=True), None, None, None]
+
+        # check_classification_targets(y)
 
         super(DrCIFClassifier, self).__init__(
             base_estimator=base_estimator,

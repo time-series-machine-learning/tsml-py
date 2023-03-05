@@ -82,7 +82,7 @@ def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
     --------
     >>> from tsml.utils.testing import parametrize_with_checks
     >>> from tsml.interval_based import TSFRegressor
-    >>> from tsml.sklearn import RotationForestClassifier
+    >>> from tsml.vector import RotationForestClassifier
     >>> @parametrize_with_checks(
     ...     [TSFRegressor(), RotationForestClassifier()]
     ... )

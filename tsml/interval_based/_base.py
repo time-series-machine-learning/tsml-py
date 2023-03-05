@@ -9,20 +9,21 @@ import time
 import warnings
 
 import numpy as np
+from joblib import Parallel
 from sklearn.base import BaseEstimator, is_classifier, is_regressor
 from sklearn.tree import BaseDecisionTree, DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.utils import check_random_state
-from sklearn.utils.parallel import Parallel, delayed
+from sklearn.utils.fixes import delayed
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
-from tsml.sklearn import CITClassifier
 from tsml.transformations.interval_extraction import (
     RandomIntervalTransformer,
     SupervisedIntervalTransformer,
 )
 from tsml.utils.numba_functions.stats import row_mean, row_slope, row_std
 from tsml.utils.validation import check_n_jobs, is_transformer
+from tsml.vector import CITClassifier
 
 
 class BaseIntervalForest(BaseTimeSeriesEstimator):

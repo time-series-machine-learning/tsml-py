@@ -6,5 +6,5 @@ __all__ = [
     "CITClassifier",
 ]
 
-from tsml.sklearn._cit import CITClassifier
-from tsml.sklearn._rotation_forest import RotationForestClassifier
+from tsml.vector._cit import CITClassifier
+from tsml.vector._rotation_forest import RotationForestClassifier

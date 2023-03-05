@@ -6,7 +6,7 @@ __author__ = ["MatthewMiddlehurst"]
 import numpy as np
 
 from tsml.datasets import load_minimal_chinatown
-from tsml.sklearn import RotationForestClassifier
+from tsml.vector import RotationForestClassifier
 
 
 def test_contracted_rotf():
