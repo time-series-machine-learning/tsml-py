@@ -236,15 +236,16 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
     --------
     >>> from tsml.dummy import DummyClusterer
     >>> from tsml.datasets import load_minimal_chinatown
-    >>> X_train, _ = load_minimal_chinatown(split="train")
-    >>> X_test, _ = load_minimal_chinatown(split="test")
+    >>> from sklearn.metrics import adjusted_rand_score
+    >>> X_train, y_train = load_minimal_chinatown(split="train")
+    >>> X_test, y_test = load_minimal_chinatown(split="test")
     >>> clu = DummyClusterer(strategy="random", random_state=0)
     >>> clu.fit(X_train)
     DummyClusterer(random_state=0, strategy='random')
-    >>> clu.labels_
-    array([0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1])
-    >>> clu.predict(X_test)
-    array([0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1])
+    >>> adjusted_rand_score(clu.labels_, y_train)
+    0.2087729039422543
+    >>> adjusted_rand_score(clu.predict(X_test), y_test)
+    0.2087729039422543
     """
 
     def __init__(self, strategy="single", n_clusters=2, random_state=None):
