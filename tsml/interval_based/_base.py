@@ -17,7 +17,7 @@ from sklearn.utils.fixes import delayed
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
-from tsml.transformations.interval_extraction import (
+from tsml.transformations._interval_extraction import (
     RandomIntervalTransformer,
     SupervisedIntervalTransformer,
 )

@@ -18,8 +18,8 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
-from tsml.transformations.catch22 import Catch22Transformer
-from tsml.transformations.interval_extraction import RandomIntervalTransformer
+from tsml.transformations._catch22 import Catch22Transformer
+from tsml.transformations._interval_extraction import RandomIntervalTransformer
 from tsml.utils.validation import check_n_jobs
 from tsml.vector import RotationForestClassifier
 

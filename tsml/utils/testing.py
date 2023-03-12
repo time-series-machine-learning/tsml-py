@@ -86,7 +86,7 @@ def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
     >>> @parametrize_with_checks(
     ...     [TSFRegressor(), RotationForestClassifier()]
     ... )
-    ... def test_sklearn_compatible_estimator(estimator, check):
+    ... def test_tsml_compatible_estimator(estimator, check):
     ...     check(estimator)
     """
     import pytest

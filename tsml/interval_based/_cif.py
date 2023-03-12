@@ -8,7 +8,7 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from tsml.interval_based._base import BaseIntervalForest
-from tsml.transformations.catch22 import Catch22Transformer
+from tsml.transformations._catch22 import Catch22Transformer
 from tsml.utils.numba_functions.stats import row_mean, row_slope, row_std
 from tsml.vector import CITClassifier
 

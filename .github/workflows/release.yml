@@ -36,7 +36,7 @@ jobs:
           python -m pip install build
           python -m build
 
-      - name: Store built files
+      - name: Store build files
         uses: actions/upload-artifact@v3
         with:
           name: dist

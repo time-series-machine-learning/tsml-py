@@ -5,7 +5,7 @@ A transformer from the time domain into the shapelet domain.
 """
 
 __author__ = ["MatthewMiddlehurst"]
-__all__ = ["RandomShapeletTransform"]
+__all__ = ["RandomShapeletTransformer"]
 
 import heapq
 import math
@@ -26,7 +26,7 @@ from tsml.utils.numba_functions.general import z_normalise_series
 from tsml.utils.validation import check_n_jobs
 
 
-class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
+class RandomShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     """Random Shapelet Transform.
 
     Implementation of the binary shapelet transform along the lines of [1]_[2]_, with
@@ -165,7 +165,7 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
         self.batch_size = batch_size
         self.random_state = random_state
 
-        super(RandomShapeletTransform, self).__init__()
+        super(RandomShapeletTransformer, self).__init__()
 
     def fit(self, X, y=None):
         """Fit the shapelet transform to a specified X and y.
@@ -179,7 +179,7 @@ class RandomShapeletTransform(TransformerMixin, BaseTimeSeriesEstimator):
 
         Returns
         -------
-        self : RandomShapeletTransform
+        self : RandomShapeletTransformer
             This estimator.
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
