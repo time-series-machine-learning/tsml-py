@@ -161,7 +161,7 @@ def load_from_ts_file(
                 if len(tokens) != 2:
                     raise IOError(
                         "Invalid .ts file. @dimension tag requires a int value "
-                        "(the number of dimensions for the problem)."
+                        "(the number of channels for the problem)."
                     )
 
                 try:
@@ -169,7 +169,7 @@ def load_from_ts_file(
                 except ValueError:
                     raise IOError(
                         "Invalid .ts file. @dimension tag requires a int value "
-                        "(the number of dimensions for the problem)."
+                        "(the number of channels for the problem)."
                     )
 
                 dimensions_tag = True
@@ -194,7 +194,7 @@ def load_from_ts_file(
                 if len(tokens) != 2:
                     raise IOError(
                         "Invalid .ts file. @serieslength tag requires a int value "
-                        "(the number of dimensions for the problem)."
+                        "(the series length for the problem)."
                     )
 
                 try:
@@ -202,7 +202,7 @@ def load_from_ts_file(
                 except ValueError:
                     raise IOError(
                         "Invalid .ts file. @serieslength tag requires a int value "
-                        "(the number of dimensions for the problem)."
+                        "(the series length for the problem)."
                     )
 
                 serieslength_tag = True
@@ -341,13 +341,13 @@ def load_from_ts_file(
             ) and data_dims > 1:
                 raise IOError(
                     "Value mismatch in .ts file. @univariate tag is missing or True "
-                    "but data has more than one dimension."
+                    "but data has more than one channel."
                 )
 
             if dimensions_tag and dimensions != data_dims:
                 raise IOError(
                     f"Value mismatch in .ts file. @dimensions tag value {dimensions} "
-                    f"and read number of dimensions {data_dims} do not match."
+                    f"and read number of channels {data_dims} do not match."
                 )
 
             if serieslength_tag and serieslength != data_length:
@@ -375,11 +375,11 @@ def load_from_ts_file(
 
             line = line.split(":")
 
-            # Does not support different number of dimensions
+            # Does not support different number of channels
             read_dims = len(line) - 1 if has_labels else len(line)
             if read_dims != data_dims:
                 raise IOError(
-                    "Unable to read .ts file. Inconsistent number of dimensions."
+                    "Unable to read .ts file. Inconsistent number of channels."
                     f"Expected {data_dims} but read {read_dims} on line {data_idx}."
                 )
 
@@ -387,7 +387,7 @@ def load_from_ts_file(
             if not equallength:
                 data_length = len(dimensions[0].strip().split(","))
 
-            # Process the data for each dimension
+            # Process the data for each channel
             series = np.zeros((data_dims, data_length), dtype=X_dtype)
             for i in range(data_dims):
                 series[i, :] = dimensions[i].strip().split(",")
@@ -500,7 +500,7 @@ def load_equal_minimal_japanese_vowels(
     stripped down version of the JapaneseVowels problem that is used in correctness
     tests for classification. It has been altered so all series are equal length. It
     loads a nine class classification problem with 20 cases for both the train and test
-    split, 12 dimensions and a series length of 25.
+    split, 12 channels and a series length of 25.
 
     For the full dataset see
     http://www.timeseriesclassification.com/description.php?Dataset=JapaneseVowels
@@ -534,7 +534,7 @@ def load_minimal_japanese_vowels(
     This is an unequal length multivariate time series classification problem. It is a
     stripped down version of the JapaneseVowels problem that is used in correctness
     tests for classification. It loads a nine class classification problem with 20 cases
-    for both the train and test split and 12 dimensions.
+    for both the train and test split and 12 channels.
 
     For the full dataset see
     http://www.timeseriesclassification.com/description.php?Dataset=JapaneseVowels

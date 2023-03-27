@@ -14,7 +14,7 @@ from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
-from tsml.transformations.shapelet_transform import RandomShapeletTransform
+from tsml.transformations._shapelet_transform import RandomShapeletTransformer
 from tsml.utils.validation import check_n_jobs
 from tsml.vector import RotationForestClassifier
 
@@ -187,7 +187,7 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         elif self.transform_limit_in_minutes > 0:
             self._transform_limit_in_minutes = self.transform_limit_in_minutes
 
-        self._transformer = RandomShapeletTransform(
+        self._transformer = RandomShapeletTransformer(
             n_shapelet_samples=self.n_shapelet_samples,
             max_shapelets=self.max_shapelets,
             max_shapelet_length=self.max_shapelet_length,

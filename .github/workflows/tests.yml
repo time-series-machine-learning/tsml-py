@@ -18,8 +18,7 @@ jobs:
         with:
           python-version: "3.10"
 
-      - id: file_changes
-        uses: trilom/file-changes-action@v1.2.4
+      - uses: trilom/file-changes-action@v1.2.4
         with:
           output: " "
 
@@ -43,7 +42,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install
-        run: python -m pip install .[dev,optional_dependencies]
+        run: python -m pip install .[dev,extras]
 
       - name: Tests
         run: python -m pytest
@@ -63,7 +62,7 @@ jobs:
         run: echo "NUMBA_DISABLE_JIT=1" >> $GITHUB_ENV
 
       - name: Install
-        run: python -m pip install .[dev,optional_dependencies]
+        run: python -m pip install .[dev,extras]
 
       - name: Tests
         run: python -m pytest --cov=tsml --cov-report=xml

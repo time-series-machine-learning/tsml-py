@@ -14,7 +14,7 @@ from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
-from tsml.transformations.catch22 import Catch22Transformer
+from tsml.transformations._catch22 import Catch22Transformer
 from tsml.utils.validation import check_n_jobs
 
 

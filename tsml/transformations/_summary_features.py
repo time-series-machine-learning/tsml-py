@@ -36,6 +36,7 @@ class SevenNumberSummaryTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
     def transform(self, X, y=None):
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
         if self.summary_stats == "default":
             functions = [
@@ -72,14 +73,16 @@ class SevenNumberSummaryTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 f"Summary function input {self.summary_stats} not " f"recognised."
             )
 
-        n_instances = X.shape[0]
+        n_instances, n_dims, _ = X.shape
 
-        Xt = np.zeros((n_instances, 7))
-        for i, f in enumerate(functions):
-            if isinstance(f, float):
-                Xt[:, i] = row_quantile(X, f)
-            else:
-                Xt[:, i] = f(X)
+        Xt = np.zeros((n_instances, 7 * n_dims))
+        for i in range(n_instances):
+            for n, f in enumerate(functions):
+                idx = n * n_dims
+                if isinstance(f, float):
+                    Xt[i, idx : idx + n_dims] = row_quantile(X[i], f)
+                else:
+                    Xt[i, idx : idx + n_dims] = f(X[i])
 
         return Xt
 

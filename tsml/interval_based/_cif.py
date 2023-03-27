@@ -8,7 +8,7 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from tsml.interval_based._base import BaseIntervalForest
-from tsml.transformations.catch22 import Catch22Transformer
+from tsml.transformations._catch22 import Catch22Transformer
 from tsml.utils.numba_functions.stats import row_mean, row_slope, row_std
 from tsml.vector import CITClassifier
 
@@ -31,9 +31,6 @@ class CIFClassifier(ClassifierMixin, BaseIntervalForest):
         n_jobs=1,
         parallel_backend=None,
     ):
-        if base_estimator is None:
-            base_estimator = DecisionTreeClassifier(criterion="entropy")
-
         if isinstance(base_estimator, CITClassifier):
             replace_nan = "nan"
         else:
@@ -97,7 +94,7 @@ class CIFClassifier(ClassifierMixin, BaseIntervalForest):
         }
 
 
-class CIFRegressor(ClassifierMixin, BaseIntervalForest):
+class CIFRegressor(RegressorMixin, BaseIntervalForest):
     """TODO."""
 
     def __init__(
@@ -115,9 +112,6 @@ class CIFRegressor(ClassifierMixin, BaseIntervalForest):
         n_jobs=1,
         parallel_backend=None,
     ):
-        if base_estimator is None:
-            base_estimator = DecisionTreeRegressor()
-
         interval_features = [
             Catch22Transformer(outlier_norm=True),
             row_mean,

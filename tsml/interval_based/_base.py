@@ -7,6 +7,7 @@ __all__ = ["BaseIntervalForest"]
 import inspect
 import time
 import warnings
+from abc import ABCMeta, abstractmethod
 
 import numpy as np
 from joblib import Parallel
@@ -17,7 +18,7 @@ from sklearn.utils.fixes import delayed
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
-from tsml.transformations.interval_extraction import (
+from tsml.transformations._interval_extraction import (
     RandomIntervalTransformer,
     SupervisedIntervalTransformer,
 )
@@ -26,7 +27,7 @@ from tsml.utils.validation import check_n_jobs, is_transformer
 from tsml.vector import CITClassifier
 
 
-class BaseIntervalForest(BaseTimeSeriesEstimator):
+class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
     """A base class for interval extracting forest estimators.
 
     Allows the implementation of classifiers and regressors along the lines of [1][2][3]
@@ -37,11 +38,11 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
     intervals on the base series, periodogram representation and differences
     representation described in the HIVE-COTE 2.0 paper Middlehurst et al (2021). [1]_
 
-    Overview: Input "n" series with "d" dimensions of length "m".
+    Overview: Input "n" series with "d" channels of length "m".
     For each tree
         - Sample n_intervals intervals per representation of random position and length
         - Subsample att_subsample_size catch22 or summary statistic attributes randomly
-        - Randomly select dimension for each interval
+        - Randomly select channel for each interval
         - Calculate attributes for each interval from its representation, concatenate
           to form new data set
         - Build decision tree on new data set
@@ -112,7 +113,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
     n_instances_ : int
         The number of train cases.
     n_dims_ : int
-        The number of dimensions per case.
+        The number of channels per case.
     series_length_ : int
         The length of each series.
     total_intervals_ : int
@@ -136,6 +137,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
     .. [3]
     """
 
+    @abstractmethod
     def __init__(
         self,
         base_estimator,
@@ -176,7 +178,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
     # parameter name from transformer_feature_selection and an attribute name from
     # transformer_feature_names to allow features to be subsampled
     transformer_feature_selection = ["features"]
-    transformer_feature_names = ["features_arguments_"]
+    transformer_feature_names = ["features_arguments_", "_features_arguments"]
     # an interval_features transformer must contain one of these attribute names to
     # be able to skip transforming features in predict
     transformer_feature_skip = ["transform_features_", "_transform_features"]
@@ -190,6 +192,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X = self._convert_X(X)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         if is_classifier(self):
@@ -199,14 +202,18 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
             for index, classVal in enumerate(self.classes_):
                 self.class_dictionary_[classVal] = index
 
-        # default base_estimators for classification and regression
-        self._base_estimator = self.base_estimator
         if self.base_estimator is None:
-            if is_classifier(self):
-                self._base_estimator = DecisionTreeClassifier(criterion="entropy")
-            elif is_regressor(self):
-                self._base_estimator = DecisionTreeRegressor(criterion="absolute_error")
-            else:
+            # default base_estimators for classification and regression
+            if not hasattr(self, "_base_estimator"):
+                if is_classifier(self):
+                    self._base_estimator = DecisionTreeClassifier(criterion="entropy")
+                elif is_regressor(self):
+                    self._base_estimator = DecisionTreeRegressor(
+                        criterion="absolute_error"
+                    )
+                else:
+                    raise ValueError()  # todo error for invalid self.base_estimator
+            elif not isinstance(self._base_estimator, BaseEstimator):
                 raise ValueError()  # todo error for invalid self.base_estimator
         # base_estimator must be an sklearn estimator
         elif not isinstance(self.base_estimator, BaseEstimator):
@@ -872,13 +879,14 @@ class BaseIntervalForest(BaseTimeSeriesEstimator):
         check_is_fitted(self)
 
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
         n_instances, n_dims, series_length = X.shape
 
         if n_dims != self.n_dims_:
             raise ValueError(
-                "The number of dimensions in the train data does not match the number "
-                "of dimensions in the test data"
+                "The number of channels in the train data does not match the number "
+                "of channels in the test data"
             )
         if series_length != self.series_length_:
             raise ValueError(

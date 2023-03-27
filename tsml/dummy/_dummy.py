@@ -94,11 +94,10 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         """"""
-        X, y = self._validate_data(X=X, y=y)
+        X, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
 
         check_classification_targets(y)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
@@ -125,7 +124,7 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         return self._clf.predict(np.zeros(X.shape))
 
@@ -137,9 +136,12 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat([[1]], X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         return self._clf.predict_proba(np.zeros(X.shape))
+
+    def _more_tags(self):
+        return {"X_types": ["3darray", "2darray", "np_list"]}
 
 
 class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
@@ -203,7 +205,7 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         """"""
-        X, y = self._validate_data(X=X, y=y)
+        X, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
 
         self._reg = SklearnDummyRegressor(
             strategy=self.strategy, constant=self.constant, quantile=self.quantile
@@ -216,9 +218,12 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         """"""
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         return self._reg.predict(np.zeros(X.shape))
+
+    def _more_tags(self):
+        return {"X_types": ["3darray", "2darray", "np_list"]}
 
 
 class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
@@ -229,8 +234,6 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
 
     All strategies make predictions that ignore the input feature values passed
     as the `X` argument to `fit` and `predict`.
-
-    todo example adjusted_rand_score
 
     Examples
     --------
@@ -257,7 +260,7 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y=None):
         """"""
-        X = self._validate_data(X=X)
+        X = self._validate_data(X=X, ensure_min_series_length=1)
 
         if self.strategy == "single":
             self.labels_ = np.zeros(len(X), dtype=np.int32)
@@ -275,7 +278,7 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
         """"""
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         if self.strategy == "single":
             return np.zeros(len(X), dtype=np.int32)
@@ -287,26 +290,5 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
         else:
             raise ValueError(f"Unknown strategy {self.strategy}")
 
-    @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
-
-        Parameters
-        ----------
-        parameter_set : str, default="default"
-            Name of the set of test parameters to return, for use in tests. If no
-            special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
-
-        Returns
-        -------
-        params : dict or list of dict, default={}
-            Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
-        """
-        return {}
+    def _more_tags(self):
+        return {"X_types": ["3darray", "2darray", "np_list"]}
