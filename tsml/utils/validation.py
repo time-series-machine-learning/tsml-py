@@ -238,6 +238,7 @@ def check_X_y(
     return X, y
 
 
+
 def check_X(
     X: object,
     dtype: Union[str, type, None] = "numeric",
