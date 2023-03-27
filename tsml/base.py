@@ -7,6 +7,7 @@ __all__ = [
     "_clone_estimator",
 ]
 
+from abc import ABCMeta
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -19,7 +20,7 @@ from tsml.utils._tags import _DEFAULT_TAGS, _safe_tags
 from tsml.utils.validation import _num_features, check_X, check_X_y
 
 
-class BaseTimeSeriesEstimator(BaseEstimator):
+class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
     """Base class for time series estimators in tsml."""
 
     def _validate_data(
@@ -40,7 +41,7 @@ class BaseTimeSeriesEstimator(BaseEstimator):
 
         Parameters
         ----------
-        X : ndarray or list of ndarrays of shape (n_samples, n_dimensions, \
+        X : ndarray or list of ndarrays of shape (n_samples, n_channels, \
                 series_length), array-like, or 'no validation', default='no validation'
             The input samples. ideally a 3D numpy array or a list of 2D numpy
             arrays.
@@ -109,6 +110,67 @@ class BaseTimeSeriesEstimator(BaseEstimator):
 
         return out
 
+    def _convert_X(
+        self, X: Union[np.ndarray, List[np.ndarray]], concatenate_channels: bool = False
+    ) -> Union[np.ndarray, List[np.ndarray]]:
+        dtypes = self._get_tags()["X_types"]
+
+        if isinstance(X, np.ndarray) and X.ndim == 3:
+            if "3darray" in dtypes:
+                return X
+            elif dtypes[0] == "2darray":
+                if X.shape[1] == 1 or concatenate_channels:
+                    return X.reshape((X.shape[0], -1))
+                else:
+                    raise ValueError(
+                        "Can only convert 3D numpy array with 1 channel to 2D numpy "
+                        f"array if concatenate_channels is True, found {X.shape[1]} "
+                        "channels."
+                    )
+            elif dtypes[0] == "np_list":
+                return [x for x in X]
+        elif isinstance(X, np.ndarray) and X.ndim == 2:
+            if "2darray" in dtypes:
+                return X
+            elif dtypes[0] == "3darray":
+                return X.reshape((X.shape[0], 1, -1))
+            elif dtypes[0] == "np_list":
+                return [x.reshape(1, X.shape[1]) for x in X]
+        elif isinstance(X, list) and all(
+            isinstance(x, np.ndarray) and x.ndim == 2 for x in X
+        ):
+            if "np_list" in dtypes:
+                return X
+            elif dtypes[0] == "3darray":
+                max_len = max(x.shape[1] for x in X)
+                arr = np.zeros((len(X), X[0].shape[0], max_len))
+
+                for i, x in enumerate(X):
+                    arr[i, :, : x.shape[1]] = x
+
+                return arr
+            elif dtypes[0] == "2darray":
+                if X[0].shape[0] == 1 or concatenate_channels:
+                    max_len = max(x.shape[1] for x in X)
+                    arr = np.zeros((len(X), X[0].shape[0], max_len))
+
+                    for i, x in enumerate(X):
+                        arr[i, :, : x.shape[1]] = x
+
+                    return arr.reshape((arr.shape[0], -1))
+                else:
+                    raise ValueError(
+                        "Can only convert list of 2D numpy arrays with 1 channel to 2D "
+                        "numpy array if concatenate_channels is True, found "
+                        f"{X[0].shape[0]} channels."
+                    )
+        else:
+            raise ValueError(
+                "X must be a 2D/3D numpy array or a list of 2D numpy arrays, got "
+                f"{f'list of {type(X[0])}' if isinstance(X, list) else type(X)} "
+                "instead."
+            )
+
     def _check_n_features(self, X: Union[np.ndarray, List[np.ndarray]], reset: bool):
         """Set the `n_features_in_` attribute, or check against it.
 
@@ -117,14 +179,14 @@ class BaseTimeSeriesEstimator(BaseEstimator):
         Parameters
         ----------
         X : ndarray or list of ndarrays of shape \
-                (n_samples, n_dimensions, series_length)
+                (n_samples, n_channels, series_length)
             The input samples. Should be a 3D numpy array or a list of 2D numpy
             arrays.
         reset : bool
             If True, the `n_features_in_` attribute is set to
-            `(n_dimensions, min_series_length, max_series_length)`.
+            `(n_channels, min_series_length, max_series_length)`.
             If False and the attribute exists, then check that it is equal to
-            `(n_dimensions, min_series_length, max_series_length)`.
+            `(n_channels, min_series_length, max_series_length)`.
             If False and the attribute does *not* exist, then the check is skipped.
             .. note::
                It is recommended to call reset=True in `fit`. All other methods that
@@ -137,7 +199,7 @@ class BaseTimeSeriesEstimator(BaseEstimator):
                 raise ValueError(
                     "X does not contain any features to extract, but "
                     f"{self.__class__.__name__} is expecting "
-                    f"{self.n_features_in_[0]} dimensions as input."
+                    f"{self.n_features_in_[0]} channels as input."
                 ) from e
             # If the number of features is not defined and reset=True,
             # then we skip this check
@@ -155,8 +217,8 @@ class BaseTimeSeriesEstimator(BaseEstimator):
 
         if n_features[0] != self.n_features_in_[0]:
             raise ValueError(
-                f"X has {n_features[0]} dimensions, but {self.__class__.__name__} "
-                f"is expecting {self.n_features_in_[0]} dimensions as input."
+                f"X has {n_features[0]} channels, but {self.__class__.__name__} "
+                f"is expecting {self.n_features_in_[0]} channels as input."
             )
 
         tags = _safe_tags(self)

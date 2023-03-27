@@ -94,11 +94,10 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         """"""
-        X, y = self._validate_data(X=X, y=y)
+        X, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
 
         check_classification_targets(y)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
@@ -125,7 +124,7 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         return self._clf.predict(np.zeros(X.shape))
 
@@ -137,9 +136,12 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat([[1]], X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         return self._clf.predict_proba(np.zeros(X.shape))
+
+    def _more_tags(self):
+        return {"X_types": ["3darray", "2darray", "np_list"]}
 
 
 class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
@@ -203,7 +205,7 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         """"""
-        X, y = self._validate_data(X=X, y=y)
+        X, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
 
         self._reg = SklearnDummyRegressor(
             strategy=self.strategy, constant=self.constant, quantile=self.quantile
@@ -216,9 +218,12 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         """"""
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         return self._reg.predict(np.zeros(X.shape))
+
+    def _more_tags(self):
+        return {"X_types": ["3darray", "2darray", "np_list"]}
 
 
 class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
@@ -255,7 +260,7 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y=None):
         """"""
-        X = self._validate_data(X=X)
+        X = self._validate_data(X=X, ensure_min_series_length=1)
 
         if self.strategy == "single":
             self.labels_ = np.zeros(len(X), dtype=np.int32)
@@ -273,7 +278,7 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
         """"""
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         if self.strategy == "single":
             return np.zeros(len(X), dtype=np.int32)
@@ -284,3 +289,6 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
             return rng.randint(self.n_clusters, size=len(X), dtype=np.int32)
         else:
             raise ValueError(f"Unknown strategy {self.strategy}")
+
+    def _more_tags(self):
+        return {"X_types": ["3darray", "2darray", "np_list"]}

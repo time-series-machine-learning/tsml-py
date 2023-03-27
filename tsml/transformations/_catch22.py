@@ -14,10 +14,34 @@ from joblib import Parallel
 from numba import njit
 from sklearn.base import TransformerMixin
 from sklearn.utils.fixes import delayed
-from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator
 from tsml.utils.validation import _check_optional_dependency, check_n_jobs
+
+feature_names = [
+    "DN_HistogramMode_5",
+    "DN_HistogramMode_10",
+    "SB_BinaryStats_diff_longstretch0",
+    "DN_OutlierInclude_p_001_mdrmd",
+    "DN_OutlierInclude_n_001_mdrmd",
+    "CO_f1ecac",
+    "CO_FirstMin_ac",
+    "SP_Summaries_welch_rect_area_5_1",
+    "SP_Summaries_welch_rect_centroid",
+    "FC_LocalSimple_mean3_stderr",
+    "CO_trev_1_num",
+    "CO_HistogramAMI_even_2_5",
+    "IN_AutoMutualInfoStats_40_gaussian_fmmi",
+    "MD_hrv_classic_pnn40",
+    "SB_BinaryStats_mean_longstretch1",
+    "SB_MotifThree_quantile_hh",
+    "FC_LocalSimple_mean1_tauresrat",
+    "CO_Embed2_Dist_tau_d_expfit_meandiff",
+    "SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1",
+    "SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1",
+    "SB_TransitionMatrix_3ac_sumdiagcov",
+    "PD_PeriodicityWang_th0_01",
+]
 
 
 class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
@@ -97,6 +121,8 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         super(Catch22Transformer, self).__init__()
 
+    features_arguments_ = feature_names
+
     def fit(self, X, y=None):
         self._validate_data(X=X)
 
@@ -139,8 +165,9 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
              number of features requested, containing Catch22 features for X.
         """
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
-        n_instances = X.shape[0]
+        n_instances = len(X)
 
         f_idx = _verify_features(self.features, self.catch24)
 
@@ -276,27 +303,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         return c22
 
     def _more_tags(self):
-        return {"stateless": True}
-
-    @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
-
-        Parameters
-        ----------
-        parameter_set : str, default="default"
-            Name of the set of test parameters to return, for use in tests. If no
-            special parameters are defined for a value, will return `"default"` set.
-
-        Returns
-        -------
-        params : dict or list of dict, default = {}
-            Parameters to create testing instances of the class
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`
-        """
-        return {}
+        return {"X_types": ["np_list", "3darray"], "stateless": True}
 
     @staticmethod
     def _DN_HistogramMode_5(X, smin, smax):
@@ -1301,6 +1308,8 @@ class Catch22WrapperTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         super(Catch22WrapperTransformer, self).__init__()
 
+    features_arguments_ = feature_names
+
     def fit(self, X, y=None):
         self._validate_data(X=X)
 
@@ -1343,8 +1352,9 @@ class Catch22WrapperTransformer(TransformerMixin, BaseTimeSeriesEstimator):
              number of features requested, containing Catch22 features for X.
         """
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
-        n_instances = X.shape[0]
+        n_instances = len(X)
 
         f_idx = _verify_features(self.features, self.catch24)
 
@@ -1429,50 +1439,8 @@ class Catch22WrapperTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return c22
 
     def _more_tags(self):
-        return {"stateless": True, "optional_dependency": True}
-
-    @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
-
-        Parameters
-        ----------
-        parameter_set : str, default="default"
-            Name of the set of test parameters to return, for use in tests. If no
-            special parameters are defined for a value, will return `"default"` set.
-
-        Returns
-        -------
-        params : dict or list of dict, default = {}
-            Parameters to create testing instances of the class
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`
-        """
-        return {"catch24": True}
-
-
-feature_names = [
-    "DN_HistogramMode_5",
-    "DN_HistogramMode_10",
-    "SB_BinaryStats_diff_longstretch0",
-    "DN_OutlierInclude_p_001_mdrmd",
-    "DN_OutlierInclude_n_001_mdrmd",
-    "CO_f1ecac",
-    "CO_FirstMin_ac",
-    "SP_Summaries_welch_rect_area_5_1",
-    "SP_Summaries_welch_rect_centroid",
-    "FC_LocalSimple_mean3_stderr",
-    "CO_trev_1_num",
-    "CO_HistogramAMI_even_2_5",
-    "IN_AutoMutualInfoStats_40_gaussian_fmmi",
-    "MD_hrv_classic_pnn40",
-    "SB_BinaryStats_mean_longstretch1",
-    "SB_MotifThree_quantile_hh",
-    "FC_LocalSimple_mean1_tauresrat",
-    "CO_Embed2_Dist_tau_d_expfit_meandiff",
-    "SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1",
-    "SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1",
-    "SB_TransitionMatrix_3ac_sumdiagcov",
-    "PD_PeriodicityWang_th0_01",
-]
+        return {
+            "X_types": ["np_list", "3darray"],
+            "stateless": True,
+            "optional_dependency": True,
+        }

@@ -124,16 +124,16 @@ class RandomShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
     Examples
     --------
-    >>> from tsml.transformations.shapelet_transform import RandomShapeletTransform
+    >>> from tsml.transformations._shapelet_transform import RandomShapeletTransformer
     >>> from tsml.datasets import load_minimal_chinatown
     >>> X_train, y_train = load_minimal_chinatown(split="train")
-    >>> t = RandomShapeletTransform(
+    >>> t = RandomShapeletTransformer(
     ...     n_shapelet_samples=500,
     ...     max_shapelets=10,
     ...     batch_size=100,
     ... )
     >>> t.fit(X_train, y_train)
-    RandomShapeletTransform(...)
+    RandomShapeletTransformer(...)
     >>> X_t = t.transform(X_train)
     """
 

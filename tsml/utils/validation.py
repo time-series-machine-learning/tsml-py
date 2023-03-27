@@ -22,7 +22,6 @@ from scipy import sparse
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import (
     _assert_all_finite,
-    _check_estimator_name,
     _check_y,
     _ensure_no_complex_data,
     _num_samples,
@@ -103,16 +102,27 @@ def _num_features(X: Union[np.ndarray, List[np.ndarray]]) -> Tuple[int]:
     Returns
     -------
     num_features : tuple
-        A tuple containing the number of dimensions, the minimum series length and the
+        A tuple containing the number of channels, the minimum series length and the
         maximum series length of X.
     """
     if isinstance(X, np.ndarray) and X.ndim == 3:
         return X.shape[1], X.shape[2], X.shape[2]
+    elif isinstance(X, np.ndarray) and X.ndim == 2:
+        return 1, X.shape[1], X.shape[1]
     elif isinstance(X, list) and isinstance(X[0], np.ndarray) and X[0].ndim == 2:
         lengths = [x.shape[1] for x in X]
         return X[0].shape[0], np.min(lengths), np.max(lengths)
     else:
         raise ValueError("X must be a 3D numpy array or a list of 2D numpy arrays")
+
+
+def _check_estimator_name(estimator):
+    if estimator is not None:
+        if isinstance(estimator, str):
+            return estimator
+        else:
+            return estimator.__class__.__name__
+    return None
 
 
 def check_X_y(
@@ -123,7 +133,7 @@ def check_X_y(
     force_all_finite: bool = True,
     convert_2d: bool = True,
     ensure_min_samples: int = 1,
-    ensure_min_dimensions: int = 1,
+    ensure_min_channels: int = 1,
     ensure_min_series_length: int = 2,
     estimator: Union[str, BaseEstimator, None] = None,
     y_numeric: bool = False,
@@ -138,7 +148,8 @@ def check_X_y(
 
     If X input is array-like but not a 3D array or list of 2D arrays, the function
     will attempt to convert the input into a numpy array and validate it as such. 2D
-    numpy arrays will be converted to a 3D numpy array of shape (n,1,m).
+    numpy arrays will be converted to a 3D numpy array of shape (n,1,m) if convert_2d
+    is True.
 
     Uses the `scikit-learn` 1.2.1 `check_X_y` function as a base.
 
@@ -169,8 +180,8 @@ def check_X_y(
         Make sure that the array has a minimum number of samples in its first
         axis (number of items for list of 2D numpy array). Setting to 0 disables this
         check.
-    ensure_min_dimensions : int, default=1
-        Make sure that the array has a minimum number of dimensions in its second
+    ensure_min_channels : int, default=1
+        Make sure that the array has a minimum number of channels in its second
         axis (first axis of all items for list of 2D numpy array). Setting to 0 disables
         this check.
     ensure_min_series_length : int, default=1
@@ -215,12 +226,12 @@ def check_X_y(
         force_all_finite=force_all_finite,
         convert_2d=convert_2d,
         ensure_min_samples=ensure_min_samples,
-        ensure_min_dimensions=ensure_min_dimensions,
+        ensure_min_channels=ensure_min_channels,
         ensure_min_series_length=ensure_min_series_length,
         estimator=estimator,
     )
 
-    y = _check_y(y, multi_output=False, y_numeric=y_numeric, estimator=estimator)
+    y = _check_y(y, multi_output=False, y_numeric=y_numeric)
 
     check_consistent_length(X, y)
 
@@ -232,9 +243,9 @@ def check_X(
     dtype: Union[str, type, None] = "numeric",
     copy: bool = False,
     force_all_finite: bool = True,
-    convert_2d: bool = True,
+    convert_2d: bool = False,
     ensure_min_samples: int = 1,
-    ensure_min_dimensions: int = 1,
+    ensure_min_channels: int = 1,
     ensure_min_series_length: int = 2,
     estimator: Union[str, BaseEstimator, None] = None,
 ) -> Union[np.ndarray, list]:
@@ -246,7 +257,8 @@ def check_X(
 
     If the input is array-like but not a 3D array or list of 2D arrays, the function
     will attempt to convert the input into a numpy array and validate it as such. 2D
-    numpy arrays will be converted to a 3D numpy array of shape (n,1,m).
+    numpy arrays will be converted to a 3D numpy array of shape (n,1,m) if convert_2d
+    is True.
 
     Uses the `scikit-learn` 1.2.1 `check_array` function as a base.
 
@@ -271,12 +283,14 @@ def check_X(
         - False: accepts np.inf, np.nan, pd.NA in array.
         - 'allow-nan': accepts only np.nan and pd.NA values in array. Values
           cannot be infinite.
+    convert_2d : bool, default=False
+        Whether to convert 2D numpy arrays to 3D numpy arrays of shape (n,1,m).
     ensure_min_samples : int, default=1
         Make sure that the array has a minimum number of samples in its first
         axis (number of items for list of 2D numpy array). Setting to 0 disables this
         check.
-    ensure_min_dimensions : int, default=1
-        Make sure that the array has a minimum number of dimensions in its second
+    ensure_min_channels : int, default=1
+        Make sure that the array has a minimum number of channels in its second
         axis (first axis of all items for list of 2D numpy array). Setting to 0 disables
         this check.
     ensure_min_series_length : int, default=1
@@ -332,18 +346,13 @@ def check_X(
             if x.ndim != 2:
                 raise ValueError(
                     "X is a list of np.ndarray objects, but not all arrays are 2D. "
-                    f"Found {x.ndim} dimensions at index {i}."
+                    f"Found {x.ndim} channels at index {i}."
                 )
-            if x.shape[0] < 2:
-                raise ValueError(
-                    "X must have a series length of at least 2. Found series length "
-                    f"{x.shape[1]} at index {i}."
-                )
-            elif x.shape[0] != X[0].shape[0]:
+            if x.shape[0] != X[0].shape[0]:
                 raise ValueError(
                     "X is a list of np.ndarray objects, but not all arrays have "
-                    "the same number of dimensions. "
-                    f"Found {x.shape[0]} dimensions at index {i} and "
+                    "the same number of channels. "
+                    f"Found {x.shape[0]} channels at index {i} and "
                     f"{X[0].shape[0]} at index 0."
                 )
 
@@ -364,6 +373,13 @@ def check_X(
         try:
             X = np.array(X)
             dtype_orig = getattr(X, "dtype", None)
+
+            warnings.warn(
+                "Attempted to convert array-like object to np.ndarray and succeeded. "
+                "This conversion is not safe however, and we recommend input X as a 3D "
+                "np.ndarray or a list of 2D np.ndarray objects.",
+                stacklevel=1,
+            )
         except Exception as ex:
             raise ValueError(
                 "Attempted to convert array-like object to np.ndarray but failed. "
@@ -379,30 +395,30 @@ def check_X(
     # check numpy arrays, these may have been converted from list-like objects above
     is_np = False
     if isinstance(X, np.ndarray):
+        # index for series length, will be 2 if 3D and 1 if 2D
+        series_idx = 2
+
         _ensure_no_complex_data(X)
 
-        # convert 2D numpy arrays to univariate 3D data.
-        if X.ndim == 2 and convert_2d:
-            X = X.reshape((X.shape[0], 1, -1))
+        # convert 2D numpy arrays to univariate 3D data if enabled.
+        if X.ndim == 2:
+            if convert_2d:
+                X = X.reshape((X.shape[0], 1, -1))
+            else:
+                series_idx = 1
         elif X.ndim == 1:
             raise ValueError(
-                "X is a np.ndarray, but does not have 3 dimensions. Found 1 dimension. "
+                "X is a np.ndarray, but does not have 3 channels. Found 1 channel. "
                 "2D arrays are automatically converted to the 3D format used by tsml. "
                 "Reshape your data using X.reshape(1, -1) if it contains a single "
                 "sample."
             )
         elif X.ndim != 3:
             raise ValueError(
-                "X is a np.ndarray, but does not have 3 dimensions. "
-                f"Found {X.ndim} dimensions.  If your data is 2D, consider "
+                "X is a np.ndarray, but does not have 3 channels. "
+                f"Found {X.ndim} channels.  If your data is 2D, consider "
                 f"using X.reshape((X.shape[0], 1, -1)) to convert it into a univariate "
                 f"format usable by tsml."
-            )
-
-        if X.shape[2] < 2:
-            raise ValueError(
-                "X must have a series length of at least 2. Found series length "
-                f"{X.shape[2]}."
             )
 
         dtype_orig = getattr(X, "dtype", None)
@@ -439,7 +455,6 @@ def check_X(
             _assert_all_finite(
                 X,
                 allow_nan=False,
-                estimator_name=estimator_name,
             )
 
         if is_np:
@@ -457,11 +472,17 @@ def check_X(
         )
 
     if force_all_finite:
-        _assert_all_finite(
-            X,
-            allow_nan=force_all_finite == "allow-nan",
-            estimator_name=estimator_name,
-        )
+        if is_np:
+            _assert_all_finite(
+                X,
+                allow_nan=force_all_finite == "allow-nan",
+            )
+        else:
+            for x in X:
+                _assert_all_finite(
+                    x,
+                    allow_nan=force_all_finite == "allow-nan",
+                )
 
     if ensure_min_samples > 0:
         n_samples = _num_samples(X)
@@ -471,16 +492,26 @@ def check_X(
                 f"{ensure_min_samples} is required{context}."
             )
 
-    if ensure_min_dimensions > 0:
-        n_dimensions = X.shape[1] if is_np else X[0].shape[0]
-        if n_dimensions < ensure_min_dimensions:
+    if ensure_min_channels > 0:
+        # 2d numpy array requires more than one channel
+        if is_np and series_idx == 1 and ensure_min_channels > 1:
             raise ValueError(
-                f"Found array with {n_dimensions} dimension(s) while a minimum of "
-                f"{ensure_min_dimensions} is required{context}."
+                f"Found 2d array with 1 channel while a minimum of "
+                f"{ensure_min_channels} is required{context}."
+            )
+        else:
+            n_channels = X.shape[1] if is_np else X[0].shape[0]
+
+        if n_channels < ensure_min_channels:
+            raise ValueError(
+                f"Found array with {n_channels} channel(s) while a minimum of "
+                f"{ensure_min_channels} is required{context}."
             )
 
     if ensure_min_series_length > 0:
-        series_length = X.shape[2] if is_np else np.min([x.shape[1] for x in X])
+        series_length = (
+            X.shape[series_idx] if is_np else np.min([x.shape[1] for x in X])
+        )
         if series_length < ensure_min_series_length:
             raise ValueError(
                 f"Found array with {series_length} series length while a minimum of "
@@ -558,7 +589,7 @@ def _check_optional_dependency(
         raise ModuleNotFoundError(
             f'{source_name} has an optional dependency and requires "{package_name}" '
             f'to be installed. Run: "pip install {package_name}" or "pip install '
-            f'tsml[optional_dependencies]" to install all optional dependencies.'
+            f'tsml[extras]" to install all optional dependencies.'
         ) from e
 
     # check installed version is compatible

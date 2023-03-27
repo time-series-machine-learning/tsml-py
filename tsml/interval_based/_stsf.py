@@ -99,19 +99,15 @@ class RSTSFClassifier(ClassifierMixin, BaseIntervalForest):
         # ar_X = _ar_coefs(X)
         # ar_X[np.isnan(ar_X)] = 0
 
-        def _getPeriodogramRepr(X):
-            nfeats = X.shape[1]
-            fft_object = pyfftw.builders.fft(X)
-            per_X = np.abs(fft_object())
-            return per_X[:, : int(nfeats / 2)]
-
-        def _ar_coefs(X):
-            X_transform = []
-            lags = int(12 * (X.shape[1] / 100.0) ** (1 / 4.0))
-            for i in range(X.shape[0]):
-                coefs, _ = burg(X[i, :], order=lags)
-                X_transform.append(coefs)
-            return np.array(X_transform)
+        # def _ar_coefs(X):
+        #     X_transform = []
+        #     lags = int(12 * (X.shape[1] / 100.0) ** (1 / 4.0))
+        #     for i in range(X.shape[0]):
+        #         coefs, _ = burg(X[i, :], order=lags)
+        #         X_transform.append(coefs)
+        #     return np.array(X_transform)
+        #
+        # X_d = np.diff(X, 1)
 
         ExtraTreeClassifier(
             criterion="entropy",

@@ -2,8 +2,9 @@
 """Interval based estimators."""
 
 __all__ = [
-    # "CIFClassifier",
-    # "CIFRegressor",
+    "BaseIntervalForest",
+    "CIFClassifier",
+    "CIFRegressor",
     # "DrCIFClassifier",
     # "DrCIFRegressor",
     "IntervalForestClassifier",
@@ -19,6 +20,8 @@ __all__ = [
     "TSFRegressor",
 ]
 
+from tsml.interval_based._base import BaseIntervalForest
+from tsml.interval_based._cif import CIFClassifier, CIFRegressor
 from tsml.interval_based._interval_forest import (
     IntervalForestClassifier,
     IntervalForestRegressor,

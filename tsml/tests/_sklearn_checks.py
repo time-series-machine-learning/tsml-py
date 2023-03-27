@@ -20,11 +20,10 @@ from sklearn import clone
 from sklearn.base import is_classifier
 from sklearn.datasets import make_multilabel_classification, make_regression
 from sklearn.exceptions import DataConversionWarning, NotFittedError
-from sklearn.metrics import adjusted_rand_score
-from sklearn.metrics.pairwise import rbf_kernel
+from sklearn.metrics.pairwise import linear_kernel, pairwise_distances, rbf_kernel
 from sklearn.model_selection import ShuffleSplit, train_test_split
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler, scale
+from sklearn.preprocessing import scale
 from sklearn.utils import IS_PYPY, shuffle
 from sklearn.utils._testing import (
     SkipTest,
@@ -39,7 +38,6 @@ from sklearn.utils._testing import (
 )
 from sklearn.utils.estimator_checks import (
     _choose_check_classifiers_labels,
-    _enforce_estimator_tags_X,
     _enforce_estimator_tags_y,
     _is_pairwise_metric,
     _is_public_parameter,
@@ -54,6 +52,31 @@ import tsml.utils.testing as test_utils
 from tsml.utils._tags import _DEFAULT_TAGS, _safe_tags
 
 
+def _enforce_estimator_tags_X(estimator, X, kernel=linear_kernel):
+    # Estimators with `1darray` in `X_types` tag only accept
+    # X of shape (`n_samples`,)
+    if "1darray" in _safe_tags(estimator, key="X_types"):
+        X = X[:, 0]
+    # Estimators with a `requires_positive_X` tag only accept
+    # strictly positive data
+    if _safe_tags(estimator, key="requires_positive_X"):
+        X = X - X.min()
+    if "categorical" in _safe_tags(estimator, key="X_types"):
+        X = (X - X.min()).astype(np.int32)
+
+    if estimator.__class__.__name__ == "SkewedChi2Sampler":
+        # SkewedChi2Sampler requires X > -skewdness in transform
+        X = X - X.min()
+
+    # Pairwise estimators only accept
+    # X of shape (`n_samples`, `n_samples`)
+    if _is_pairwise_metric(estimator):
+        X = pairwise_distances(X, metric="euclidean")
+    elif _safe_tags(estimator, key="pairwise"):
+        X = kernel(X, X)
+    return X
+
+
 @ignore_warnings(category=FutureWarning)
 def check_supervised_y_no_nan(name, estimator_orig):
     """
@@ -62,7 +85,7 @@ def check_supervised_y_no_nan(name, estimator_orig):
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
     estimator = clone(estimator_orig)
-    X, _ = test_utils.generate_test_data()
+    X, _ = test_utils.generate_3d_test_data()
 
     for value in [np.nan, np.inf]:
         y = np.full(10, value)
@@ -100,7 +123,7 @@ def check_sample_weights_not_an_array(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     estimator = clone(estimator_orig)
     X = _NotAnArray(_enforce_estimator_tags_X(estimator_orig, X))
@@ -119,7 +142,7 @@ def check_sample_weights_list(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     estimator = clone(estimator_orig)
     rnd = np.random.RandomState(0)
@@ -139,7 +162,7 @@ def check_sample_weights_shape(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     estimator = clone(estimator_orig)
     y = _enforce_estimator_tags_y(estimator, y)
@@ -163,7 +186,7 @@ def check_sample_weights_invariance(name, estimator_orig, kind="ones"):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X1, y1 = test_utils.generate_test_data()
+    X1, y1 = test_utils.generate_3d_test_data()
 
     estimator1 = clone(estimator_orig)
     estimator2 = clone(estimator_orig)
@@ -211,7 +234,7 @@ def check_sample_weights_not_overwritten(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     estimator = clone(estimator_orig)
     set_random_state(estimator, random_state=0)
@@ -236,7 +259,7 @@ def check_dtype_object(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(estimator_orig, X)
     X = X.astype(object)
@@ -291,7 +314,7 @@ def check_dict_unchanged(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(estimator_orig, X)
 
@@ -325,7 +348,7 @@ def check_dont_overwrite_parameters(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     estimator = clone(estimator_orig)
     X = _enforce_estimator_tags_X(estimator_orig, X)
@@ -382,7 +405,7 @@ def check_fit3d_predict1d(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(estimator_orig, X)
     estimator = clone(estimator_orig)
@@ -413,7 +436,7 @@ def check_methods_subset_invariance(name, estimator_orig):
     Modified version of the scikit-learn 1.2.1 function with the name for time series
     data.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(estimator_orig, X)
     estimator = clone(estimator_orig)
@@ -454,7 +477,7 @@ def check_methods_sample_order_invariance(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(estimator_orig, X)
     estimator = clone(estimator_orig)
@@ -502,7 +525,7 @@ def check_fit3d_1sample(name, estimator_orig):
     Modified version of the scikit-learn 1.2.1 function with the name for time series
     data.
     """
-    X, y = test_utils.generate_test_data(n_samples=1)
+    X, y = test_utils.generate_3d_test_data(n_samples=1)
 
     X = _enforce_estimator_tags_X(estimator_orig, X)
     estimator = clone(estimator_orig)
@@ -510,7 +533,7 @@ def check_fit3d_1sample(name, estimator_orig):
 
     set_random_state(estimator, 1)
 
-    msgs = [
+    msg = [
         "1 sample",
         "n_samples = 1",
         "n_samples=1",
@@ -518,7 +541,7 @@ def check_fit3d_1sample(name, estimator_orig):
         "1 class",
         "one class",
     ]
-    with raises(ValueError, match=msgs, may_pass=True):
+    with raises(ValueError, match=msg, may_pass=True):
         estimator.fit(X, y)
 
 
@@ -532,7 +555,7 @@ def check_fit3d_1feature(name, estimator_orig):
     Modified version of the scikit-learn 1.2.1 function with the name for time series
     data.
     """
-    X, y = test_utils.generate_test_data(series_length=1)
+    X, y = test_utils.generate_3d_test_data(series_length=1)
 
     X = _enforce_estimator_tags_X(estimator_orig, X)
     estimator = clone(estimator_orig)
@@ -541,8 +564,8 @@ def check_fit3d_1feature(name, estimator_orig):
     y = _enforce_estimator_tags_y(estimator, y)
     set_random_state(estimator, 1)
 
-    msgs = ["series length 1", "series length = 1", "series length=1"]
-    with raises(ValueError, match=msgs, may_pass=True):
+    msg = ["1 series length", "series length 1", "series length = 1", "series length=1"]
+    with raises(ValueError, match=msg, may_pass=True):
         estimator.fit(X, y)
 
 
@@ -570,7 +593,7 @@ def check_transformer_general(name, transformer, readonly_memmap=False):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(transformer, X)
 
@@ -586,7 +609,7 @@ def check_transformer_data_not_an_array(name, transformer):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(transformer, X)
     this_X = _NotAnArray(X)
@@ -602,7 +625,7 @@ def check_transformers_unfitted(name, transformer):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, _ = test_utils.generate_test_data()
+    X, _ = test_utils.generate_3d_test_data()
 
     transformer = clone(transformer)
     with raises(
@@ -702,7 +725,7 @@ def check_pipeline_consistency(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     if _safe_tags(estimator_orig, key="non_deterministic"):
         msg = name + " is non deterministic"
@@ -736,7 +759,7 @@ def check_fit_score_takes_y(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(estimator_orig, X)
     estimator = clone(estimator_orig)
@@ -766,7 +789,7 @@ def check_estimators_dtypes(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X_train_32 = X.astype(np.float32)
     X_train_32 = _enforce_estimator_tags_X(estimator_orig, X_train_32)
@@ -794,7 +817,7 @@ def check_transformer_preserve_dtypes(name, transformer_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(transformer_orig, X)
 
@@ -836,7 +859,7 @@ def check_estimators_empty_data_messages(name, estimator_orig):
     # the following y should be accepted by both classifiers and regressors
     # and ignored by unsupervised models
     y = _enforce_estimator_tags_y(e, np.array([1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]))
-    msg = ["series length 0", "series length=0", "series length = 0"]
+    msg = ["0 series length", "series length 0", "series length=0", "series length = 0"]
     with raises(ValueError, match=msg):
         e.fit(X_zero_features, y)
 
@@ -848,7 +871,7 @@ def check_estimators_nan_inf(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     rnd = np.random.RandomState(0)
     X_train_finite = _enforce_estimator_tags_X(estimator_orig, X)
@@ -899,7 +922,7 @@ def check_nonsquare_error(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     estimator = clone(estimator_orig)
 
@@ -919,7 +942,7 @@ def check_estimators_pickle(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     check_methods = ["predict", "transform", "decision_function", "predict_proba"]
 
@@ -968,7 +991,7 @@ def check_estimators_partial_fit_n_features(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     if not hasattr(estimator_orig, "partial_fit"):
         return
@@ -1098,7 +1121,7 @@ def check_clustering(name, clusterer_orig, readonly_memmap=False):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     clusterer = clone(clusterer_orig)
     rng = np.random.RandomState(7)
@@ -1160,7 +1183,7 @@ def check_clusterer_compute_labels_predict(name, clusterer_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     clusterer = clone(clusterer_orig)
     set_random_state(clusterer)
@@ -1248,7 +1271,7 @@ def check_classifiers_train(
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X_m, y_m = test_utils.generate_test_data(n_samples=15, n_labels=3)
+    X_m, y_m = test_utils.generate_3d_test_data(n_samples=15, n_labels=3)
 
     X_m = X_m.astype(X_dtype)
     # generate binary problem from multi-class one
@@ -1634,7 +1657,7 @@ def check_estimators_fit_returns_self(name, estimator_orig, readonly_memmap=Fals
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
     X = _enforce_estimator_tags_X(estimator_orig, X)
 
     estimator = clone(estimator_orig)
@@ -1656,7 +1679,7 @@ def check_estimators_unfitted(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     estimator = clone(estimator_orig)
     for method in (
@@ -1676,7 +1699,7 @@ def check_supervised_y_2d(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     tags = _safe_tags(estimator_orig)
     n_samples = 30
@@ -1714,7 +1737,7 @@ def check_classifiers_classes(name, classifier_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X_multiclass, y_multiclass = test_utils.generate_test_data(n_labels=3)
+    X_multiclass, y_multiclass = test_utils.generate_3d_test_data(n_labels=3)
     X_multiclass, y_multiclass = shuffle(X_multiclass, y_multiclass, random_state=7)
 
     X_binary = X_multiclass[y_multiclass != 2]
@@ -1809,7 +1832,7 @@ def check_regressors_int(name, regressor_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(regressor_orig, X)
     y = _enforce_estimator_tags_y(regressor_orig, y)
@@ -1835,7 +1858,7 @@ def check_regressors_train(
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = X.astype(X_dtype)
     y = scale(y)  # X is already scaled
@@ -1874,7 +1897,7 @@ def check_regressors_no_decision_function(name, regressor_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     regressor = clone(regressor_orig)
 
@@ -1900,7 +1923,7 @@ def check_class_weight_classifiers(name, classifier_orig):
 
     for n_classes in problems:
         # create a very noisy dataset
-        X, y = test_utils.generate_test_data(n_samples=15, n_labels=n_classes)
+        X, y = test_utils.generate_3d_test_data(n_samples=15, n_labels=n_classes)
         rng = np.random.RandomState(0)
         X += 20 * rng.uniform(size=X.shape)
         X_train, X_test, y_train, y_test = train_test_split(
@@ -1936,7 +1959,7 @@ def check_estimators_overwrite_params(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(estimator_orig, X, kernel=rbf_kernel)
     estimator = clone(estimator_orig)
@@ -2014,7 +2037,7 @@ def check_classifier_data_not_an_array(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(estimator_orig, X)
     y = _enforce_estimator_tags_y(estimator_orig, y)
@@ -2028,7 +2051,7 @@ def check_regressor_data_not_an_array(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X = _enforce_estimator_tags_X(estimator_orig, X)
     y = _enforce_estimator_tags_y(estimator_orig, y)
@@ -2046,7 +2069,7 @@ def check_non_transformer_estimators_n_iter(name, estimator_orig):
     """
     estimator = clone(estimator_orig)
     if hasattr(estimator, "max_iter"):
-        X, y = test_utils.generate_test_data()
+        X, y = test_utils.generate_3d_test_data()
         y = _enforce_estimator_tags_y(estimator, y)
 
         set_random_state(estimator, 0)
@@ -2068,7 +2091,7 @@ def check_transformer_n_iter(name, estimator_orig):
     """
     estimator = clone(estimator_orig)
     if hasattr(estimator, "max_iter"):
-        X, y = test_utils.generate_test_data()
+        X, y = test_utils.generate_3d_test_data()
         X = _enforce_estimator_tags_X(estimator_orig, X)
         set_random_state(estimator, 0)
         estimator.fit(X, y)
@@ -2102,7 +2125,7 @@ def check_decision_proba_consistency(name, estimator_orig):
 
     Modified version of the scikit-learn 1.2.1 function with the name for time series.
     """
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=0
@@ -2168,7 +2191,7 @@ def check_fit_idempotent(name, estimator_orig):
     if "warm_start" in estimator.get_params().keys():
         estimator.set_params(warm_start=False)
 
-    X, y = test_utils.generate_test_data(n_samples=15)
+    X, y = test_utils.generate_3d_test_data(n_samples=15)
     X = _enforce_estimator_tags_X(estimator, X)
     y = _enforce_estimator_tags_y(estimator, y)
 
@@ -2217,7 +2240,7 @@ def check_fit_check_is_fitted(name, estimator_orig):
     if "warm_start" in estimator.get_params():
         estimator.set_params(warm_start=False)
 
-    X, y = test_utils.generate_test_data(n_samples=15)
+    X, y = test_utils.generate_3d_test_data(n_samples=15)
     X = _enforce_estimator_tags_X(estimator, X)
     y = _enforce_estimator_tags_y(estimator, y)
 
@@ -2252,7 +2275,7 @@ def check_n_features_in(name, estimator_orig):
     if "warm_start" in estimator.get_params():
         estimator.set_params(warm_start=False)
 
-    X, y = test_utils.generate_test_data()
+    X, y = test_utils.generate_3d_test_data()
     X = _enforce_estimator_tags_X(estimator, X)
     y = _enforce_estimator_tags_y(estimator, y)
 
@@ -2272,7 +2295,7 @@ def check_requires_y_none(name, estimator_orig):
     estimator = clone(estimator_orig)
     set_random_state(estimator)
 
-    X, _ = test_utils.generate_test_data(n_samples=15)
+    X, _ = test_utils.generate_3d_test_data(n_samples=15)
     X = _enforce_estimator_tags_X(estimator, X)
 
     expected_err_msgs = (
