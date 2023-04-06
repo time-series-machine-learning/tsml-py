@@ -1030,3 +1030,4 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             return estimator.predict_proba(interval_features)
         else:
             return estimator.predict(interval_features)
+
