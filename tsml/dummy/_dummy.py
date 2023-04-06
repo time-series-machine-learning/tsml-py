@@ -104,7 +104,7 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         for index, classVal in enumerate(self.classes_):
             self.class_dictionary_[classVal] = index
 
-        if len(self.classes_) == 1:
+        if self.n_classes_ == 1:
             return self
 
         self._clf = SklearnDummyClassifier(
@@ -120,11 +120,11 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         """"""
         check_is_fitted(self)
 
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
+
         # treat case of single class seen in fit
         if self.n_classes_ == 1:
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
-
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         return self._clf.predict(np.zeros(X.shape))
 

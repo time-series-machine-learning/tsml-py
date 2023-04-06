@@ -24,15 +24,6 @@ def _yield_all_time_series_checks(estimator):
     name = estimator.__class__.__name__
     tags = _safe_tags(estimator)
 
-    if "3darray" not in tags["X_types"]:
-        warnings.warn(
-            "Can't test estimator {} which requires input  of type {}".format(
-                name, tags["X_types"]
-            ),
-            SkipTestWarning,
-        )
-        return
-
     if tags["_skip_test"]:
         warnings.warn(
             f"Explicit SKIP via _skip_test tag for estimator {name}.",

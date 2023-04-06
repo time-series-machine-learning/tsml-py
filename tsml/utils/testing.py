@@ -111,7 +111,7 @@ def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
 def generate_3d_test_data(
     n_samples: int = 10,
     n_channels: int = 1,
-    series_length: int = 8,
+    series_length: int = 12,
     n_labels: int = 2,
     random_state: Union[int, None] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:

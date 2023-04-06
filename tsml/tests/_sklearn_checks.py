@@ -1702,7 +1702,6 @@ def check_supervised_y_2d(name, estimator_orig):
     X, y = test_utils.generate_3d_test_data()
 
     tags = _safe_tags(estimator_orig)
-    n_samples = 30
     X = _enforce_estimator_tags_X(estimator_orig, X)
     y = _enforce_estimator_tags_y(estimator_orig, y)
     estimator = clone(estimator_orig)
@@ -2328,3 +2327,6 @@ def check_estimator_get_tags_default_keys(name, estimator_orig):
         f"{name}._get_tags() is missing entries for the following default tags"
         f": {default_tags_keys - tags_keys.intersection(default_tags_keys)}"
     )
+
+
+# todo add pandas tests again?

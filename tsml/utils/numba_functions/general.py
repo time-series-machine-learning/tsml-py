@@ -5,7 +5,7 @@ __author__ = ["MatthewMiddlehurst"]
 __all__ = [
     "unique_count",
     "first_order_differences",
-    "row_first_order_differences",
+    "first_order_differences_2d",
     "z_normalise_series",
     "z_normalise_series_2d",
     "z_normalise_series_3d",
@@ -88,7 +88,7 @@ def first_order_differences(X: np.ndarray) -> np.ndarray:
 
 
 @njit(fastmath=True, cache=True)
-def row_first_order_differences(X: np.ndarray) -> np.ndarray:
+def first_order_differences_2d(X: np.ndarray) -> np.ndarray:
     """Numba first order differences function for a 2d numpy array.
 
     Parameters
@@ -99,16 +99,40 @@ def row_first_order_differences(X: np.ndarray) -> np.ndarray:
     Returns
     -------
     arr : 2d numpy array of shape (X.shape[0], X.shape[1] - 1)
-        The first order differences for axis 0 of the input array
+        The first order differences for axis 1 of the input array
 
     Examples
     --------
     >>> import numpy as np
-    >>> from tsml.utils.numba_functions.general import row_first_order_differences
+    >>> from tsml.utils.numba_functions.general import first_order_differences_2d
     >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
-    >>> diff = row_first_order_differences(X)
+    >>> diff = first_order_differences_2d(X)
     """
     return X[:, 1:] - X[:, :-1]
+
+
+@njit(fastmath=True, cache=True)
+def first_order_differences_3d(X: np.ndarray) -> np.ndarray:
+    """Numba first order differences function for a 3d numpy array.
+
+    Parameters
+    ----------
+    X : 3d numpy array
+        A 3d numpy array of values
+
+    Returns
+    -------
+    arr : 2d numpy array of shape (X.shape[0], X.shape[1], X.shape[2] - 1)
+        The first order differences for axis 2 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.general import first_order_differences_3d
+    >>> X = np.array([[[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]]])
+    >>> diff = first_order_differences_3d(X)
+    """
+    return X[:, :, 1:] - X[:, :, :-1]
 
 
 @njit(fastmath=True, cache=True)

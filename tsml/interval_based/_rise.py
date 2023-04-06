@@ -8,6 +8,7 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier
 
 from tsml.interval_based._base import BaseIntervalForest
+from tsml.transformations import PeriodogramTransformer
 from tsml.vector import CITClassifier
 
 
@@ -22,20 +23,18 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
         max_interval_length=np.inf,
         time_limit_in_minutes=None,
         contract_max_n_estimators=500,
+        use_pyfftw=True,
         save_transformed_data=False,
         random_state=None,
         n_jobs=1,
         parallel_backend=None,
     ):
-        if base_estimator is None:
-            base_estimator = DecisionTreeClassifier(criterion="entropy")
+        self.use_pyfftw = use_pyfftw
 
         if isinstance(base_estimator, CITClassifier):
             replace_nan = "nan"
         else:
-            replace_nan = "zero"
-
-        interval_features = []
+            replace_nan = 0
 
         super(RISEClassifier, self).__init__(
             base_estimator=base_estimator,
@@ -44,7 +43,7 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
             n_intervals=1,
             min_interval_length=min_interval_length,
             max_interval_length=max_interval_length,
-            interval_features=interval_features,
+            interval_features=PeriodogramTransformer(use_pyfftw=use_pyfftw),
             series_transformers=None,
             att_subsample_size=None,
             replace_nan=replace_nan,
@@ -97,15 +96,13 @@ class RISERegressor(RegressorMixin, BaseIntervalForest):
         max_interval_length=np.inf,
         time_limit_in_minutes=None,
         contract_max_n_estimators=500,
+        use_pyfftw=True,
         save_transformed_data=False,
         random_state=None,
         n_jobs=1,
         parallel_backend=None,
     ):
-        if base_estimator is None:
-            base_estimator = DecisionTreeClassifier(criterion="entropy")
-
-        interval_features = []
+        self.use_pyfftw = use_pyfftw
 
         super(RISERegressor, self).__init__(
             base_estimator=base_estimator,
@@ -114,10 +111,10 @@ class RISERegressor(RegressorMixin, BaseIntervalForest):
             n_intervals=1,
             min_interval_length=min_interval_length,
             max_interval_length=max_interval_length,
-            interval_features=interval_features,
+            interval_features=PeriodogramTransformer(use_pyfftw=use_pyfftw),
             series_transformers=None,
             att_subsample_size=None,
-            replace_nan="zero",
+            replace_nan=0,
             time_limit_in_minutes=time_limit_in_minutes,
             contract_max_n_estimators=contract_max_n_estimators,
             save_transformed_data=save_transformed_data,

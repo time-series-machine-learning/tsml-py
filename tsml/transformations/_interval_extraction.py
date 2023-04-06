@@ -364,6 +364,9 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                         y,
                     )
 
+                    if t.ndim == 3:
+                        t = t.reshape((t.shape[0], t.shape[2]))
+
                     Xt = np.hstack((Xt, t))
                 else:
                     feature.fit(
@@ -395,6 +398,8 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 np.expand_dims(X[:, dim, interval_start:interval_end], axis=1)
             )
 
+            if Xt.ndim == 3:
+                Xt = Xt.reshape((Xt.shape[0], Xt.shape[2]))
         else:
             Xt = [[f] for f in feature(X[:, dim, interval_start:interval_end])]
 
@@ -719,7 +724,7 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
     def _fit_setup(self, X, y):
         X, y = self._validate_data(
-            X=X, y=y, ensure_min_samples=2, ensure_min_series_length=7
+            X=X, y=y, ensure_min_samples=2, ensure_min_series_length=5
         )
 
         self.intervals_ = []
