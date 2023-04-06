@@ -8,6 +8,24 @@ from sklearn.base import ClassifierMixin
 from sklearn.tree import ExtraTreeClassifier
 
 from tsml.interval_based._base import BaseIntervalForest
+from tsml.transformations import (
+    ARCoefficientTransformer,
+    FunctionTransformer,
+    PeriodogramTransformer,
+)
+from tsml.utils.numba_functions.general import first_order_differences_3d
+from tsml.utils.numba_functions.stats import (
+    row_count_above_mean,
+    row_count_mean_crossing,
+    row_iqr,
+    row_mean,
+    row_median,
+    row_numba_max,
+    row_numba_min,
+    row_slope,
+    row_std,
+)
+from tsml.utils.validation import _check_optional_dependency
 
 
 class STSFClassifier(ClassifierMixin, BaseIntervalForest):
@@ -20,13 +38,31 @@ class STSFClassifier(ClassifierMixin, BaseIntervalForest):
         min_interval_length=3,
         time_limit_in_minutes=None,
         contract_max_n_estimators=500,
+        use_pyfftw=True,
         save_transformed_data=False,
         random_state=None,
         n_jobs=1,
         parallel_backend=None,
     ):
-        # min interval length
-        # check defaults for others
+        self.use_pyfftw = use_pyfftw
+        if use_pyfftw:
+            _check_optional_dependency("pyfftw", "pyfftw", self)
+
+        series_transformers = [
+            None,
+            FunctionTransformer(func=first_order_differences_3d, validate=False),
+            PeriodogramTransformer(use_pyfftw=use_pyfftw),
+        ]
+
+        interval_features = [
+            row_mean,
+            row_std,
+            row_slope,
+            row_median,
+            row_iqr,
+            row_numba_min,
+            row_numba_max,
+        ]
 
         super(STSFClassifier, self).__init__(
             base_estimator=base_estimator,
@@ -34,9 +70,9 @@ class STSFClassifier(ClassifierMixin, BaseIntervalForest):
             interval_selection_method="supervised",
             n_intervals=1,
             min_interval_length=min_interval_length,
-            max_interval_length=0,
-            interval_features=0,
-            series_transformers=0,
+            max_interval_length=np.inf,
+            interval_features=interval_features,
+            series_transformers=series_transformers,
             att_subsample_size=None,
             replace_nan=0,
             time_limit_in_minutes=time_limit_in_minutes,
@@ -76,6 +112,11 @@ class STSFClassifier(ClassifierMixin, BaseIntervalForest):
             "n_estimators": 2,
         }
 
+    def _more_tags(self):
+        return {
+            "optional_dependency": True,
+        }
+
 
 class RSTSFClassifier(ClassifierMixin, BaseIntervalForest):
     def __init__(
@@ -86,34 +127,35 @@ class RSTSFClassifier(ClassifierMixin, BaseIntervalForest):
         min_interval_length=3,
         time_limit_in_minutes=None,
         contract_max_n_estimators=500,
+        use_pyfftw=True,
         save_transformed_data=False,
         random_state=None,
         n_jobs=1,
         parallel_backend=None,
     ):
-        # min interval length
-        # check defaults for others
+        self.use_pyfftw = use_pyfftw
+        if use_pyfftw:
+            _check_optional_dependency("pyfftw", "pyfftw", self)
+        _check_optional_dependency("statsmodels", "statsmodels", self)
 
-        # per_X = _getPeriodogramRepr(X)
-        # diff_X = np.diff(X)
-        # ar_X = _ar_coefs(X)
-        # ar_X[np.isnan(ar_X)] = 0
+        series_transformers = [
+            None,
+            FunctionTransformer(func=first_order_differences_3d, validate=False),
+            PeriodogramTransformer(use_pyfftw=use_pyfftw),
+            ARCoefficientTransformer(replace_nan=True),
+        ]
 
-        # def _ar_coefs(X):
-        #     X_transform = []
-        #     lags = int(12 * (X.shape[1] / 100.0) ** (1 / 4.0))
-        #     for i in range(X.shape[0]):
-        #         coefs, _ = burg(X[i, :], order=lags)
-        #         X_transform.append(coefs)
-        #     return np.array(X_transform)
-        #
-        # X_d = np.diff(X, 1)
-
-        ExtraTreeClassifier(
-            criterion="entropy",
-            class_weight="balanced",
-            max_features="sqrt",
-        )
+        interval_features = [
+            row_mean,
+            row_std,
+            row_slope,
+            row_median,
+            row_iqr,
+            row_numba_min,
+            row_numba_max,
+            row_count_mean_crossing,
+            row_count_above_mean,
+        ]
 
         super(RSTSFClassifier, self).__init__(
             base_estimator=base_estimator,
@@ -121,9 +163,9 @@ class RSTSFClassifier(ClassifierMixin, BaseIntervalForest):
             interval_selection_method="random-supervised",
             n_intervals=n_intervals,
             min_interval_length=min_interval_length,
-            max_interval_length=0,
-            interval_features=0,
-            series_transformers=0,
+            max_interval_length=np.inf,
+            interval_features=interval_features,
+            series_transformers=series_transformers,
             att_subsample_size=None,
             replace_nan=0,
             time_limit_in_minutes=time_limit_in_minutes,
@@ -161,4 +203,10 @@ class RSTSFClassifier(ClassifierMixin, BaseIntervalForest):
         """
         return {
             "n_estimators": 2,
+            "n_intervals": 2,
+        }
+
+    def _more_tags(self):
+        return {
+            "optional_dependency": True,
         }

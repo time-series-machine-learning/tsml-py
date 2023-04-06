@@ -172,7 +172,7 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         for index, classVal in enumerate(self.classes_):
             self.class_dictionary_[classVal] = index
 
-        if len(self.classes_) == 1:
+        if self.n_classes_ == 1:
             return self
 
         self._n_jobs = check_n_jobs(self.n_jobs)

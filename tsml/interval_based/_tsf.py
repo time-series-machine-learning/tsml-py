@@ -30,7 +30,7 @@ class TSFClassifier(ClassifierMixin, BaseIntervalForest):
         if isinstance(base_estimator, CITClassifier):
             replace_nan = "nan"
         else:
-            replace_nan = "zero"
+            replace_nan = 0
 
         super(TSFClassifier, self).__init__(
             base_estimator=base_estimator,
@@ -109,7 +109,7 @@ class TSFRegressor(RegressorMixin, BaseIntervalForest):
             interval_features=None,
             series_transformers=None,
             att_subsample_size=None,
-            replace_nan="zero",
+            replace_nan=0,
             time_limit_in_minutes=time_limit_in_minutes,
             contract_max_n_estimators=contract_max_n_estimators,
             save_transformed_data=save_transformed_data,

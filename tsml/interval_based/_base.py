@@ -12,9 +12,15 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 from joblib import Parallel
 from sklearn.base import BaseEstimator, is_classifier, is_regressor
-from sklearn.tree import BaseDecisionTree, DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.tree import (
+    BaseDecisionTree,
+    DecisionTreeClassifier,
+    DecisionTreeRegressor,
+    ExtraTreeClassifier,
+)
 from sklearn.utils import check_random_state
 from sklearn.utils.fixes import delayed
+from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
@@ -33,57 +39,78 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
     Allows the implementation of classifiers and regressors along the lines of [1][2][3]
     which extract intervals and create an ensemble from the subsequent features.
 
-        Extension of the CIF algorithm using multple representations. Implementation of the
-    interval based forest making use of the catch22 feature set on randomly selected
-    intervals on the base series, periodogram representation and differences
-    representation described in the HIVE-COTE 2.0 paper Middlehurst et al (2021). [1]_
-
-    Overview: Input "n" series with "d" channels of length "m".
-    For each tree
-        - Sample n_intervals intervals per representation of random position and length
-        - Subsample att_subsample_size catch22 or summary statistic attributes randomly
-        - Randomly select channel for each interval
-        - Calculate attributes for each interval from its representation, concatenate
-          to form new data set
-        - Build decision tree on new data set
-    Ensemble the trees with averaged probability estimates
+    #skipping predict todo
 
     Parameters
     ----------
-    base_estimator : BaseEstimator
-        Base estimator for the ensemble, can be supplied a sklearn BaseEstimator or a
-        string for suggested options.
-    estimator_type : str
-
-        self.interval_selection_method = interval_selection_method
-        self.n_intervals = n_intervals
-        self.min_interval_length = min_interval_length
-        self.max_interval_length = max_interval_length
-        self.interval_features = interval_features
-        self.series_transformers = series_transformers
-        self.att_subsample_size = att_subsample_size
-        self.replace_nan = replace_nan
-
+    base_estimator : BaseEstimator or None, default=None
+        scikit-learn BaseEstimator used to build the interval ensemble. If None, uses a
+        simple decision tree.
     n_estimators : int, default=200
         Number of estimators to build for the ensemble.
-    interval_selection_method :
+    interval_selection_method : "random", "supervised" or "random-supervised",
+            default="random"
+        The interval selection transformer to use.
+            - "random" uses a RandomIntervalTransformer.
+            - "supervised" uses a SupervisedIntervalTransformer.
+            - "random-supervised" uses a SupervisedIntervalTransformer with
+                randomised elements.
 
-    n_intervals : int, length 3 list of int or None, default=None
-        Number of intervals to extract per representation per tree as an int for all
-        representations or list for individual settings, if None extracts
-        (4 + (sqrt(representation_length) * sqrt(n_dims)) / 3) intervals.
-    min_interval_length : int or length 3 list of int, default=4
-        Minimum length of an interval per representation as an int for all
-        representations or list for individual settings.
-    max_interval_length : int, length 3 list of int or None, default=None
-        Maximum length of an interval per representation as an int for all
-        representations or list for individual settings, if None set to
-        (representation_length / 2).
-    interval_features :
+        Supervised methods can only be used for classification tasks, and require
+        function inputs for interval_features rather than transformers.
+    n_intervals : int, str, list or tuple, default="sqrt"
+        Number of intervals to extract per tree for each series_transformers series.
 
-    series_transformers :
+        An int input will extract that number of intervals from the series, while a str
+        input will return a function of the series length (may differ per
+        series_transformers output) to extract that number of intervals.
+        Valid str inputs are:
+            - "sqrt" : square root of the series length.
+            - "sqrt-div" : sqrt of series length divided by the number
+                of series_transformers.
 
-    att_subsample_size : int, default=10
+        A list or tuple of ints and/or strs will extract the number of intervals using
+        the above rules and sum the results for the final n_intervals. i.e. [4, "sqrt"]
+        will extract sqrt(series_length) + 4 intervals.
+
+        Different number of intervals for each series_transformers series can be
+        specified using a nested list or tuple. Any list or tuple input containing
+        another list or tuple must be the same length as the number of
+        series_transformers.
+
+        %todo random vs supervised
+    min_interval_length : int, float, list, or tuple, default=3
+        Minimum length of intervals to extract from series. float inputs take a
+        proportion of the series length to use as the minimum interval length.
+
+        Different minimum interval lengths for each series_transformers series can be
+        specified using a list or tuple. Any list or tuple input must be the same length
+        as the number of series_transformers.
+    max_interval_length : int, float, list, or tuple, default=np.inf
+        Maximum length of intervals to extract from series. float inputs take a
+        proportion of the series length to use as the maximum interval length.
+
+        Different maximum interval lengths for each series_transformers series can be
+        specified using a list or tuple. Any list or tuple input must be the same length
+        as the number of series_transformers.
+
+        Ignored for supervised interval_selection_method inputs.
+    interval_features : TransformerMixin, callable, list, tuple, or None, default=None
+        The features to extract from the intervals using transformers or callable
+        functions. If None, uses the mean, standard deviation, and slope of the series.
+
+        Both transformers and functions should be able to take a 2d np.ndarray input.
+        Functions should output a 1d array (the feature for each series) and
+        transformers should output a 2d array where rows are the features for each
+        series. A list or tuple of transformers and/or functions will extract all
+        features and concatenate the output.
+
+        Different features for each series_transformers series can be specified using a
+        nested list or tuple. Any list or tuple input containing another list or tuple
+        must be the same length as the number of series_transformers.
+    series_transformers : TransformerMixin, list, tuple, or None, default=None
+
+    att_subsample_size : int or None, default=None
         Number of catch22 or summary statistic attributes to subsample per tree.
     replace_nan :
 
@@ -140,7 +167,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
     @abstractmethod
     def __init__(
         self,
-        base_estimator,
+        base_estimator=None,
         n_estimators=200,
         interval_selection_method="random",
         n_intervals="sqrt",
@@ -183,41 +210,49 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
     # be able to skip transforming features in predict
     transformer_feature_skip = ["transform_features_", "_transform_features"]
 
-    _tags = {
-        "capability:multivariate": True,
-        "capability:train_estimate": True,
-        "capability:contractable": True,
-        "capability:multithreading": True,
-    }
-
     def fit(self, X, y):
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         if is_classifier(self):
+            check_classification_targets(y)
+
             self.classes_ = np.unique(y)
             self.n_classes_ = self.classes_.shape[0]
             self.class_dictionary_ = {}
             for index, classVal in enumerate(self.classes_):
                 self.class_dictionary_[classVal] = index
 
+            if self.n_classes_ == 1:
+                return self
+
+        self._base_estimator = self.base_estimator
         if self.base_estimator is None:
+            from tsml.interval_based import RSTSFClassifier
+
             # default base_estimators for classification and regression
-            if not hasattr(self, "_base_estimator"):
-                if is_classifier(self):
-                    self._base_estimator = DecisionTreeClassifier(criterion="entropy")
-                elif is_regressor(self):
-                    self._base_estimator = DecisionTreeRegressor(
-                        criterion="absolute_error"
-                    )
-                else:
-                    raise ValueError()  # todo error for invalid self.base_estimator
-            elif not isinstance(self._base_estimator, BaseEstimator):
-                raise ValueError()  # todo error for invalid self.base_estimator
+            if isinstance(self, RSTSFClassifier):
+                self._base_estimator = ExtraTreeClassifier(
+                    criterion="entropy",
+                    class_weight="balanced",
+                    max_features="sqrt",
+                )
+            elif is_classifier(self):
+                self._base_estimator = DecisionTreeClassifier(criterion="entropy")
+            elif is_regressor(self):
+                self._base_estimator = DecisionTreeRegressor(criterion="absolute_error")
+            else:
+                raise ValueError(
+                    f"{self} must be a scikit-learn compatible classifier or "
+                    "regressor."
+                )
         # base_estimator must be an sklearn estimator
         elif not isinstance(self.base_estimator, BaseEstimator):
-            raise ValueError()  # todo error for invalid self.base_estimator
+            raise ValueError(
+                "base_estimator must be a scikit-learn BaseEstimator or None. "
+                f"Found: {self.base_estimator}"
+            )
 
         # use the base series if series_transformers is None
         if self.series_transformers is None or self.series_transformers == []:
@@ -254,34 +289,39 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         if isinstance(self.n_intervals, (int, str)):
             n_intervals = [[self.n_intervals]] * len(Xt)
         elif isinstance(self.n_intervals, (list, tuple)):
-            # if only one series_transformer is used, n_intervals can be a list of
-            # multiple n_intervals options to be applied
-            if len(Xt) == 1:
-                for method in self.n_intervals:
-                    if not isinstance(method, (int, str)):
-                        raise ValueError()  # todo error for invalid self.n_intervals
-                n_intervals = [self.n_intervals]
-            # if more than one series_transformer is used, n_intervals must have the
-            # same number of items if it is a list
+            # if input is a list and only contains ints or strs, use the list for all
+            # series in Xt
+            if all(isinstance(item, (int, str)) for item in self.n_intervals):
+                n_intervals = [self.n_intervals] * len(Xt)
+            # other lists must be the same length as Xt
             elif len(self.n_intervals) != len(Xt):
-                raise ValueError()  # todo error for invalid self.n_intervals
+                raise ValueError(
+                    "n_intervals as a list or tuple containing other lists or tuples "
+                    "must be the same length as series_transformers."
+                )
             # list items can be a list of items or a single item for each
             # series_transformer, but each individual item must be an int or str
             else:
                 n_intervals = []
-                for features in self.n_intervals:
-                    if isinstance(features, (list, tuple)):
-                        for method in features:
-                            if not isinstance(method, (int, str)):
-                                raise ValueError()  # todo error for invalid self.n_intervals
-                        n_intervals.append(features)
-                    elif isinstance(features, (int, str)):
-                        n_intervals.append([features])
+                for items in self.n_intervals:
+                    if isinstance(items, (list, tuple)):
+                        if not all(isinstance(item, (int, str)) for item in items):
+                            raise ValueError(
+                                "Individual items in a n_intervals list or tuple must "
+                                f"be an int or str. Input {items} does not contain "
+                                "only ints or strs"
+                            )
+                        n_intervals.append(items)
+                    elif isinstance(items, (int, str)):
+                        n_intervals.append([items])
                     else:
-                        raise ValueError()  # todo error for invalid self.n_intervals
+                        raise ValueError(
+                            "Individual items in a n_intervals list or tuple must be "
+                            f"an int or str. Found: {items}"
+                        )
         # other inputs are invalid
         else:
-            raise ValueError()  # todo error for invalid self.n_intervals
+            raise ValueError(f"Invalid n_intervals input. Found {self.n_intervals}")
 
         # add together the number of intervals for each series_transformer
         # str input must be one of a set valid options
@@ -303,7 +343,10 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                             / len(Xt)
                         )
                     else:
-                        raise ValueError()  # todo error for invalid self.n_intervals string
+                        raise ValueError(
+                            "Invalid str input for n_intervals. Must be "
+                            f'("sqrt","sqrt-div"). Found {method}'
+                        )
 
         # each series_transformer must have at least 1 interval extracted
         for i, n in enumerate(self._n_intervals):
@@ -316,7 +359,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         if isinstance(self.min_interval_length, int):
             self._min_interval_length = [self.min_interval_length] * len(Xt)
         # min_interval_length must be at less than one if it is a float (proportion of
-        # total attributed to subsample)
+        # of the series length)
         elif (
             isinstance(self.min_interval_length, float)
             and self.min_interval_length <= 1
@@ -328,8 +371,11 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         # series_transformers
         # list values must be ints or floats. The same checks as above are performed
         elif isinstance(self.min_interval_length, (list, tuple)):
-            if len(self.min_interval_length) == len(Xt):
-                raise ValueError()  # todo error for invalid self.min_interval_length string
+            if len(self.min_interval_length) != len(Xt):
+                raise ValueError(
+                    "min_interval_length as a list or tuple must be the same length "
+                    "as series_transformers."
+                )
 
             self._min_interval_length = []
             for i, length in enumerate(self.min_interval_length):
@@ -338,10 +384,15 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 elif isinstance(length, int):
                     self._min_interval_length.append(length)
                 else:
-                    raise ValueError()  # todo error for invalid self.min_interval_length string
+                    raise ValueError(
+                        "min_interval_length list items must be int or floats. "
+                        f"Found {length}"
+                    )
         # other inputs are invalid
         else:
-            raise ValueError()  # todo error for invalid self.min_interval_length string
+            raise ValueError(
+                f"Invalid min_interval_length input. Found {self.min_interval_length}"
+            )
 
         # min_interval_length cannot be less than 3 or greater than the series length
         for i, n in enumerate(self._min_interval_length):
@@ -356,8 +407,8 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             or self.max_interval_length == np.inf
         ):
             self._max_interval_length = [self.max_interval_length] * len(Xt)
-        # max_interval_length must be at less than one if it is a float (proportion of
-        # total attributed to subsample)
+        # max_interval_length must be at less than one if it is a float  (proportion of
+        # of the series length)
         elif (
             isinstance(self.max_interval_length, float)
             and self.max_interval_length <= 1
@@ -369,8 +420,11 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         # series_transformers
         # list values must be ints or floats. The same checks as above are performed
         elif isinstance(self.max_interval_length, (list, tuple)):
-            if len(self.max_interval_length) == len(Xt):
-                raise ValueError()  # todo error for invalid self.max_interval_length string
+            if len(self.max_interval_length) != len(Xt):
+                raise ValueError(
+                    "max_interval_length as a list or tuple must be the same length "
+                    "as series_transformers."
+                )
 
             self._max_interval_length = []
             for i, length in enumerate(self.max_interval_length):
@@ -379,10 +433,15 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 elif isinstance(length, int):
                     self._max_interval_length.append(length)
                 else:
-                    raise ValueError()  # todo error for invalid self.max_interval_length string
+                    raise ValueError(
+                        "max_interval_length list items must be int or floats. "
+                        f"Found {length}"
+                    )
         # other inputs are invalid
         else:
-            raise ValueError()  # todo error for invalid self.max_interval_length string
+            raise ValueError(
+                f"Invalid max_interval_length input. Found {self.max_interval_length}"
+            )
 
         # max_interval_length cannot be less than min_interval_length or greater than
         # the series length
@@ -404,23 +463,27 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             self._interval_function = [True] * len(Xt)
             self._interval_features = [[self.interval_features]] * len(Xt)
         elif isinstance(self.interval_features, (list, tuple)):
-            # if only one series_transformer is used, n_intervals can be a list of
-            # multiple n_intervals options to be applied todo
-            if len(Xt) == 1:
+            # if input is a list and only contains transformers or functions, use the
+            # list for all series in Xt
+            if all(
+                is_transformer(item) or callable(item)
+                for item in self.interval_features
+            ):
                 for i, feature in enumerate(self.interval_features):
                     if is_transformer(feature):
                         self._interval_transformer[0] = True
                     elif callable(feature):
                         self._interval_function[0] = True
-                    else:
-                        raise ValueError()  # todo error for invalid self.interval_features
-                self._interval_features = [self.interval_features]
-            # if more than one series_transformer is used, n_intervals must have the
-            # same number of items if it is a list todo
+                self._interval_features = [self.interval_features] * len(Xt)
+            # other lists must be the same length as Xt
             elif len(self.interval_features) != len(Xt):
-                raise ValueError()  # todo error for invalid self.interval_features
+                raise ValueError(
+                    "interval_features as a list or tuple containing other lists or "
+                    "tuples must be the same length as series_transformers."
+                )
             # list items can be a list of items or a single item for each
-            # series_transformer, but each individual item must be an int or str todo
+            # series_transformer, but each individual item must be a transformer
+            # or function
             else:
                 self._interval_features = []
                 for i, feature in enumerate(self.interval_features):
@@ -431,7 +494,12 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                             elif callable(method):
                                 self._interval_function[i] = True
                             else:
-                                raise ValueError()  # todo error for invalid self.interval_features
+                                raise ValueError(
+                                    "Individual items in a interval_features list or "
+                                    "tuple must be a transformer or function. Input "
+                                    f"{feature} does not contain only transformers and "
+                                    f"functions."
+                                )
                         self._interval_features.append(feature)
                     elif is_transformer(feature):
                         self._interval_transformer[i] = True
@@ -440,14 +508,19 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                         self._interval_function[i] = True
                         self._interval_features.append([feature])
                     else:
-                        raise ValueError()  # todo error for invalid self.interval_features
+                        raise ValueError(
+                            "Individual items in a interval_features list or tuple "
+                            f"must be a transformer or function. Found {feature}"
+                        )
         # use basic summary stats by default if None
         elif self.interval_features is None:
             self._interval_function = [True] * len(Xt)
             self._interval_features = [[row_mean, row_std, row_slope]] * len(Xt)
         # other inputs are invalid
         else:
-            raise ValueError()  # todo error for invalid self.interval_features
+            raise ValueError(
+                f"Invalid interval_features input. Found {self.interval_features}"
+            )
 
         # att_subsample_size must be at least one if it is an int
         if isinstance(self.att_subsample_size, int):
@@ -540,34 +613,43 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 or self.interval_selection_method.lower() == "random-supervised"
             ):
                 if any(self._interval_transformer):
-                    raise ValueError()  # todo error for invalid invalid self.interval_selection_method
+                    raise ValueError(
+                        "Supervised interval_selection_method must only have function "
+                        "inputs for interval_features."
+                    )
 
                 if is_regressor(self):
-                    raise ValueError()  # todo error for invalid invalid self.interval_selection_method
+                    raise ValueError(
+                        "Supervised interval_selection_method cannot be used for "
+                        "regression."
+                    )
             # RandomIntervals
             elif not self.interval_selection_method.lower() == "random":
-                raise ValueError()  # todo error for invalid invalid self.interval_selection_method
+                raise ValueError(
+                    'Unknown interval_selection_method, must be one of ("random",'
+                    '"supervised","random-supervised"). '
+                    f"Found: {self.interval_selection_method}"
+                )
         # other inputs are invalid
         else:
-            raise ValueError()  # todo error for invalid self.interval_selection_method
+            raise ValueError(
+                'Unknown interval_selection_method, must be one of ("random",'
+                '"supervised","random-supervised"). '
+                f"Found: {self.interval_selection_method}"
+            )
 
-        # todo int option?
-        # option to replace NaN values must be a valid string
-        if isinstance(self.replace_nan, str):
-            if (
-                not self.replace_nan.lower() == "zero"
-                and not self.replace_nan.lower() == "nan"
-            ):
-                raise ValueError()  # todo error for invalid self.replace_nan
-        # other inputs are invalid except for None
-        elif self.replace_nan is not None:
+        # verify replace_nan is a valid string, number or None
+        if (
+            (not isinstance(self.replace_nan, str) or self.replace_nan.lower() != "nan")
+            and not isinstance(self.replace_nan, (int, float))
+            and self.replace_nan is not None
+        ):
             raise ValueError()  # todo error for invalid self.replace_nan
 
         self._n_jobs = check_n_jobs(self.n_jobs)
         self._efficient_predictions = True  # todo
         self._test_flag = False  # todo
 
-        self._n_estimators = self.n_estimators
         if self.time_limit_in_minutes is not None and self.time_limit_in_minutes > 0:
             time_limit = self.time_limit_in_minutes * 60
             start_time = time.time()
@@ -608,6 +690,8 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 self._n_estimators += self._n_jobs
                 train_time = time.time() - start_time
         else:
+            self._n_estimators = self.n_estimators
+
             fit = Parallel(
                 n_jobs=self._n_jobs,
                 backend=self.parallel_backend,
@@ -631,6 +715,8 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
     def predict(self, X):
         if is_regressor(self):
+            check_is_fitted(self)
+
             Xt = self._predict_setup(X)
 
             y_preds = Parallel(
@@ -649,11 +735,25 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
             return np.mean(y_preds, axis=0)
         else:
+            check_is_fitted(self)
+
+            # treat case of single class seen in fit
+            if self.n_classes_ == 1:
+                return np.repeat(
+                    list(self.class_dictionary_.keys()), X.shape[0], axis=0
+                )
+
             return np.array(
                 [self.classes_[int(np.argmax(prob))] for prob in self._predict_proba(X)]
             )
 
     def _predict_proba(self, X):
+        check_is_fitted(self)
+
+        # treat case of single class seen in fit
+        if self.n_classes_ == 1:
+            return np.repeat([[1]], X.shape[0], axis=0)
+
         Xt = self._predict_setup(X)
 
         y_probas = Parallel(
@@ -818,12 +918,17 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             transform_data_lengths.append(f.shape[1])
             interval_features = np.hstack((interval_features, f))
 
-        # replace invalid attributes with 0 or np.nan if option is selected
-        if self.replace_nan == "zero":
-            interval_features = np.nan_to_num(interval_features, False, 0, 0, 0)
-        elif self.replace_nan == "nan":
+        if isinstance(self.replace_nan, str) and self.replace_nan.lower() == "nan":
             interval_features = np.nan_to_num(
                 interval_features, False, np.nan, np.nan, np.nan
+            )
+        elif isinstance(self.replace_nan, (int, float)):
+            interval_features = np.nan_to_num(
+                interval_features,
+                False,
+                self.replace_nan,
+                self.replace_nan,
+                self.replace_nan,
             )
 
         # clone and fit the base estimator using the transformed data
@@ -876,8 +981,6 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         ]
 
     def _predict_setup(self, X):
-        check_is_fitted(self)
-
         X = self._validate_data(X=X, reset=False)
         X = self._convert_X(X)
 
@@ -910,11 +1013,17 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             f = intervals[r].transform(Xt[r])
             interval_features = np.hstack((interval_features, f))
 
-        if self.replace_nan == "zero":
-            interval_features = np.nan_to_num(interval_features, False, 0, 0, 0)
-        elif self.replace_nan == "nan":
+        if isinstance(self.replace_nan, str) and self.replace_nan.lower() == "nan":
             interval_features = np.nan_to_num(
                 interval_features, False, np.nan, np.nan, np.nan
+            )
+        elif isinstance(self.replace_nan, (int, float)):
+            interval_features = np.nan_to_num(
+                interval_features,
+                False,
+                self.replace_nan,
+                self.replace_nan,
+                self.replace_nan,
             )
 
         if predict_proba:

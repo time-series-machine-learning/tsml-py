@@ -123,6 +123,9 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         for index, classVal in enumerate(self.classes_):
             self.class_dictionary_[classVal] = index
 
+        if self.n_classes_ == 1:
+            return self
+
         self._n_jobs = check_n_jobs(self.n_jobs)
 
         self._transformer = Catch22Transformer(
@@ -164,6 +167,10 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         """
         check_is_fitted(self)
 
+        # treat case of single class seen in fit
+        if self.n_classes_ == 1:
+            return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
+
         X = self._validate_data(X=X, reset=False)
 
         return self._estimator.predict(self._transformer.transform(X))
@@ -182,6 +189,10 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
             Predicted probabilities using the ordering in classes_.
         """
         check_is_fitted(self)
+
+        # treat case of single class seen in fit
+        if self.n_classes_ == 1:
+            return np.repeat([[1]], X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False)
 
