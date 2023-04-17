@@ -111,7 +111,10 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
         return out
 
     def _convert_X(
-        self, X: Union[np.ndarray, List[np.ndarray]], concatenate_channels: bool = False
+        self,
+        X: Union[np.ndarray, List[np.ndarray]],
+        pad_unequal: bool = False,
+        concatenate_channels: bool = False,
     ) -> Union[np.ndarray, List[np.ndarray]]:
         dtypes = self._get_tags()["X_types"]
 
@@ -123,9 +126,9 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
                     return X.reshape((X.shape[0], -1))
                 else:
                     raise ValueError(
-                        "Can only convert 3D numpy array with 1 channel to 2D numpy "
-                        f"array if concatenate_channels is True, found {X.shape[1]} "
-                        "channels."
+                        "Can only convert 3D numpy array with more than 1 channel to "
+                        "2D numpy array if concatenate_channels is True, found "
+                        f"{X.shape[1]} channels."
                     )
             elif dtypes[0] == "np_list":
                 return [x for x in X]
@@ -142,6 +145,13 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
             if "np_list" in dtypes:
                 return X
             elif dtypes[0] == "3darray":
+                if not pad_unequal and not all(x.shape[1] == X[0].shape[1] for x in X):
+                    raise ValueError(
+                        "Can only convert list of 2D numpy arrays with unequal length "
+                        "data to 3D numpy array if pad_unequal is True, found "
+                        "different series lengths."
+                    )
+
                 max_len = max(x.shape[1] for x in X)
                 arr = np.zeros((len(X), X[0].shape[0], max_len))
 
@@ -151,6 +161,15 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
                 return arr
             elif dtypes[0] == "2darray":
                 if X[0].shape[0] == 1 or concatenate_channels:
+                    if not pad_unequal and not all(
+                        x.shape[1] == X[0].shape[1] for x in X
+                    ):
+                        raise ValueError(
+                            "Can only convert list of 2D numpy arrays with unequal "
+                            "length data to 2D numpy array if pad_unequal is True, "
+                            "found different series lengths."
+                        )
+
                     max_len = max(x.shape[1] for x in X)
                     arr = np.zeros((len(X), X[0].shape[0], max_len))
 
@@ -160,9 +179,9 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
                     return arr.reshape((arr.shape[0], -1))
                 else:
                     raise ValueError(
-                        "Can only convert list of 2D numpy arrays with 1 channel to 2D "
-                        "numpy array if concatenate_channels is True, found "
-                        f"{X[0].shape[0]} channels."
+                        "Can only convert list of 2D numpy arrays with more than 1 "
+                        "channel to 2D numpy array if concatenate_channels is True, "
+                        f"found {X[0].shape[0]} channels."
                     )
         else:
             raise ValueError(

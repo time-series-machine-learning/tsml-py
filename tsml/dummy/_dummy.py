@@ -112,7 +112,7 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             random_state=self.random_state,
             constant=self.constant,
         )
-        self._clf.fit(np.zeros(X.shape), y)
+        self._clf.fit(None, y)
 
         return self
 
@@ -120,11 +120,11 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         """"""
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
-
         # treat case of single class seen in fit
         if self.n_classes_ == 1:
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
+
+        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         return self._clf.predict(np.zeros(X.shape))
 
@@ -141,7 +141,10 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         return self._clf.predict_proba(np.zeros(X.shape))
 
     def _more_tags(self):
-        return {"X_types": ["3darray", "2darray", "np_list"]}
+        return {
+            "X_types": ["3darray", "2darray", "np_list"],
+            "equal_length_only": False,
+        }
 
 
 class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
@@ -205,12 +208,12 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         """"""
-        X, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
+        _, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
 
         self._reg = SklearnDummyRegressor(
             strategy=self.strategy, constant=self.constant, quantile=self.quantile
         )
-        self._reg.fit(np.zeros(X.shape), y)
+        self._reg.fit(None, y)
 
         return self
 
@@ -223,7 +226,10 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         return self._reg.predict(np.zeros(X.shape))
 
     def _more_tags(self):
-        return {"X_types": ["3darray", "2darray", "np_list"]}
+        return {
+            "X_types": ["3darray", "2darray", "np_list"],
+            "equal_length_only": False,
+        }
 
 
 class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
@@ -291,4 +297,7 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
             raise ValueError(f"Unknown strategy {self.strategy}")
 
     def _more_tags(self):
-        return {"X_types": ["3darray", "2darray", "np_list"]}
+        return {
+            "X_types": ["3darray", "2darray", "np_list"],
+            "equal_length_only": False,
+        }

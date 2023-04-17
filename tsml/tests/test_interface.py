@@ -32,7 +32,7 @@ def _generate_conversion_test_X(data_type):
 def test_convert_X_to_3d_array(input_type):
     est = _3dArrayDummy()
     X, old_shape = _generate_conversion_test_X(input_type)
-    X = est._convert_X(X)
+    X = est._convert_X(X, pad_unequal=True)
 
     assert isinstance(X, np.ndarray)
     assert X.ndim == 3
@@ -58,7 +58,7 @@ def test_convert_X_to_2d_array(input_type):
 def test_convert_X_to_numpy_list(input_type):
     est = _NpListDummy()
     X, old_shape = _generate_conversion_test_X(input_type)
-    X = est._convert_X(X)
+    X = est._convert_X(X, pad_unequal=True)
 
     assert isinstance(X, list)
     assert X[0].ndim == 2
