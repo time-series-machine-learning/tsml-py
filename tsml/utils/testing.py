@@ -113,6 +113,7 @@ def generate_3d_test_data(
     n_channels: int = 1,
     series_length: int = 12,
     n_labels: int = 2,
+    regression_target: bool = False,
     random_state: Union[int, None] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Randomly generate 3D data for testing.
@@ -129,6 +130,8 @@ def generate_3d_test_data(
         The number of features/series length to generate.
     n_labels : int
         The number of unique labels to generate.
+    regression_target : bool
+        If True, the target will be a float, otherwise an int.
     random_state : int or None
         Seed for random number generation.
 
@@ -152,11 +155,17 @@ def generate_3d_test_data(
     rng = np.random.RandomState(random_state)
     X = n_labels * rng.uniform(size=(n_samples, n_channels, series_length))
     y = X[:, 0, 0].astype(int)
+
     for i in range(n_labels):
         if len(y) > i:
             X[i, 0, 0] = i
             y[i] = i
     X = X * (y[:, None, None] + 1)
+
+    if regression_target:
+        y = y.astype(np.float32)
+        y += rng.uniform(size=y.shape)
+
     return X, y
 
 
@@ -164,6 +173,7 @@ def generate_2d_test_data(
     n_samples: int = 10,
     series_length: int = 8,
     n_labels: int = 2,
+    regression_target: bool = False,
     random_state: Union[int, None] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Randomly generate 2D data for testing.
@@ -178,6 +188,8 @@ def generate_2d_test_data(
         The number of features/series length to generate.
     n_labels : int
         The number of unique labels to generate.
+    regression_target : bool
+        If True, the target will be a float, otherwise an int.
     random_state : int or None
         Seed for random number generation.
 
@@ -200,11 +212,17 @@ def generate_2d_test_data(
     rng = np.random.RandomState(random_state)
     X = n_labels * rng.uniform(size=(n_samples, series_length))
     y = X[:, 0].astype(int)
+
     for i in range(n_labels):
         if len(y) > i:
             X[i, 0] = i
             y[i] = i
     X = X * (y[:, None] + 1)
+
+    if regression_target:
+        y = y.astype(np.float32)
+        y += rng.uniform(size=y.shape)
+
     return X, y
 
 
@@ -214,6 +232,7 @@ def generate_unequal_test_data(
     min_series_length: int = 6,
     max_series_length: int = 8,
     n_labels: int = 2,
+    regression_target: bool = False,
     random_state: Union[int, None] = None,
 ) -> Tuple[List[np.ndarray], np.ndarray]:
     """Randomly generate unequal length 3D data for testing.
@@ -232,6 +251,8 @@ def generate_unequal_test_data(
         The maximum number of features/series length to generate for invidiaul series.
     n_labels : int
         The number of unique labels to generate.
+    regression_target : bool
+        If True, the target will be a float, otherwise an int.
     random_state : int or None
         Seed for random number generation.
 
@@ -255,7 +276,7 @@ def generate_unequal_test_data(
     """
     rng = np.random.RandomState(random_state)
     X = []
-    y = np.zeros(n_samples)
+    y = np.zeros(n_samples, dtype=np.int32)
 
     for i in range(n_samples):
         series_length = rng.randint(min_series_length, max_series_length + 1)
@@ -268,5 +289,9 @@ def generate_unequal_test_data(
 
         X.append(x)
         y[i] = label
+
+    if regression_target:
+        y = y.astype(np.float32)
+        y += rng.uniform(size=y.shape)
 
     return X, y

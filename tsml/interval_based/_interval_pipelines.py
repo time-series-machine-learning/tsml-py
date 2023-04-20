@@ -99,6 +99,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, ensure_min_series_length=3
         )
+        X = self._convert_X(X)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         self.classes_ = np.unique(y)
@@ -152,6 +153,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         check_is_fitted(self)
 
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
+        X = self._convert_X(X)
 
         return self._estimator.predict(self._transformer.transform(X))
 
@@ -171,6 +173,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         check_is_fitted(self)
 
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
+        X = self._convert_X(X)
 
         m = getattr(self._estimator, "predict_proba", None)
         if callable(m):
@@ -311,6 +314,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, ensure_min_series_length=3
         )
+        X = self._convert_X(X)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
 
@@ -359,6 +363,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         check_is_fitted(self)
 
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
+        X = self._convert_X(X)
 
         return self._estimator.predict(self._transformer.transform(X))
 
@@ -489,6 +494,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, ensure_min_series_length=7
         )
+        X = self._convert_X(X)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         self.classes_ = np.unique(y)
@@ -542,6 +548,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         check_is_fitted(self)
 
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=7)
+        X = self._convert_X(X)
 
         return self._estimator.predict(self._transformer.transform(X))
 
@@ -561,6 +568,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         check_is_fitted(self)
 
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=7)
+        X = self._convert_X(X)
 
         m = getattr(self._estimator, "predict_proba", None)
         if callable(m):

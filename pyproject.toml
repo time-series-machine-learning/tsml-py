@@ -47,6 +47,7 @@ extras = [
     "statsmodels>=0.12.1",
 ]
 dev = [
+    "pandas",
     "pre-commit",
     "pytest",
     "pytest-randomly",

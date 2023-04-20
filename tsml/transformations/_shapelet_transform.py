@@ -183,6 +183,7 @@ class RandomShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             This estimator.
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X = self._convert_X(X)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         self.classes_, self._class_counts = np.unique(y, return_counts=True)
@@ -335,6 +336,7 @@ class RandomShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         check_is_fitted(self)
 
         X = self._validate_data(X=X, reset=True)
+        X = self._convert_X(X)
 
         output = np.zeros((len(X), len(self.shapelets_)))
 

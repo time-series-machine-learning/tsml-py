@@ -50,4 +50,4 @@ class ARCoefficientTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return Xt
 
     def _more_tags(self):
-        return {"stateless": True, "optional_dependency": True}
+        return {"requires_fit": False, "optional_dependency": True}

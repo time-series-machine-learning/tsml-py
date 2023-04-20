@@ -136,6 +136,38 @@ def first_order_differences_3d(X: np.ndarray) -> np.ndarray:
 
 
 @njit(fastmath=True, cache=True)
+def z_normalise_series_with_mean(X: np.ndarray, series_mean: float) -> np.ndarray:
+    """Numba series normalization function for a 1d numpy array with mean.
+
+    Parameters
+    ----------
+    X : 1d numpy array
+        A 1d numpy array of values
+    series_mean : float
+        The mean of the series
+
+    Returns
+    -------
+    arr : 1d numpy array
+        The normalised series
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.general import z_normalise_series_with_mean
+    >>> from tsml.utils.numba_functions.stats import mean
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> X_norm = z_normalise_series_with_mean(X, mean(X))
+    """
+    s = stats.std(X)
+    if s > 0:
+        arr = (X - series_mean) / s
+    else:
+        arr = X - series_mean
+    return arr
+
+
+@njit(fastmath=True, cache=True)
 def z_normalise_series(X: np.ndarray) -> np.ndarray:
     """Numba series normalization function for a 1d numpy array.
 
