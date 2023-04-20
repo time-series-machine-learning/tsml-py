@@ -38,6 +38,7 @@ dependencies = [
     "numba>=0.55",
     "numpy>=1.21.0",
     "scikit-learn>=1.0.2",
+    "pandas",
 ]
 
 [project.optional-dependencies]
@@ -47,7 +48,6 @@ extras = [
     "statsmodels>=0.12.1",
 ]
 dev = [
-    "pandas",
     "pre-commit",
     "pytest",
     "pytest-randomly",
