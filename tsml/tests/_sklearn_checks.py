@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Patched estimator checks originating from scikit-learn"""
+"""Patched estimator checks originating from scikit-learn."""
 
 __author__ = ["MatthewMiddlehurst"]
 
@@ -26,11 +26,7 @@ from sklearn.utils._testing import (
     raises,
     set_random_state,
 )
-from sklearn.utils.estimator_checks import (
-    _is_public_parameter,
-    _NotAnArray,
-    check_estimators_data_not_an_array,
-)
+from sklearn.utils.estimator_checks import _is_public_parameter, _NotAnArray
 from sklearn.utils.validation import _num_samples, check_is_fitted
 
 import tsml.utils.testing as test_utils
@@ -39,7 +35,7 @@ from tsml.utils._tags import _DEFAULT_TAGS, _safe_tags
 
 @ignore_warnings(category=FutureWarning)
 def check_supervised_y_no_nan(name, estimator_orig):
-    """Checks that the Estimator targets are not NaN.
+    """Check that the Estimator targets are not NaN.
 
     Modified version of the scikit-learn 1.2.1 function with the same name for time
     series data.
@@ -191,7 +187,7 @@ def check_dont_overwrite_parameters(name, estimator_orig):
 
 @ignore_warnings(category=FutureWarning)
 def check_fit3d_predict1d(name, estimator_orig):
-    """Check by fitting a 3d array and predicting with a 1d array
+    """Check by fitting a 3d array and predicting with a 1d array.
 
     Modified version of the scikit-learn 1.2.1 function with a similar name for time
     series data.
@@ -590,7 +586,7 @@ def check_estimators_empty_data_messages(name, estimator_orig):
     estimator = clone(estimator_orig)
 
     X_zero_samples = np.empty(0).reshape((0, 1, 8))
-    msg = ["0 sample\(s\)", "n_samples=0", "n_samples = 0"]
+    msg = ["0 sample\(s\)", "n_samples=0", "n_samples = 0"]  # noqa: W605
     with raises(ValueError, match=msg):
         estimator.fit(X_zero_samples, [])
 
@@ -636,7 +632,9 @@ def check_estimators_nan_inf(name, estimator_orig):
                 with raises(
                     ValueError,
                     match=["inf", "NaN"],
-                    err_msg=f"Estimator {name} doesn't check for NaN and inf in {method}.",
+                    err_msg=(
+                        f"Estimator {name} doesn't check for NaN and inf in {method}."
+                    ),
                 ):
                     getattr(estimator, method)(X_train)
 
@@ -737,8 +735,7 @@ def check_clustering(name, clusterer_orig, readonly_memmap=False):
     assert labels_sorted[0] in [0, -1]
     # Labels should be less than n_clusters - 1
     if hasattr(clusterer, "n_clusters"):
-        n_clusters = getattr(clusterer, "n_clusters")
-        assert n_clusters - 1 >= labels_sorted[-1]
+        assert clusterer.n_clusters - 1 >= labels_sorted[-1]
     # else labels should be less than max(labels_) which is necessarily true
 
 
@@ -931,8 +928,8 @@ def check_estimators_unfitted(name, estimator_orig):
             with raises(
                 NotFittedError,
                 err_msg=(
-                    f"The unfitted estimator {name} does not raise an error when {method} "
-                    "is called. Perhaps use check_is_fitted."
+                    f"The unfitted estimator {name} does not raise an error when "
+                    f"{method} is called. Perhaps use check_is_fitted."
                 ),
             ):
                 getattr(estimator, method)(X)
@@ -976,7 +973,7 @@ def check_supervised_y_2d(name, estimator_orig):
 
 @ignore_warnings(category=FutureWarning)
 def check_classifiers_classes(name, classifier_orig):
-    """Check classifier can handle binary and multiclass data with differen y types.
+    """Check classifier can handle binary and multiclass data with different y types.
 
     Modified version of the scikit-learn 1.2.1 function with the same name for time
     series data.
@@ -994,21 +991,21 @@ def check_classifiers_classes(name, classifier_orig):
     y_names_binary = np.take(labels_binary, y_binary)
 
     problems = [
-        (X_binary, y_binary, y_names_binary),
-        (X_multiclass, y_multiclass, y_names_multiclass),
+        (X_binary, y_names_binary),
+        (X_multiclass, y_names_multiclass),
     ]
 
-    for X, y, y_names in problems:
+    for X, y_names in problems:
         for y_names_i in [y_names, y_names.astype("O")]:
-            check_classifiers_predictions(X, y_names_i, name, classifier_orig)
+            _check_classifiers_predictions(X, y_names_i, name, classifier_orig)
 
     labels_binary = [-1, 1]
     y_names_binary = np.take(labels_binary, y_binary)
-    check_classifiers_predictions(X_binary, y_names_binary, name, classifier_orig)
+    _check_classifiers_predictions(X_binary, y_names_binary, name, classifier_orig)
 
 
 @ignore_warnings
-def check_classifiers_predictions(X, y, name, classifier_orig):
+def _check_classifiers_predictions(X, y, name, classifier_orig):
     classes = np.unique(y)
     classifier = clone(classifier_orig)
 
@@ -1189,7 +1186,47 @@ def check_estimator_data_not_an_array(name, estimator_orig):
     X, y = test_utils.generate_3d_test_data()
 
     for obj_type in ["NotAnArray", "PandasDataframe"]:
-        check_estimators_data_not_an_array(name, estimator_orig, X, y, obj_type)
+        _check_estimators_data_not_an_array(name, estimator_orig, X, y, obj_type)
+
+
+@ignore_warnings(category=FutureWarning)
+def _check_estimators_data_not_an_array(name, estimator_orig, X, y, obj_type):
+    estimator_1 = clone(estimator_orig)
+    estimator_2 = clone(estimator_orig)
+    set_random_state(estimator_1)
+    set_random_state(estimator_2)
+
+    if obj_type not in ["NotAnArray", "PandasDataframe"]:
+        raise ValueError("Data type {0} not supported".format(obj_type))
+
+    if obj_type == "NotAnArray":
+        y_ = _NotAnArray(np.asarray(y))
+        X_ = _NotAnArray(np.asarray(X))
+    else:
+        # Here pandas objects (Series and DataFrame) are tested explicitly
+        # because some estimators may handle them (especially their indexing)
+        # specially.
+        try:
+            import pandas as pd
+
+            y_ = np.asarray(y)
+            if y_.ndim == 1:
+                y_ = pd.Series(y_)
+            else:
+                y_ = pd.DataFrame(y_)
+            X_ = pd.DataFrame(np.asarray(X.reshape((X.shape[0], -1))))
+
+        except ImportError:
+            raise SkipTest(
+                "pandas is not installed: not checking estimators for pandas objects."
+            )
+
+    # fit
+    estimator_1.fit(X_, y_)
+    pred1 = estimator_1.predict(X_)
+    estimator_2.fit(X, y)
+    pred2 = estimator_2.predict(X)
+    assert_allclose(pred1, pred2, atol=1e-2, err_msg=name)
 
 
 @ignore_warnings(category=FutureWarning)
