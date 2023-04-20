@@ -204,3 +204,4 @@ def check_estimator_handles_unequal_data(name, estimator_orig):
 @ignore_warnings(category=FutureWarning)
 def check_n_features_unequal(name, estimator_orig):
     pass
+
