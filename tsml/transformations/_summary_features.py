@@ -87,4 +87,4 @@ class SevenNumberSummaryTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return Xt
 
     def _more_tags(self):
-        return {"stateless": True}
+        return {"requires_fit": False}

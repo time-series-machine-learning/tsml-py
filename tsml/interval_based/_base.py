@@ -214,6 +214,8 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
+        rng = check_random_state(self.random_state)
+
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         if is_classifier(self):
             check_classification_targets(y)
@@ -260,9 +262,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             self._series_transformers = [None]
         # clone series_transformers if it is a transformer and transform the input data
         elif is_transformer(self.series_transformers):
-            t = _clone_estimator(
-                self.series_transformers, random_state=self.random_state
-            )
+            t = _clone_estimator(self.series_transformers, random_state=rng)
             Xt = [t.fit_transform(X, y)]
             self._series_transformers = [t]
         # clone each series_transformers transformer and include the base series if None
@@ -276,7 +276,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                     Xt.append(X)
                     self._series_transformers.append(None)
                 elif is_transformer(transformer):
-                    t = _clone_estimator(transformer, random_state=self.random_state)
+                    t = _clone_estimator(transformer, random_state=rng)
                     Xt.append(t.fit_transform(X, y))
                     self._series_transformers.append(t)
                 else:
@@ -458,7 +458,8 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         # single transformer or function for all series_transformers
         if is_transformer(self.interval_features):
             self._interval_transformer = [True] * len(Xt)
-            self._interval_features = [[self.interval_features]] * len(Xt)
+            transformer = _clone_estimator(self.interval_features, random_state=rng)
+            self._interval_features = [[transformer]] * len(Xt)
         elif callable(self.interval_features):
             self._interval_function = [True] * len(Xt)
             self._interval_features = [[self.interval_features]] * len(Xt)
@@ -491,6 +492,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                         for method in feature:
                             if is_transformer(method):
                                 self._interval_transformer[i] = True
+                                feature = _clone_estimator(feature, random_state=rng)
                             elif callable(method):
                                 self._interval_function[i] = True
                             else:
@@ -503,6 +505,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                         self._interval_features.append(feature)
                     elif is_transformer(feature):
                         self._interval_transformer[i] = True
+                        feature = _clone_estimator(feature, random_state=rng)
                         self._interval_features.append([feature])
                     elif callable(feature):
                         self._interval_function[i] = True
@@ -1030,4 +1033,3 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             return estimator.predict_proba(interval_features)
         else:
             return estimator.predict(interval_features)
-

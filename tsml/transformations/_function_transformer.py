@@ -102,6 +102,6 @@ class FunctionTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     def _more_tags(self):
         return {
             "no_validation": not self.validate,
-            "stateless": True,
+            "requires_fit": False,
             "X_types": ["3darray", "2darray", "np_list"],
         }

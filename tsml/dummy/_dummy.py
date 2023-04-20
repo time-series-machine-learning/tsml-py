@@ -10,7 +10,7 @@ from sklearn.dummy import DummyClassifier as SklearnDummyClassifier
 from sklearn.dummy import DummyRegressor as SklearnDummyRegressor
 from sklearn.utils import check_random_state
 from sklearn.utils.multiclass import check_classification_targets
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import _num_samples, check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator
 
@@ -85,8 +85,11 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     0.5
     """
 
-    def __init__(self, strategy="prior", random_state=None, constant=None):
+    def __init__(
+        self, strategy="prior", validate=False, random_state=None, constant=None
+    ):
         self.strategy = strategy
+        self.validate = validate
         self.random_state = random_state
         self.constant = constant
 
@@ -94,25 +97,28 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         """"""
-        X, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
+        if self.validate:
+            X, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
 
-        check_classification_targets(y)
+            check_classification_targets(y)
 
-        self.classes_ = np.unique(y)
-        self.n_classes_ = self.classes_.shape[0]
-        self.class_dictionary_ = {}
-        for index, classVal in enumerate(self.classes_):
-            self.class_dictionary_[classVal] = index
+        self.classes_ = np.unique(np.asarray(y))
 
-        if self.n_classes_ == 1:
-            return self
+        if self.validate:
+            self.n_classes_ = self.classes_.shape[0]
+            self.class_dictionary_ = {}
+            for index, classVal in enumerate(self.classes_):
+                self.class_dictionary_[classVal] = index
 
-        self._clf = SklearnDummyClassifier(
+            if self.n_classes_ == 1:
+                return self
+
+        self.clf_ = SklearnDummyClassifier(
             strategy=self.strategy,
             random_state=self.random_state,
             constant=self.constant,
         )
-        self._clf.fit(None, y)
+        self.clf_.fit(None, y)
 
         return self
 
@@ -120,30 +126,36 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         """"""
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
+        if self.validate:
+            # treat case of single class seen in fit
+            if self.n_classes_ == 1:
+                return np.repeat(
+                    list(self.class_dictionary_.keys()), X.shape[0], axis=0
+                )
 
-        # treat case of single class seen in fit
-        if self.n_classes_ == 1:
-            return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
+            X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
-        return self._clf.predict(np.zeros(X.shape))
+        return self.clf_.predict(np.zeros((_num_samples(X), 2)))
 
     def predict_proba(self, X) -> np.ndarray:
         """"""
         check_is_fitted(self)
 
-        # treat case of single class seen in fit
-        if self.n_classes_ == 1:
-            return np.repeat([[1]], X.shape[0], axis=0)
+        if self.validate:
+            # treat case of single class seen in fit
+            if self.n_classes_ == 1:
+                return np.repeat([[1]], X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
+            X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
-        return self._clf.predict_proba(np.zeros(X.shape))
+        return self.clf_.predict_proba(np.zeros((_num_samples(X), 2)))
 
     def _more_tags(self):
         return {
             "X_types": ["3darray", "2darray", "np_list"],
             "equal_length_only": False,
+            "no_validation": not self.validate,
+            "allow_nan": True,
         }
 
 
@@ -199,8 +211,9 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
     -0.07184048625633688
     """
 
-    def __init__(self, strategy="mean", constant=None, quantile=None):
+    def __init__(self, strategy="mean", validate=False, constant=None, quantile=None):
         self.strategy = strategy
+        self.validate = validate
         self.constant = constant
         self.quantile = quantile
 
@@ -208,12 +221,13 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         """"""
-        _, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
+        if self.validate:
+            _, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
 
-        self._reg = SklearnDummyRegressor(
+        self.reg_ = SklearnDummyRegressor(
             strategy=self.strategy, constant=self.constant, quantile=self.quantile
         )
-        self._reg.fit(None, y)
+        self.reg_.fit(None, y)
 
         return self
 
@@ -221,14 +235,17 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         """"""
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
+        if self.validate:
+            X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
-        return self._reg.predict(np.zeros(X.shape))
+        return self.reg_.predict(np.zeros((_num_samples(X), 2)))
 
     def _more_tags(self):
         return {
             "X_types": ["3darray", "2darray", "np_list"],
             "equal_length_only": False,
+            "no_validation": not self.validate,
+            "allow_nan": True,
         }
 
 
@@ -257,8 +274,11 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
     0.2087729039422543
     """
 
-    def __init__(self, strategy="single", n_clusters=2, random_state=None):
+    def __init__(
+        self, strategy="single", validate=False, n_clusters=2, random_state=None
+    ):
         self.strategy = strategy
+        self.validate = validate
         self.n_clusters = n_clusters
         self.random_state = random_state
 
@@ -266,7 +286,8 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y=None):
         """"""
-        X = self._validate_data(X=X, ensure_min_series_length=1)
+        if self.validate:
+            X = self._validate_data(X=X, ensure_min_series_length=1)
 
         if self.strategy == "single":
             self.labels_ = np.zeros(len(X), dtype=np.int32)
@@ -284,15 +305,16 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
         """"""
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
+        if self.validate:
+            X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         if self.strategy == "single":
-            return np.zeros(len(X), dtype=np.int32)
+            return np.zeros(_num_samples(X), dtype=np.int32)
         elif self.strategy == "unique":
-            return np.arange(len(X), dtype=np.int32)
+            return np.arange(_num_samples(X), dtype=np.int32)
         elif self.strategy == "random":
             rng = check_random_state(self.random_state)
-            return rng.randint(self.n_clusters, size=len(X), dtype=np.int32)
+            return rng.randint(self.n_clusters, size=_num_samples(X), dtype=np.int32)
         else:
             raise ValueError(f"Unknown strategy {self.strategy}")
 
@@ -300,4 +322,6 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
         return {
             "X_types": ["3darray", "2darray", "np_list"],
             "equal_length_only": False,
+            "no_validation": not self.validate,
+            "allow_nan": True,
         }

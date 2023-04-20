@@ -16,6 +16,11 @@ from sklearn.base import TransformerMixin
 from sklearn.utils.fixes import delayed
 
 from tsml.base import BaseTimeSeriesEstimator
+from tsml.utils.numba_functions.general import (
+    z_normalise_series,
+    z_normalise_series_with_mean,
+)
+from tsml.utils.numba_functions.stats import mean, numba_max, numba_min
 from tsml.utils.validation import _check_optional_dependency, check_n_jobs
 
 feature_names = [
@@ -242,26 +247,26 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
 
                 if feature == 0 or feature == 1 or feature == 11:
                     if smin is None:
-                        smin = np.min(series)
+                        smin = numba_min(series)
                     if smax is None:
-                        smax = np.max(series)
+                        smax = numba_max(series)
                     args = [series, smin, smax]
                 elif feature == 2 or feature == 22:
                     if smean is None:
-                        smean = np.mean(series)
+                        smean = mean(series)
                     args = [series, smean]
                 elif feature == 3 or feature == 4:
                     if self.outlier_norm:
                         if smean is None:
-                            smean = np.mean(series)
+                            smean = mean(series)
                         if outlier_series is None:
-                            outlier_series = _normalise_series(series, smean)
+                            outlier_series = z_normalise_series_with_mean(series, smean)
                         args = [outlier_series]
                     else:
                         args = [series]
                 elif feature == 7 or feature == 8:
                     if smean is None:
-                        smean = np.mean(series)
+                        smean = mean(series)
                     if fft is None:
                         nfft = int(
                             np.power(2, np.ceil(np.log(len(series)) / np.log(2)))
@@ -270,7 +275,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
                     args = [series, fft]
                 elif feature == 5 or feature == 6 or feature == 12:
                     if smean is None:
-                        smean = np.mean(series)
+                        smean = mean(series)
                     if fft is None:
                         nfft = int(
                             np.power(2, np.ceil(np.log(len(series)) / np.log(2)))
@@ -281,7 +286,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
                     args = [ac]
                 elif feature == 16 or feature == 17 or feature == 20:
                     if smean is None:
-                        smean = np.mean(series)
+                        smean = mean(series)
                     if fft is None:
                         nfft = int(
                             np.power(2, np.ceil(np.log(len(series)) / np.log(2)))
@@ -303,7 +308,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         return c22
 
     def _more_tags(self):
-        return {"X_types": ["np_list", "3darray"], "stateless": True}
+        return {"X_types": ["np_list", "3darray"], "requires_fit": False}
 
     @staticmethod
     def _DN_HistogramMode_5(X, smin, smax):
@@ -1172,14 +1177,6 @@ def _spline_fit(X):
     return y_out
 
 
-@njit(fastmath=True, cache=True)
-def _normalise_series(X, mean):
-    std = np.std(X)
-    if std > 0:
-        return (X - mean) / std
-    return X
-
-
 def _verify_features(features, catch24):
     if isinstance(features, str):
         if features == "all":
@@ -1417,10 +1414,7 @@ class Catch22WrapperTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             series = list(X[i])
 
             if self.outlier_norm and (3 in f_idx or 4 in f_idx):
-                outlier_series = np.array(series)
-                outlier_series = list(
-                    _normalise_series(outlier_series, np.mean(outlier_series))
-                )
+                outlier_series = list(z_normalise_series(X[i]))
 
             for n, feature in enumerate(f_idx):
                 f_count += 1
@@ -1441,6 +1435,6 @@ class Catch22WrapperTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     def _more_tags(self):
         return {
             "X_types": ["np_list", "3darray"],
-            "stateless": True,
+            "requires_fit": False,
             "optional_dependency": True,
         }

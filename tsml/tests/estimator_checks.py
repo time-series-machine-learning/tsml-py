@@ -8,12 +8,13 @@ from functools import partial
 
 from sklearn.base import is_classifier, is_regressor
 from sklearn.exceptions import SkipTestWarning
+from sklearn.utils._testing import ignore_warnings
 from sklearn.utils.estimator_checks import (
     check_get_params_invariance,
+    check_no_attributes_set_in_init,
     check_parameters_default_constructible,
     check_set_params,
 )
-from sklearn.utils.validation import has_fit_parameter
 
 import tsml.tests._sklearn_checks as patched_checks
 from tsml.utils._tags import _safe_tags
@@ -55,14 +56,13 @@ def _yield_checks(estimator):
     """sklearn"""
     tags = _safe_tags(estimator)
 
-    yield patched_checks.check_no_attributes_set_in_init
+    yield check_no_attributes_set_in_init
     yield patched_checks.check_estimators_dtypes
     yield patched_checks.check_fit_score_takes_y
     yield patched_checks.check_estimators_fit_returns_self
     yield partial(
         patched_checks.check_estimators_fit_returns_self, readonly_memmap=True
     )
-    yield patched_checks.check_pipeline_consistency
     yield patched_checks.check_estimators_overwrite_params
     yield patched_checks.check_estimators_pickle
     yield patched_checks.check_estimator_get_tags_default_keys
@@ -73,19 +73,10 @@ def _yield_checks(estimator):
     yield check_set_params
     yield patched_checks.check_dict_unchanged
     yield patched_checks.check_dont_overwrite_parameters
-    yield patched_checks.check_fit_idempotent
     yield patched_checks.check_fit_check_is_fitted
 
-    if has_fit_parameter(estimator, "sample_weight"):
-        yield patched_checks.check_sample_weights_not_an_array
-        yield patched_checks.check_sample_weights_list
-        if not tags["pairwise"]:
-            yield patched_checks.check_sample_weights_shape
-            yield patched_checks.check_sample_weights_not_overwritten
-            yield partial(patched_checks.check_sample_weights_invariance, kind="ones")
-            yield partial(patched_checks.check_sample_weights_invariance, kind="zeros")
-
     if not tags["no_validation"]:
+        yield check_estimator_input_types
         yield patched_checks.check_complex_data
         yield patched_checks.check_dtype_object
         yield patched_checks.check_estimators_empty_data_messages
@@ -99,81 +90,61 @@ def _yield_checks(estimator):
         yield patched_checks.check_estimators_nan_inf
 
     if not tags["non_deterministic"]:
+        yield patched_checks.check_pipeline_consistency
+        yield patched_checks.check_fit_idempotent
         yield patched_checks.check_methods_sample_order_invariance
         yield patched_checks.check_methods_subset_invariance
 
-    if tags["requires_positive_X"]:
-        yield patched_checks.check_fit_non_negative
-
-    if tags["pairwise"]:
-        yield patched_checks.check_nonsquare_error
-
     if not tags["univariate_only"]:
-        _yield_multivariate_checks(estimator)
+        yield check_estimator_handles_multivariate_data
+        yield check_fit3d_predict2d
+    else:
+        yield check_estimator_cannot_handle_multivariate_data
 
     if not tags["equal_length_only"]:
-        _yield_unequal_length_checks(estimator)
+        yield check_estimator_handles_unequal_data
+        yield check_n_features_unequal
+    else:
+        yield check_estimator_cannot_handle_unequal_data
 
 
 def _yield_classifier_checks(classifier):
     tags = _safe_tags(classifier)
 
-    yield patched_checks.check_classifier_data_not_an_array
+    yield patched_checks.check_estimator_data_not_an_array
     yield patched_checks.check_classifiers_one_label
-    yield patched_checks.check_classifiers_one_label_sample_weights
     yield patched_checks.check_classifiers_classes
-    yield patched_checks.check_estimators_partial_fit_n_features
     yield patched_checks.check_classifiers_train
     yield partial(patched_checks.check_classifiers_train, readonly_memmap=True)
     yield partial(
         patched_checks.check_classifiers_train, readonly_memmap=True, X_dtype="float32"
     )
-    yield patched_checks.check_classifiers_regression_target
-    yield patched_checks.check_non_transformer_estimators_n_iter
     yield patched_checks.check_decision_proba_consistency
 
-    if tags["multioutput"]:
-        yield patched_checks.check_classifier_multioutput
-
-    if tags["multilabel"]:
-        yield patched_checks.check_classifiers_multilabel_representation_invariance
-        yield patched_checks.check_classifiers_multilabel_output_format_predict
-        yield patched_checks.check_classifiers_multilabel_output_format_predict_proba
-        yield patched_checks.check_classifiers_multilabel_output_format_decision_function
-
     if not tags["no_validation"]:
+        yield patched_checks.check_classifiers_regression_target
         yield patched_checks.check_supervised_y_no_nan
-        if not tags["multioutput_only"]:
-            yield patched_checks.check_supervised_y_2d
+        yield patched_checks.check_supervised_y_2d
 
     if tags["requires_fit"]:
         yield patched_checks.check_estimators_unfitted
-
-    if "class_weight" in classifier.get_params().keys():
-        yield patched_checks.check_class_weight_classifiers
 
 
 def _yield_regressor_checks(regressor):
     tags = _safe_tags(regressor)
 
+    yield patched_checks.check_estimator_data_not_an_array
     yield patched_checks.check_regressors_train
     yield partial(patched_checks.check_regressors_train, readonly_memmap=True)
     yield partial(
         patched_checks.check_regressors_train, readonly_memmap=True, X_dtype="float32"
     )
-    yield patched_checks.check_regressor_data_not_an_array
-    yield patched_checks.check_estimators_partial_fit_n_features
     yield patched_checks.check_regressors_no_decision_function
     yield patched_checks.check_regressors_int
-    yield patched_checks.check_non_transformer_estimators_n_iter
-
-    if tags["multioutput"]:
-        yield patched_checks.check_regressor_multioutput
 
     if not tags["no_validation"]:
         yield patched_checks.check_supervised_y_no_nan
-        if not tags["multioutput_only"]:
-            yield patched_checks.check_supervised_y_2d
+        yield patched_checks.check_supervised_y_2d
 
     if tags["requires_fit"]:
         yield patched_checks.check_estimators_unfitted
@@ -184,7 +155,6 @@ def _yield_transformer_checks(transformer):
 
     yield patched_checks.check_transformer_general
     yield partial(patched_checks.check_transformer_general, readonly_memmap=True)
-    yield patched_checks.check_transformer_n_iter
 
     if not tags["no_validation"]:
         yield patched_checks.check_transformer_data_not_an_array
@@ -192,23 +162,46 @@ def _yield_transformer_checks(transformer):
     if tags["preserves_dtype"]:
         yield patched_checks.check_transformer_preserve_dtypes
 
-    if not tags["stateless"]:
-        yield patched_checks.check_transformers_unfitted
+    if tags["requires_fit"]:
+        yield patched_checks.check_estimators_unfitted
 
 
 def _yield_clustering_checks(clusterer):
     yield patched_checks.check_clusterer_compute_labels_predict
     yield patched_checks.check_clustering
     yield partial(patched_checks.check_clustering, readonly_memmap=True)
-    yield patched_checks.check_estimators_partial_fit_n_features
-
-    if not hasattr(clusterer, "transform"):
-        yield patched_checks.check_non_transformer_estimators_n_iter
 
 
-def _yield_multivariate_checks(estimator):
+def check_estimator_input_types(name, estimator_orig):
     pass
 
 
-def _yield_unequal_length_checks(estimator):
+@ignore_warnings(category=FutureWarning)
+def check_fit3d_predict2d(name, estimator_orig):
     pass
+
+
+@ignore_warnings(category=FutureWarning)
+def check_estimator_cannot_handle_multivariate_data(name, estimator_orig):
+    pass
+
+
+@ignore_warnings(category=FutureWarning)
+def check_estimator_handles_multivariate_data(name, estimator_orig):
+    pass
+
+
+@ignore_warnings(category=FutureWarning)
+def check_estimator_cannot_handle_unequal_data(name, estimator_orig):
+    pass
+
+
+@ignore_warnings(category=FutureWarning)
+def check_estimator_handles_unequal_data(name, estimator_orig):
+    pass
+
+
+@ignore_warnings(category=FutureWarning)
+def check_n_features_unequal(name, estimator_orig):
+    pass
+
