@@ -5,10 +5,13 @@ from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator
-from tsml.utils.validation import _check_optional_dependency, check_n_jobs
+from tsml.utils.validation import _check_optional_dependency
 
 
 class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
+    """
+    Wrapper for https://github.com/mlgig/mrsqm.
+    """
     def __init__(
         self,
         strat="RS",

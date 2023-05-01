@@ -9,6 +9,9 @@ from tsml.utils.validation import _check_optional_dependency, check_n_jobs
 
 
 class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
+    """
+    Wrapper for https://github.com/wildboar-foundation/wildboar PF implementation.
+    """
     def __init__(
         self,
         n_estimators=100,
