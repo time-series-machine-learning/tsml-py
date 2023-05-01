@@ -5,7 +5,7 @@ A transformer for the Catch22 features.
 """
 
 __author__ = ["MatthewMiddlehurst"]
-__all__ = ["Catch22Transformer", "Catch22WrapperTransformer"]
+__all__ = ["Catch22Transformer"]
 
 import math
 
@@ -83,6 +83,10 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         while to process for large values.
     replace_nans : bool, optional, default=True
         Replace NaN or inf values from the Catch22 transform with 0.
+    use_pycatch22 : bool, optional, default=True
+        Wraps the C based pycatch22 implementation for tsml.
+        (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
+        ``pycatch22`` package to be installed if True.
     n_jobs : int, optional, default=1
         The number of jobs to run in parallel for transform. Requires multiple input
         cases. ``-1`` means using all processors.
@@ -116,13 +120,18 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         catch24=False,
         outlier_norm=False,
         replace_nans=False,
+        use_pycatch22=True,
         n_jobs=1,
     ):
         self.features = features
         self.catch24 = catch24
         self.outlier_norm = outlier_norm
         self.replace_nans = replace_nans
+        self.use_pycatch22 = use_pycatch22
         self.n_jobs = n_jobs
+
+        if use_pycatch22:
+            _check_optional_dependency("pycatch22", "pycatch22", self)
 
         super(Catch22Transformer, self).__init__()
 
@@ -178,33 +187,65 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         threads_to_use = check_n_jobs(self.n_jobs)
 
-        features = [
-            Catch22Transformer._DN_HistogramMode_5,
-            Catch22Transformer._DN_HistogramMode_10,
-            Catch22Transformer._SB_BinaryStats_diff_longstretch0,
-            Catch22Transformer._DN_OutlierInclude_p_001_mdrmd,
-            Catch22Transformer._DN_OutlierInclude_n_001_mdrmd,
-            Catch22Transformer._CO_f1ecac,
-            Catch22Transformer._CO_FirstMin_ac,
-            Catch22Transformer._SP_Summaries_welch_rect_area_5_1,
-            Catch22Transformer._SP_Summaries_welch_rect_centroid,
-            Catch22Transformer._FC_LocalSimple_mean3_stderr,
-            Catch22Transformer._CO_trev_1_num,
-            Catch22Transformer._CO_HistogramAMI_even_2_5,
-            Catch22Transformer._IN_AutoMutualInfoStats_40_gaussian_fmmi,
-            Catch22Transformer._MD_hrv_classic_pnn40,
-            Catch22Transformer._SB_BinaryStats_mean_longstretch1,
-            Catch22Transformer._SB_MotifThree_quantile_hh,
-            Catch22Transformer._FC_LocalSimple_mean1_tauresrat,
-            Catch22Transformer._CO_Embed2_Dist_tau_d_expfit_meandiff,
-            Catch22Transformer._SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1,
-            Catch22Transformer._SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1,
-            Catch22Transformer._SB_TransitionMatrix_3ac_sumdiagcov,
-            Catch22Transformer._PD_PeriodicityWang_th0_01,
-        ]
+        if self.use_pycatch22:
+            import pycatch22
+
+            features = [
+                pycatch22.DN_HistogramMode_5,
+                pycatch22.DN_HistogramMode_10,
+                pycatch22.SB_BinaryStats_diff_longstretch0,
+                pycatch22.DN_OutlierInclude_p_001_mdrmd,
+                pycatch22.DN_OutlierInclude_n_001_mdrmd,
+                pycatch22.CO_f1ecac,
+                pycatch22.CO_FirstMin_ac,
+                pycatch22.SP_Summaries_welch_rect_area_5_1,
+                pycatch22.SP_Summaries_welch_rect_centroid,
+                pycatch22.FC_LocalSimple_mean3_stderr,
+                pycatch22.CO_trev_1_num,
+                pycatch22.CO_HistogramAMI_even_2_5,
+                pycatch22.IN_AutoMutualInfoStats_40_gaussian_fmmi,
+                pycatch22.MD_hrv_classic_pnn40,
+                pycatch22.SB_BinaryStats_mean_longstretch1,
+                pycatch22.SB_MotifThree_quantile_hh,
+                pycatch22.FC_LocalSimple_mean1_tauresrat,
+                pycatch22.CO_Embed2_Dist_tau_d_expfit_meandiff,
+                pycatch22.SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1,
+                pycatch22.SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1,
+                pycatch22.SB_TransitionMatrix_3ac_sumdiagcov,
+                pycatch22.PD_PeriodicityWang_th0_01,
+            ]
+        else:
+            features = [
+                Catch22Transformer._DN_HistogramMode_5,
+                Catch22Transformer._DN_HistogramMode_10,
+                Catch22Transformer._SB_BinaryStats_diff_longstretch0,
+                Catch22Transformer._DN_OutlierInclude_p_001_mdrmd,
+                Catch22Transformer._DN_OutlierInclude_n_001_mdrmd,
+                Catch22Transformer._CO_f1ecac,
+                Catch22Transformer._CO_FirstMin_ac,
+                Catch22Transformer._SP_Summaries_welch_rect_area_5_1,
+                Catch22Transformer._SP_Summaries_welch_rect_centroid,
+                Catch22Transformer._FC_LocalSimple_mean3_stderr,
+                Catch22Transformer._CO_trev_1_num,
+                Catch22Transformer._CO_HistogramAMI_even_2_5,
+                Catch22Transformer._IN_AutoMutualInfoStats_40_gaussian_fmmi,
+                Catch22Transformer._MD_hrv_classic_pnn40,
+                Catch22Transformer._SB_BinaryStats_mean_longstretch1,
+                Catch22Transformer._SB_MotifThree_quantile_hh,
+                Catch22Transformer._FC_LocalSimple_mean1_tauresrat,
+                Catch22Transformer._CO_Embed2_Dist_tau_d_expfit_meandiff,
+                Catch22Transformer._SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1,
+                Catch22Transformer._SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1,
+                Catch22Transformer._SB_TransitionMatrix_3ac_sumdiagcov,
+                Catch22Transformer._PD_PeriodicityWang_th0_01,
+            ]
 
         c22_list = Parallel(n_jobs=threads_to_use)(
-            delayed(self._transform_case)(
+            delayed(
+                self._transform_case_pycatch22
+                if self.use_pycatch22
+                else self._transform_case
+            )(
                 X[i],
                 f_idx,
                 features,
@@ -307,8 +348,68 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         return c22
 
+    def _transform_case_pycatch22(self, X, f_idx, features):
+        c22 = np.zeros(len(f_idx) * len(X))
+
+        if self._transform_features is not None and len(
+            self._transform_features
+        ) == len(c22):
+            transform_feature = self._transform_features
+        else:
+            transform_feature = [True] * len(c22)
+
+        f_count = -1
+        for i in range(len(X)):
+            dim = i * len(f_idx)
+            series = list(X[i])
+
+            if self.outlier_norm and (3 in f_idx or 4 in f_idx):
+                outlier_series = list(z_normalise_series(X[i]))
+
+            for n, feature in enumerate(f_idx):
+                f_count += 1
+                if not transform_feature[f_count]:
+                    continue
+
+                if self.outlier_norm and feature in [3, 4]:
+                    c22[dim + n] = features[feature](outlier_series)
+                if feature == 22:
+                    c22[dim + n] = np.mean(series)
+                elif feature == 23:
+                    c22[dim + n] = np.std(series)
+                else:
+                    c22[dim + n] = features[feature](series)
+
+        return c22
+
     def _more_tags(self):
-        return {"X_types": ["np_list", "3darray"], "requires_fit": False}
+        return {
+            "X_types": ["np_list", "3darray"],
+            "requires_fit": False,
+            "optional_dependency": self.use_pycatch22,
+        }
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        """Return testing parameter settings for the estimator.
+
+        Parameters
+        ----------
+        parameter_set : str, default="default"
+            Name of the set of test parameters to return, for use in tests. If no
+            special parameters are defined for a value, will return `"default"` set.
+
+        Returns
+        -------
+        params : dict or list of dict, default = {}
+            Parameters to create testing instances of the class
+            Each dict are parameters to construct an "interesting" test instance, i.e.,
+            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
+            `create_test_instance` uses the first (or only) dictionary in `params`
+        """
+        return {
+            "use_pycatch22": False,
+        }
 
     @staticmethod
     def _DN_HistogramMode_5(X, smin, smax):
@@ -1230,211 +1331,3 @@ def _verify_features(features, catch24):
         raise ValueError("Invalid feature selection.")
 
     return f_idx
-
-
-class Catch22WrapperTransformer(TransformerMixin, BaseTimeSeriesEstimator):
-    """Canonical Time-series Characteristics (Catch22) C Wrapper.
-
-    Wraps the pycatch22 implementation for sktime
-    (https://github.com/DynamicsAndNeuralSystems/pycatch22).
-
-    Overview: Input n series with d dimensions of length m
-    Transforms series into the 22 Catch22 [1]_ features extracted from the hctsa [2]_
-    toolbox.
-
-    Parameters
-    ----------
-    features : int/str or List of int/str, optional, default="all"
-        The Catch22 features to extract by feature index, feature name as a str or as a
-        list of names or indices for multiple features. If "all", all features are
-        extracted.
-        Valid features are as follows:
-            ["DN_HistogramMode_5", "DN_HistogramMode_10",
-            "SB_BinaryStats_diff_longstretch0", "DN_OutlierInclude_p_001_mdrmd",
-            "DN_OutlierInclude_n_001_mdrmd", "CO_f1ecac", "CO_FirstMin_ac",
-            "SP_Summaries_welch_rect_area_5_1", "SP_Summaries_welch_rect_centroid",
-            "FC_LocalSimple_mean3_stderr", "CO_trev_1_num", "CO_HistogramAMI_even_2_5",
-            "IN_AutoMutualInfoStats_40_gaussian_fmmi", "MD_hrv_classic_pnn40",
-            "SB_BinaryStats_mean_longstretch1", "SB_MotifThree_quantile_hh",
-            "FC_LocalSimple_mean1_tauresrat", "CO_Embed2_Dist_tau_d_expfit_meandiff",
-            "SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1",
-            "SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1",
-            "SB_TransitionMatrix_3ac_sumdiagcov", "PD_PeriodicityWang_th0_01"]
-    catch24 : bool, optional, default=False
-        Extract the mean and standard deviation as well as the 22 Catch22 features if
-        true. If a List of specific features to extract is provided, "Mean" and/or
-        "StandardDeviation" must be added to the List to extract these features.
-    outlier_norm : bool, optional, default=False
-        Normalise each series during the two outlier Catch22 features, which can take a
-        while to process for large values.
-    replace_nans : bool, optional, default=True
-        Replace NaN or inf values from the Catch22 transform with 0.
-    n_jobs : int, optional, default=1
-        The number of jobs to run in parallel for transform. Requires multiple input
-        cases. ``-1`` means using all processors.
-
-    See Also
-    --------
-    Catch22 Catch22Classifier
-
-    References
-    ----------
-    .. [1] Lubba, C. H., Sethi, S. S., Knaute, P., Schultz, S. R., Fulcher, B. D., &
-    Jones, N. S. (2019). catch22: Canonical time-series characteristics. Data Mining
-    and Knowledge Discovery, 33(6), 1821-1852.
-    .. [2] Fulcher, B. D., Little, M. A., & Jones, N. S. (2013). Highly comparative
-    time-series analysis: the empirical structure of time series and their methods.
-    Journal of the Royal Society Interface, 10(83), 20130048.
-    """
-
-    def __init__(
-        self,
-        features="all",
-        catch24=False,
-        outlier_norm=False,
-        replace_nans=False,
-        n_jobs=1,
-    ):
-        self.features = features
-        self.catch24 = catch24
-        self.outlier_norm = outlier_norm
-        self.replace_nans = replace_nans
-        self.n_jobs = n_jobs
-
-        _check_optional_dependency("pycatch22", "pycatch22", self)
-
-        super(Catch22WrapperTransformer, self).__init__()
-
-    features_arguments_ = feature_names
-
-    def fit(self, X, y=None):
-        self._validate_data(X=X)
-
-        self.features_arguments_ = (
-            self.features
-            if self.features != "all"
-            else (
-                feature_names + ["Mean", "StandardDeviation"]
-                if self.catch24
-                else feature_names
-            )
-        )
-
-        if isinstance(self.features, str):
-            if self.features == "all":
-                self.n_transformed_features_ = 24 if self.catch24 else 22
-            else:
-                self.n_transformed_features_ = 1
-        elif isinstance(self.features, (list, tuple)):
-            self.n_transformed_features_ = len(self.features)
-        else:
-            raise ValueError("features must be a str, list or tuple")
-
-        self._transform_features = None
-
-        return self
-
-    def transform(self, X, y=None):
-        """Transform data into the Catch22 features.
-
-        Parameters
-        ----------
-        X : 3D numpy array of shape [n_instances, n_dimensions, n_features],
-            input time series panel.
-        y : ignored.
-
-        Returns
-        -------
-        c22 : Pandas DataFrame of shape [n_instances, c*n_dimensions] where c is the
-             number of features requested, containing Catch22 features for X.
-        """
-        X = self._validate_data(X=X, reset=False)
-        X = self._convert_X(X)
-
-        n_instances = len(X)
-
-        f_idx = _verify_features(self.features, self.catch24)
-
-        import pycatch22
-
-        features = [
-            pycatch22.DN_HistogramMode_5,
-            pycatch22.DN_HistogramMode_10,
-            pycatch22.SB_BinaryStats_diff_longstretch0,
-            pycatch22.DN_OutlierInclude_p_001_mdrmd,
-            pycatch22.DN_OutlierInclude_n_001_mdrmd,
-            pycatch22.CO_f1ecac,
-            pycatch22.CO_FirstMin_ac,
-            pycatch22.SP_Summaries_welch_rect_area_5_1,
-            pycatch22.SP_Summaries_welch_rect_centroid,
-            pycatch22.FC_LocalSimple_mean3_stderr,
-            pycatch22.CO_trev_1_num,
-            pycatch22.CO_HistogramAMI_even_2_5,
-            pycatch22.IN_AutoMutualInfoStats_40_gaussian_fmmi,
-            pycatch22.MD_hrv_classic_pnn40,
-            pycatch22.SB_BinaryStats_mean_longstretch1,
-            pycatch22.SB_MotifThree_quantile_hh,
-            pycatch22.FC_LocalSimple_mean1_tauresrat,
-            pycatch22.CO_Embed2_Dist_tau_d_expfit_meandiff,
-            pycatch22.SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1,
-            pycatch22.SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1,
-            pycatch22.SB_TransitionMatrix_3ac_sumdiagcov,
-            pycatch22.PD_PeriodicityWang_th0_01,
-        ]
-
-        threads_to_use = check_n_jobs(self.n_jobs)
-
-        c22_list = Parallel(n_jobs=threads_to_use)(
-            delayed(self._transform_case)(
-                X[i],
-                f_idx,
-                features,
-            )
-            for i in range(n_instances)
-        )
-
-        if self.replace_nans:
-            c22_list = np.nan_to_num(c22_list, False, 0, 0, 0)
-
-        return np.array(c22_list)
-
-    def _transform_case(self, X, f_idx, features):
-        c22 = np.zeros(len(f_idx) * len(X))
-
-        if self._transform_features is not None and len(
-            self._transform_features
-        ) == len(c22):
-            transform_feature = self._transform_features
-        else:
-            transform_feature = [True] * len(c22)
-
-        f_count = -1
-        for i in range(len(X)):
-            dim = i * len(f_idx)
-            series = list(X[i])
-
-            if self.outlier_norm and (3 in f_idx or 4 in f_idx):
-                outlier_series = list(z_normalise_series(X[i]))
-
-            for n, feature in enumerate(f_idx):
-                f_count += 1
-                if not transform_feature[f_count]:
-                    continue
-
-                if self.outlier_norm and feature in [3, 4]:
-                    c22[dim + n] = features[feature](outlier_series)
-                if feature == 22:
-                    c22[dim + n] = np.mean(series)
-                elif feature == 23:
-                    c22[dim + n] = np.std(series)
-                else:
-                    c22[dim + n] = features[feature](series)
-
-        return c22
-
-    def _more_tags(self):
-        return {
-            "X_types": ["np_list", "3darray"],
-            "requires_fit": False,
-            "optional_dependency": True,
-        }

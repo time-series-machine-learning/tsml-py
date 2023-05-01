@@ -5,11 +5,10 @@ __all__ = ["CIFClassifier", "CIFRegressor", "DrCIFClassifier", "DrCIFRegressor"]
 
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
-from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from tsml.interval_based._base import BaseIntervalForest
 from tsml.transformations import FunctionTransformer, PeriodogramTransformer
-from tsml.transformations._catch22 import Catch22Transformer, Catch22WrapperTransformer
+from tsml.transformations._catch22 import Catch22Transformer
 from tsml.utils.numba_functions.general import first_order_differences_3d
 from tsml.utils.numba_functions.stats import (
     row_iqr,
@@ -53,9 +52,7 @@ class CIFClassifier(ClassifierMixin, BaseIntervalForest):
             replace_nan = 0
 
         interval_features = [
-            Catch22WrapperTransformer(outlier_norm=True)
-            if use_pycatch22
-            else Catch22Transformer(outlier_norm=True),
+            Catch22Transformer(outlier_norm=True, use_pycatch22=use_pycatch22),
             row_mean,
             row_std,
             row_slope,
@@ -141,9 +138,7 @@ class CIFRegressor(RegressorMixin, BaseIntervalForest):
             _check_optional_dependency("pycatch22", "pycatch22", self)
 
         interval_features = [
-            Catch22WrapperTransformer(outlier_norm=True)
-            if use_pycatch22
-            else Catch22Transformer(outlier_norm=True),
+            Catch22Transformer(outlier_norm=True, use_pycatch22=use_pycatch22),
             row_mean,
             row_std,
             row_slope,
@@ -242,9 +237,7 @@ class DrCIFClassifier(ClassifierMixin, BaseIntervalForest):
         ]
 
         interval_features = [
-            Catch22WrapperTransformer(outlier_norm=True)
-            if use_pycatch22
-            else Catch22Transformer(outlier_norm=True),
+            Catch22Transformer(outlier_norm=True, use_pycatch22=use_pycatch22),
             row_mean,
             row_std,
             row_slope,
@@ -345,9 +338,7 @@ class DrCIFRegressor(RegressorMixin, BaseIntervalForest):
         ]
 
         interval_features = [
-            Catch22WrapperTransformer(outlier_norm=True)
-            if use_pycatch22
-            else Catch22Transformer(outlier_norm=True),
+            Catch22Transformer(outlier_norm=True, use_pycatch22=use_pycatch22),
             row_mean,
             row_std,
             row_slope,

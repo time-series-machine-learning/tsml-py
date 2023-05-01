@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tsml"
-version = "0.0.7"
+version = "0.0.8"
 description = "A toolkit for time series machine learning algorithms."
 authors = [
     {name = "Matthew Middlehurst", email = "m.middlehurst@uea.ac.uk"},
@@ -42,10 +42,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-extras = [
+all_extras = [
     "pycatch22>=0.4.2",
     "pyfftw>=0.12.0",
     "statsmodels>=0.12.1",
+    "wildboar>=1.1.0",
+    "mrsqm>=0.0.1 ; platform_system != 'Windows'",
 ]
 dev = [
     "pre-commit",
