@@ -53,7 +53,7 @@ def generate_test_estimators() -> List[BaseEstimator]:
                     estimators.append(c[1](**p))
                 except ModuleNotFoundError:
                     warnings.warn(
-                        f"Unable to create estimator {c.__name__} with parameters {p}. "
+                        f"Unable to create estimator {c[0]} with parameters {p}. "
                         f"Most likely an optional dependency is not present.",
                         ImportWarning,
                     )
@@ -62,8 +62,8 @@ def generate_test_estimators() -> List[BaseEstimator]:
                 estimators.append(c[1](**params))
             except ModuleNotFoundError:
                 warnings.warn(
-                    f"Unable to create estimator {c.__name__} with parameters "
-                    f"{params}. Most likely an optional dependency is not present.",
+                    f"Unable to create estimator {c[0]} with parameters {params}. "
+                    f"Most likely an optional dependency is not present.",
                     ImportWarning,
                 )
     return estimators
