@@ -30,9 +30,9 @@ def load_from_ts_file(
     data is unequal length, a list of 2D numpy arrays will be returned. If labels are
     present, they will be returned as well as the data.
 
-    The only mandatory tags in the loaded file are @equallength and one of
-    @targetlabels or @classlabels. Other details can be inferred, though some error
-    checking will be done if they are present.
+    The only mandatory tags in the loaded file are one of @targetlabels or @classlabels.
+    Other details can be inferred, though some error checking will be done if they are
+    present.
 
     Parameters
     ----------
@@ -304,11 +304,9 @@ def load_from_ts_file(
                     "required."
                 )
 
-            # Equal length tag is required.
+            # Assume equal length if no tag.
             if not equallength_tag:
-                raise IOError(
-                    "Unable to read .ts file. The @equallength tag is required."
-                )
+                equallength = True
 
             n_instances = len(lines) - data_start_line
             data_dims = len(first_line) - 1 if has_labels else len(first_line)
@@ -384,13 +382,19 @@ def load_from_ts_file(
                 )
 
             dimensions = line[:data_dims]
-            if not equallength:
-                data_length = len(dimensions[0].strip().split(","))
+            split = dimensions[0].strip().split(",")
+            length = len(split)
+            if equallength and length != data_length:
+                raise IOError(
+                    "Unable to read .ts file. Inconsistent number of channels."
+                    f"Expected {data_dims} but read {read_dims} on line {data_idx}."
+                )
 
             # Process the data for each channel
-            series = np.zeros((data_dims, data_length), dtype=X_dtype)
-            for i in range(data_dims):
-                series[i, :] = dimensions[i].strip().split(",")
+            series = np.zeros((data_dims, length), dtype=X_dtype)
+            series[0, :] = split
+            for n in range(1, data_dims):
+                series[n, :] = dimensions[n].strip().split(",")
 
             X[data_idx] = series
 

@@ -8,6 +8,7 @@ __all__ = [
     "generate_3d_test_data",
 ]
 
+import warnings
 from functools import partial
 from typing import Callable, List, Tuple, Union
 
@@ -29,6 +30,9 @@ def generate_test_estimators() -> List[BaseEstimator]:
 
     Uses estimator parameters from `get_test_params` if available.
 
+    If an optional dependency is not present, the estimator is skipped and a warning is
+    raised.
+
     Returns
     -------
     estimators : list
@@ -45,9 +49,23 @@ def generate_test_estimators() -> List[BaseEstimator]:
 
         if isinstance(params, list):
             for p in params:
-                estimators.append(c[1](**p))
+                try:
+                    estimators.append(c[1](**p))
+                except ModuleNotFoundError:
+                    warnings.warn(
+                        f"Unable to create estimator {c[0]} with parameters {p}. "
+                        f"Most likely an optional dependency is not present.",
+                        ImportWarning,
+                    )
         else:
-            estimators.append(c[1](**params))
+            try:
+                estimators.append(c[1](**params))
+            except ModuleNotFoundError:
+                warnings.warn(
+                    f"Unable to create estimator {c[0]} with parameters {params}. "
+                    f"Most likely an optional dependency is not present.",
+                    ImportWarning,
+                )
     return estimators
 
 

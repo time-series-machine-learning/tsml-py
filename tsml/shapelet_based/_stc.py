@@ -242,7 +242,7 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
+        X = self._validate_data(X=X, reset=False)
 
         return self._estimator.predict(self._transformer.transform(X))
 
@@ -265,7 +265,7 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat([[1]], X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
+        X = self._validate_data(X=X, reset=False)
 
         m = getattr(self._estimator, "predict_proba", None)
         if callable(m):

@@ -15,7 +15,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
 from tsml.transformations._catch22 import Catch22Transformer
-from tsml.utils.validation import check_n_jobs
+from tsml.utils.validation import _check_optional_dependency, check_n_jobs
 
 
 class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
@@ -24,15 +24,37 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
     This classifier simply transforms the input data using the Catch22 [1]
     transformer and builds a provided estimator using the transformed data.
 
-    Shorthand for the pipeline `Catch22(outlier_norm, replace_nans) * estimator`
-
     Parameters
     ----------
+    features : int/str or List of int/str, optional, default="all"
+        The Catch22 features to extract by feature index, feature name as a str or as a
+        list of names or indices for multiple features. If "all", all features are
+        extracted.
+        Valid features are as follows:
+            ["DN_HistogramMode_5", "DN_HistogramMode_10",
+            "SB_BinaryStats_diff_longstretch0", "DN_OutlierInclude_p_001_mdrmd",
+            "DN_OutlierInclude_n_001_mdrmd", "CO_f1ecac", "CO_FirstMin_ac",
+            "SP_Summaries_welch_rect_area_5_1", "SP_Summaries_welch_rect_centroid",
+            "FC_LocalSimple_mean3_stderr", "CO_trev_1_num", "CO_HistogramAMI_even_2_5",
+            "IN_AutoMutualInfoStats_40_gaussian_fmmi", "MD_hrv_classic_pnn40",
+            "SB_BinaryStats_mean_longstretch1", "SB_MotifThree_quantile_hh",
+            "FC_LocalSimple_mean1_tauresrat", "CO_Embed2_Dist_tau_d_expfit_meandiff",
+            "SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1",
+            "SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1",
+            "SB_TransitionMatrix_3ac_sumdiagcov", "PD_PeriodicityWang_th0_01"]
+    catch24 : bool, optional, default=False
+        Extract the mean and standard deviation as well as the 22 Catch22 features if
+        true. If a List of specific features to extract is provided, "Mean" and/or
+        "StandardDeviation" must be added to the List to extract these features.
     outlier_norm : bool, optional, default=False
         Normalise each series during the two outlier Catch22 features, which can take a
         while to process for large values.
     replace_nans : bool, optional, default=True
         Replace NaN or inf values from the Catch22 transform with 0.
+    use_pycatch22 : bool, optional, default=True
+        Wraps the C based pycatch22 implementation for tsml.
+        (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
+        ``pycatch22`` package to be installed if True.
     estimator : sklearn classifier, optional, default=None
         An sklearn estimator to be built using the transformed data.
         Defaults to sklearn RandomForestClassifier(n_estimators=200)
@@ -75,6 +97,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         catch24=False,
         outlier_norm=False,
         replace_nans=True,
+        use_pycatch22=True,
         estimator=None,
         n_jobs=1,
         random_state=None,
@@ -83,10 +106,14 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.catch24 = catch24
         self.outlier_norm = outlier_norm
         self.replace_nans = replace_nans
+        self.use_pycatch22 = use_pycatch22
         self.estimator = estimator
 
         self.n_jobs = n_jobs
         self.random_state = random_state
+
+        if use_pycatch22:
+            _check_optional_dependency("pycatch22", "pycatch22", self)
 
         super(Catch22Classifier, self).__init__()
 
@@ -133,6 +160,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
             catch24=self.catch24,
             outlier_norm=self.outlier_norm,
             replace_nans=self.replace_nans,
+            use_pycatch22=self.use_pycatch22,
             n_jobs=self._n_jobs,
         )
 
