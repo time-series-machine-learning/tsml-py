@@ -47,7 +47,7 @@ dependencies = [
 extras = [
     "pyfftw>=0.12.0,<0.14.0",
     "statsmodels>=0.12.1,<0.14.0",
-    "wildboar>=1.1.0,<0.12.0",
+    "wildboar>=1.1.0,<1.2.0",
 ]
 unstable_extras = [
     "mrsqm>=0.0.1,<0.1.0 ; platform_system == 'Darwin'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
