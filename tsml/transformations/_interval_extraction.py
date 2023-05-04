@@ -364,7 +364,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                         y,
                     )
 
-                    if t.ndim == 3:
+                    if t.ndim == 3 and t.shape[1] == 1:
                         t = t.reshape((t.shape[0], t.shape[2]))
 
                     Xt = np.hstack((Xt, t))

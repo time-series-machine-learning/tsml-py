@@ -140,6 +140,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, ensure_min_series_length=3
         )
+        X = self._convert_X(X)
 
         check_classification_targets(y)
 
@@ -200,6 +201,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
         return self._estimator.predict(self._transformer.transform(X))
 
@@ -223,6 +225,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return np.repeat([[1]], X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
         m = getattr(self._estimator, "predict_proba", None)
         if callable(m):
@@ -374,6 +377,7 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
         ending in "_" and sets is_fitted flag to True.
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X = self._convert_X(X)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
 
@@ -419,6 +423,7 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
         check_is_fitted(self)
 
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
         return self._estimator.predict(self._transformer.transform(X))
 

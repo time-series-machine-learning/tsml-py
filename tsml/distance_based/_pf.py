@@ -12,6 +12,7 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     """
     Wrapper for https://github.com/wildboar-foundation/wildboar PF implementation.
     """
+
     def __init__(
         self,
         n_estimators=100,
@@ -54,6 +55,7 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X = self._convert_X(X)
 
         check_classification_targets(y)
 
@@ -106,6 +108,7 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
         if X.ndim == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], X.shape[2]))
@@ -120,6 +123,7 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return np.repeat([[1]], X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
         if X.ndim == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], X.shape[2]))

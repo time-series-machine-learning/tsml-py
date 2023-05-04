@@ -2,6 +2,7 @@
 """tsml transformations."""
 
 __all__ = [
+    "AutocorrelationFunctionTransformer",
     "ARCoefficientTransformer",
     "Catch22Transformer",
     "FunctionTransformer",
@@ -13,6 +14,7 @@ __all__ = [
     "SevenNumberSummaryTransformer",
 ]
 
+from tsml.transformations._acf import AutocorrelationFunctionTransformer
 from tsml.transformations._ar_coefficient import ARCoefficientTransformer
 from tsml.transformations._catch22 import Catch22Transformer
 from tsml.transformations._function_transformer import FunctionTransformer
