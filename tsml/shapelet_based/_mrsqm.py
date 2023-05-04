@@ -96,6 +96,9 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict_proba(_convert_data(X))
 
+    def _more_tags(self):
+        return {"non_deterministic": True}
+
 
 def _convert_data(X):
     column_list = []
