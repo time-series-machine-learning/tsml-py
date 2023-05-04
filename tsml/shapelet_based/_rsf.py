@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from sklearn.base import ClassifierMixin
+from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted
 
@@ -12,6 +12,7 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     """
     Wrapper for https://github.com/wildboar-foundation/wildboar RSF implementation.
     """
+
     def __init__(
         self,
         n_estimators=100,
@@ -58,6 +59,7 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X = self._convert_X(X)
 
         check_classification_targets(y)
 
@@ -112,6 +114,7 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
         if X.ndim == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], X.shape[2]))
@@ -126,8 +129,102 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return np.repeat([[1]], X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
         if X.ndim == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], X.shape[2]))
 
         return self.clf_.predict_proba(X)
+
+
+class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
+    """
+    Wrapper for https://github.com/wildboar-foundation/wildboar RSF implementation.
+    """
+
+    def __init__(
+        self,
+        n_estimators=100,
+        n_shapelets=10,
+        max_depth=None,
+        min_samples_split=2,
+        min_samples_leaf=1,
+        min_impurity_decrease=0.0,
+        min_shapelet_size=0.0,
+        max_shapelet_size=1.0,
+        alpha=None,
+        metric="euclidean",
+        metric_params=None,
+        criterion="squared_error",
+        oob_score=False,
+        bootstrap=True,
+        warm_start=False,
+        n_jobs=None,
+        random_state=None,
+    ):
+        self.n_shapelets = n_shapelets
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
+        self.min_impurity_decrease = min_impurity_decrease
+        self.min_shapelet_size = min_shapelet_size
+        self.max_shapelet_size = max_shapelet_size
+        self.alpha = alpha
+        self.metric = metric
+        self.metric_params = metric_params
+        self.criterion = criterion
+        self.oob_score = oob_score
+        self.bootstrap = bootstrap
+        self.warm_start = warm_start
+        self.n_jobs = n_jobs
+        self.random_state = random_state
+
+        _check_optional_dependency("wildboar", "wildboar", self)
+
+        super(RandomShapeletForestRegressor, self).__init__()
+
+    def fit(self, X, y):
+        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X = self._convert_X(X)
+
+        self._n_jobs = check_n_jobs(self.n_jobs)
+
+        if X.ndim == 3 and X.shape[1] == 1:
+            X = np.reshape(X, (X.shape[0], X.shape[2]))
+
+        from wildboar.ensemble import ShapeletForestRegressor
+
+        self.reg_ = ShapeletForestRegressor(
+            n_shapelets=self.n_shapelets,
+            n_estimators=self.n_estimators,
+            max_depth=self.max_depth,
+            min_samples_split=self.min_samples_split,
+            min_samples_leaf=self.min_samples_leaf,
+            min_impurity_decrease=self.min_impurity_decrease,
+            min_shapelet_size=self.min_shapelet_size,
+            max_shapelet_size=self.max_shapelet_size,
+            alpha=self.alpha,
+            metric=self.metric,
+            metric_params=self.metric_params,
+            criterion=self.criterion,
+            oob_score=self.oob_score,
+            bootstrap=self.bootstrap,
+            warm_start=self.warm_start,
+            n_jobs=self._n_jobs,
+            random_state=self.random_state,
+        )
+        self.reg_.fit(X, y)
+
+        return self
+
+    def predict(self, X) -> np.ndarray:
+        check_is_fitted(self)
+
+        X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
+
+        if X.ndim == 3 and X.shape[1] == 1:
+            X = np.reshape(X, (X.shape[0], X.shape[2]))
+
+        return self.reg_.predict(X)

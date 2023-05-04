@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+import pandas as pd
 from sklearn.base import ClassifierMixin
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted
@@ -12,6 +13,7 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     """
     Wrapper for https://github.com/mlgig/mrsqm.
     """
+
     def __init__(
         self,
         strat="RS",
@@ -38,6 +40,7 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y):
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X = self._convert_X(X)
 
         check_classification_targets(y)
 
@@ -65,7 +68,7 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             custom_config=self.custom_config,
             random_state=self.random_state,
         )
-        self.clf_.fit(X, y)
+        self.clf_.fit(_convert_data(X), y)
 
         return self
 
@@ -77,8 +80,9 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
-        return self.clf_.predict(X)
+        return self.clf_.predict(_convert_data(X))
 
     def predict_proba(self, X) -> np.ndarray:
         check_is_fitted(self)
@@ -88,5 +92,26 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return np.repeat([[1]], X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False)
+        X = self._convert_X(X)
 
-        return self.clf_.predict_proba(X)
+        return self.clf_.predict_proba(_convert_data(X))
+
+    def _more_tags(self):
+        return {
+            "non_deterministic": True,
+            "_xfail_checks": {"check_estimators_pickle": "External failure to pickle."},
+        }
+
+
+def _convert_data(X):
+    column_list = []
+    for i in range(X.shape[1]):
+        nested_column = (
+            pd.DataFrame(X[:, i, :])
+            .apply(lambda x: [pd.Series(x, dtype=X.dtype)], axis=1)
+            .str[0]
+            .rename(str(i))
+        )
+        column_list.append(nested_column)
+    df = pd.concat(column_list, axis=1)
+    return df
