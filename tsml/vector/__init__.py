@@ -3,8 +3,12 @@
 
 __all__ = [
     "RotationForestClassifier",
+    "RotationForestRegressor",
     "CITClassifier",
 ]
 
 from tsml.vector._cit import CITClassifier
-from tsml.vector._rotation_forest import RotationForestClassifier
+from tsml.vector._rotation_forest import (
+    RotationForestClassifier,
+    RotationForestRegressor,
+)
