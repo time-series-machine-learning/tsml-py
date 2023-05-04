@@ -100,8 +100,11 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 def _convert_data(X):
     column_list = []
     for i in range(X.shape[1]):
-        nested_column = pd.DataFrame(X[:, i, :]).apply(
-            lambda x: [pd.Series(x, dtype=X.dtype)], axis=1
+        nested_column = (
+            pd.DataFrame(X[:, i, :])
+            .apply(lambda x: [pd.Series(x, dtype=X.dtype)], axis=1)
+            .str[0]
+            .rename(str(i))
         )
         column_list.append(nested_column)
     df = pd.concat(column_list, axis=1)
