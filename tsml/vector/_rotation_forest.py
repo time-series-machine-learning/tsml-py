@@ -749,7 +749,7 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
 
         return output
 
-    def _fit_estimator(self, X, X_cls_split, y, idx):
+    def _fit_estimator(self, X, y, idx):
         rs = 255 if self.random_state == 0 else self.random_state
         rs = (
             None
