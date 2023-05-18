@@ -157,8 +157,8 @@ class RSTSFClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
-        for index, classVal in enumerate(self.classes_):
-            self.class_dictionary_[classVal] = index
+        for index, class_val in enumerate(self.classes_):
+            self.class_dictionary_[class_val] = index
 
         if self.n_classes_ == 1:
             return self
@@ -219,6 +219,7 @@ class RSTSFClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         return self.clf_.predict_proba(Xt)
 
     def _predict_transform(self, X):
+        # todo skip transform
         X = self._validate_data(X=X, ensure_min_series_length=5, reset=False)
         X = self._convert_X(X)
 

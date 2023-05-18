@@ -17,7 +17,6 @@ from sklearn.exceptions import DataConversionWarning, NotFittedError
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import scale
-from sklearn.utils import shuffle
 from sklearn.utils._testing import (
     SkipTest,
     assert_allclose,
@@ -979,7 +978,6 @@ def check_classifiers_classes(name, classifier_orig):
     series data.
     """
     X_multiclass, y_multiclass = test_utils.generate_3d_test_data(n_labels=3)
-    X_multiclass, y_multiclass = shuffle(X_multiclass, y_multiclass, random_state=7)
 
     X_binary = X_multiclass[y_multiclass != 2]
     y_binary = y_multiclass[y_multiclass != 2]
@@ -997,15 +995,15 @@ def check_classifiers_classes(name, classifier_orig):
 
     for X, y_names in problems:
         for y_names_i in [y_names, y_names.astype("O")]:
-            _check_classifiers_predictions(X, y_names_i, name, classifier_orig)
+            _check_classifiers_predictions(X, y_names_i, classifier_orig)
 
     labels_binary = [-1, 1]
     y_names_binary = np.take(labels_binary, y_binary)
-    _check_classifiers_predictions(X_binary, y_names_binary, name, classifier_orig)
+    _check_classifiers_predictions(X_binary, y_names_binary, classifier_orig)
 
 
 @ignore_warnings
-def _check_classifiers_predictions(X, y, name, classifier_orig):
+def _check_classifiers_predictions(X, y, classifier_orig):
     classes = np.unique(y)
     classifier = clone(classifier_orig)
 

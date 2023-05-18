@@ -20,16 +20,14 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         pivot_sample="label",
         metric_sample="weighted",
         metric_factories="default",
-        oob_score=False,
         max_depth=None,
         min_samples_split=2,
         min_samples_leaf=1,
         min_impurity_decrease=0,
         criterion="entropy",
         bootstrap=True,
-        warm_start=False,
+        oob_score=False,
         n_jobs=None,
-        class_weight=None,
         random_state=None,
     ):
         self.n_estimators = n_estimators
@@ -37,16 +35,14 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.pivot_sample = pivot_sample
         self.metric_sample = metric_sample
         self.metric_factories = metric_factories
-        self.oob_score = oob_score
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
         self.criterion = criterion
         self.bootstrap = bootstrap
-        self.warm_start = warm_start
+        self.oob_score = oob_score
         self.n_jobs = n_jobs
-        self.class_weight = class_weight
         self.random_state = random_state
 
         _check_optional_dependency("wildboar", "wildboar", self)
@@ -65,8 +61,8 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
-        for index, classVal in enumerate(self.classes_):
-            self.class_dictionary_[classVal] = index
+        for index, class_val in enumerate(self.classes_):
+            self.class_dictionary_[class_val] = index
 
         if self.n_classes_ == 1:
             return self
@@ -91,9 +87,7 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             min_impurity_decrease=self.min_impurity_decrease,
             criterion=self.criterion,
             bootstrap=self.bootstrap,
-            warm_start=self.warm_start,
             n_jobs=self.n_jobs,
-            class_weight=self.class_weight,
             random_state=self.random_state,
         )
         self.clf_.fit(X, y)
@@ -115,7 +109,7 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict(X)
 
-    def _predict_proba(self, X) -> np.ndarray:
+    def predict_proba(self, X) -> np.ndarray:
         check_is_fitted(self)
 
         # treat case of single class seen in fit
@@ -129,3 +123,30 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             X = np.reshape(X, (X.shape[0], X.shape[2]))
 
         return self.clf_.predict_proba(X)
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        """Return testing parameter settings for the estimator.
+
+        Parameters
+        ----------
+        parameter_set : str, default="default"
+            Name of the set of test parameters to return, for use in tests. If no
+            special parameters are defined for a value, will return `"default"` set.
+            For classifiers, a "default" set of parameters should be provided for
+            general testing, and a "results_comparison" set for comparing against
+            previously recorded results if the general set does not produce suitable
+            probabilities to compare against.
+
+        Returns
+        -------
+        params : dict or list of dict, default={}
+            Parameters to create testing instances of the class.
+            Each dict are parameters to construct an "interesting" test instance, i.e.,
+            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
+            `create_test_instance` uses the first (or only) dictionary in `params`.
+        """
+
+        return {
+            "n_estimators": 2,
+        }

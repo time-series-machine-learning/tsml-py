@@ -130,8 +130,8 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self._class_dictionary = {}
-        for index, classVal in enumerate(self.classes_):
-            self._class_dictionary[classVal] = index
+        for index, class_val in enumerate(self.classes_):
+            self._class_dictionary[class_val] = index
 
         # escape if only one class seen
         if self.n_classes_ == 1:
