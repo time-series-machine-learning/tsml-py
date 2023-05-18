@@ -135,33 +135,8 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         super(Catch22Transformer, self).__init__()
 
-    features_arguments_ = feature_names
-
     def fit(self, X, y=None):
         self._validate_data(X=X)
-
-        self.features_arguments_ = (
-            self.features
-            if self.features != "all"
-            else (
-                feature_names + ["Mean", "StandardDeviation"]
-                if self.catch24
-                else feature_names
-            )
-        )
-
-        if isinstance(self.features, str):
-            if self.features == "all":
-                self.n_transformed_features_ = 24 if self.catch24 else 22
-            else:
-                self.n_transformed_features_ = 1
-        elif isinstance(self.features, (list, tuple)):
-            self.n_transformed_features_ = len(self.features)
-        else:
-            raise ValueError("features must be a str, list or tuple")
-
-        self._transform_features = None
-
         return self
 
     def transform(self, X, y=None):
@@ -261,7 +236,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
     def _transform_case(self, X, f_idx, features):
         c22 = np.zeros(len(f_idx) * len(X))
 
-        if self._transform_features is not None and len(
+        if hasattr(self, "_transform_features") and len(
             self._transform_features
         ) == len(c22):
             transform_feature = self._transform_features
@@ -351,7 +326,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
     def _transform_case_pycatch22(self, X, f_idx, features):
         c22 = np.zeros(len(f_idx) * len(X))
 
-        if self._transform_features is not None and len(
+        if hasattr(self, "_transform_features") and len(
             self._transform_features
         ) == len(c22):
             transform_feature = self._transform_features
@@ -388,6 +363,18 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
             "requires_fit": False,
             "optional_dependency": self.use_pycatch22,
         }
+
+    @property
+    def get_features_arguments(self):
+        return (
+            self.features
+            if self.features != "all"
+            else (
+                feature_names + ["Mean", "StandardDeviation"]
+                if self.catch24
+                else feature_names
+            )
+        )
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):

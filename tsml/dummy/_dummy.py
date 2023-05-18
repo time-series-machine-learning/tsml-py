@@ -107,8 +107,8 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.validate:
             self.n_classes_ = self.classes_.shape[0]
             self.class_dictionary_ = {}
-            for index, classVal in enumerate(self.classes_):
-                self.class_dictionary_[classVal] = index
+            for index, class_val in enumerate(self.classes_):
+                self.class_dictionary_[class_val] = index
 
             if self.n_classes_ == 1:
                 return self

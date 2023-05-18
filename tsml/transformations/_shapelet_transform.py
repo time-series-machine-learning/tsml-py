@@ -189,8 +189,8 @@ class RandomShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         self.classes_, self._class_counts = np.unique(y, return_counts=True)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
-        for index, classVal in enumerate(self.classes_):
-            self.class_dictionary_[classVal] = index
+        for index, class_val in enumerate(self.classes_):
+            self.class_dictionary_[class_val] = index
 
         self._n_jobs = check_n_jobs(self.n_jobs)
 

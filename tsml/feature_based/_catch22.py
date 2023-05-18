@@ -137,9 +137,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         Changes state by creating a fitted model that updates attributes
         ending in "_" and sets is_fitted flag to True.
         """
-        X, y = self._validate_data(
-            X=X, y=y, ensure_min_samples=2, ensure_min_series_length=3
-        )
+        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
         check_classification_targets(y)
@@ -148,8 +146,8 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
-        for index, classVal in enumerate(self.classes_):
-            self.class_dictionary_[classVal] = index
+        for index, class_val in enumerate(self.classes_):
+            self.class_dictionary_[class_val] = index
 
         if self.n_classes_ == 1:
             return self

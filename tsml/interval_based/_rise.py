@@ -27,6 +27,8 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
         n_estimators=200,
         min_interval_length=3,
         max_interval_length=np.inf,
+        acf_lag=100,
+        acf_min_values=4,
         time_limit_in_minutes=None,
         contract_max_n_estimators=500,
         use_pyfftw=True,
@@ -35,6 +37,9 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
         n_jobs=1,
         parallel_backend=None,
     ):
+        self.acf_lag = acf_lag
+        self.acf_min_values = acf_min_values
+
         self.use_pyfftw = use_pyfftw
         if use_pyfftw:
             _check_optional_dependency("pyfftw", "pyfftw", self)
@@ -46,7 +51,7 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
 
         interval_features = [
             PeriodogramTransformer(use_pyfftw=use_pyfftw),
-            AutocorrelationFunctionTransformer(),
+            AutocorrelationFunctionTransformer(lags=acf_lag, min_values=acf_min_values),
         ]
 
         super(RISEClassifier, self).__init__(

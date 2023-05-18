@@ -54,6 +54,11 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             of said transformers and functions, default=None
         Transformers and functions used to extract features from selected intervals.
         If None, defaults to [mean, median, min, max, std, 25% quantile, 75% quantile]
+    dilation :
+        add dilation to intervals
+        no dilation if None, add same dilation to all of int, randomly select if list of
+         int
+        -= 1 until min interval
     random_state : int or None, default=None
         Seed for random number generation.
     n_jobs : int, default=1
@@ -89,6 +94,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         min_interval_length=3,
         max_interval_length=np.inf,
         features=None,
+        dilation=None,
         random_state=None,
         n_jobs=1,
         parallel_backend=None,
@@ -97,6 +103,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         self.min_interval_length = min_interval_length
         self.max_interval_length = max_interval_length
         self.features = features
+        self.dilation = dilation
         self.random_state = random_state
         self.n_jobs = n_jobs
         self.parallel_backend = parallel_backend
@@ -255,6 +262,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
     def _fit_setup(self, X, y):
         X, y = self._validate_data(X=X, y=y, ensure_min_series_length=3)
+        X = self._convert_X(X)
 
         self.intervals_ = []
         self._transform_features = None
@@ -299,6 +307,13 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             else:
                 raise ValueError()  # todo
         self._features = li
+
+        if self.dilation is None:
+            self._dilation = [1]
+        elif isinstance(self.dilation, list):
+            self._dilation = self.dilation
+        else:
+            self._dilation = [self.dilation]
 
         self._n_jobs = check_n_jobs(self.n_jobs)
 
@@ -348,6 +363,11 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             )
             interval_start = interval_end - length
 
+        interval_length = interval_end - interval_start
+        dilation = rng.choice(self._dilation)
+        while interval_length / dilation < self._min_interval_length:
+            dilation -= 1
+
         Xt = np.empty((self.n_instances_, 0)) if transform else None
         intervals = []
 
@@ -360,7 +380,9 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                     )
 
                     t = feature.fit_transform(
-                        np.expand_dims(X[:, dim, interval_start:interval_end], axis=1),
+                        np.expand_dims(
+                            X[:, dim, interval_start:interval_end:dilation], axis=1
+                        ),
                         y,
                     )
 
@@ -370,19 +392,24 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                     Xt = np.hstack((Xt, t))
                 else:
                     feature.fit(
-                        np.expand_dims(X[:, dim, interval_start:interval_end], axis=1),
+                        np.expand_dims(
+                            X[:, dim, interval_start:interval_end:dilation], axis=1
+                        ),
                         y,
                     )
             elif transform:
-                t = [[f] for f in feature(X[:, dim, interval_start:interval_end])]
+                t = [
+                    [f]
+                    for f in feature(X[:, dim, interval_start:interval_end:dilation])
+                ]
                 Xt = np.hstack((Xt, t))
 
-            intervals.append((interval_start, interval_end, dim, feature))
+            intervals.append((interval_start, interval_end, dim, feature, dilation))
 
         return intervals, Xt
 
     def _transform_interval(self, X, idx, keep_transform):
-        interval_start, interval_end, dim, feature = self.intervals_[idx]
+        interval_start, interval_end, dim, feature, dilation = self.intervals_[idx]
 
         if keep_transform is not None:
             if is_transformer(feature):
@@ -395,13 +422,13 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         if is_transformer(feature):
             Xt = feature.transform(
-                np.expand_dims(X[:, dim, interval_start:interval_end], axis=1)
+                np.expand_dims(X[:, dim, interval_start:interval_end:dilation], axis=1)
             )
 
             if Xt.ndim == 3:
                 Xt = Xt.reshape((Xt.shape[0], Xt.shape[2]))
         else:
-            Xt = [[f] for f in feature(X[:, dim, interval_start:interval_end])]
+            Xt = [[f] for f in feature(X[:, dim, interval_start:interval_end:dilation])]
 
         return Xt
 
@@ -726,6 +753,7 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, ensure_min_series_length=5
         )
+        X = self._convert_X(X)
 
         self.intervals_ = []
 

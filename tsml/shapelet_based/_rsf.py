@@ -69,8 +69,8 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
-        for index, classVal in enumerate(self.classes_):
-            self.class_dictionary_[classVal] = index
+        for index, class_val in enumerate(self.classes_):
+            self.class_dictionary_[class_val] = index
 
         if self.n_classes_ == 1:
             return self
@@ -135,6 +135,33 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             X = np.reshape(X, (X.shape[0], X.shape[2]))
 
         return self.clf_.predict_proba(X)
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        """Return testing parameter settings for the estimator.
+
+        Parameters
+        ----------
+        parameter_set : str, default="default"
+            Name of the set of test parameters to return, for use in tests. If no
+            special parameters are defined for a value, will return `"default"` set.
+            For classifiers, a "default" set of parameters should be provided for
+            general testing, and a "results_comparison" set for comparing against
+            previously recorded results if the general set does not produce suitable
+            probabilities to compare against.
+
+        Returns
+        -------
+        params : dict or list of dict, default={}
+            Parameters to create testing instances of the class.
+            Each dict are parameters to construct an "interesting" test instance, i.e.,
+            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
+            `create_test_instance` uses the first (or only) dictionary in `params`.
+        """
+
+        return {
+            "n_estimators": 2,
+        }
 
 
 class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
@@ -228,3 +255,29 @@ class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             X = np.reshape(X, (X.shape[0], X.shape[2]))
 
         return self.reg_.predict(X)
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        """Return testing parameter settings for the estimator.
+
+        Parameters
+        ----------
+        parameter_set : str, default="default"
+            Name of the set of test parameters to return, for use in tests. If no
+            special parameters are defined for a value, will return `"default"` set.
+            For classifiers, a "default" set of parameters should be provided for
+            general testing, and a "results_comparison" set for comparing against
+            previously recorded results if the general set does not produce suitable
+            probabilities to compare against.
+
+        Returns
+        -------
+        params : dict or list of dict, default={}
+            Parameters to create testing instances of the class.
+            Each dict are parameters to construct an "interesting" test instance, i.e.,
+            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
+            `create_test_instance` uses the first (or only) dictionary in `params`.
+        """
+        return {
+            "n_estimators": 2,
+        }
