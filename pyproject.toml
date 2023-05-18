@@ -48,7 +48,7 @@ extras = [
     "pyfftw>=0.12.0,<0.14.0",
     "statsmodels>=0.12.1,<0.14.0",
     "wildboar>=1.1.0,<1.2.0",
-    "scikit-fda>=0.7.0,<0.9.0",
+    "scikit-fda>=0.7.0,<0.9.0 ; python_version <= '3.10'",
     "stumpy>=1.6.0,<1.12.0"
 ]
 unstable_extras = [
