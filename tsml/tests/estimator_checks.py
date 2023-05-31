@@ -8,7 +8,7 @@ from functools import partial
 
 from sklearn.base import is_classifier, is_regressor
 from sklearn.exceptions import SkipTestWarning
-from sklearn.utils._testing import ignore_warnings
+from sklearn.utils._testing import SkipTest, assert_allclose, ignore_warnings
 from sklearn.utils.estimator_checks import (
     check_get_params_invariance,
     check_no_attributes_set_in_init,
@@ -17,6 +17,8 @@ from sklearn.utils.estimator_checks import (
 )
 
 import tsml.tests._sklearn_checks as patched_checks
+import tsml.utils.testing as test_utils
+from tsml.base import _clone_estimator
 from tsml.utils._tags import _safe_tags
 from tsml.utils.validation import is_clusterer, is_transformer
 
@@ -173,7 +175,74 @@ def _yield_clustering_checks(clusterer):
 
 
 def check_estimator_input_types(name, estimator_orig):
-    pass
+    """Check estimators with more than one input type returns the same results.
+
+    Validates type tag.
+    """
+    valid_types = ["3darray", "2darray", "np_list"]
+    type_tag = _safe_tags(estimator_orig, key="X_types")
+    for t in type_tag:
+        assert t in valid_types, f"Invalid X_types tag value {t} for {name}"
+
+    # If there is only one input type other tests will cover it
+    if len(type_tag) == 1:
+        return
+
+    if _safe_tags(estimator_orig, key="non_deterministic"):
+        raise SkipTest(name + " is non deterministic")
+
+    # test a single function with this priority
+    def _get_func(est):
+        if hasattr(est, "predict_proba"):
+            return getattr(est, "predict_proba")
+        elif hasattr(est, "predict"):
+            return getattr(est, "predict")
+        elif hasattr(est, "transform"):
+            return getattr(est, "transform")
+
+    X, y = test_utils.generate_3d_test_data()
+    first_result = None
+
+    if "3darray" in type_tag:
+        estimator = _clone_estimator(estimator_orig, 1)
+
+        estimator.fit(X, y)
+        current_result = _get_func(estimator)(X)
+
+        # no results to compare against yet
+        first_result = current_result
+
+    if "2darray" in type_tag:
+        estimator = _clone_estimator(estimator_orig, 1)
+        X_t = X.reshape((X.shape[0], -1))
+
+        func = _get_func(estimator)
+        estimator.fit(X_t, y)
+        current_result = func(X_t)
+
+        if first_result is None:
+            first_result = current_result
+        else:
+            # if series to series transform reshape to match first result
+            if first_result.ndim == 3 and current_result.ndim == 2:
+                current_result = current_result.reshape(first_result.shape)
+
+            msg = (
+                f"Results for {name} differ between input types using function {func}."
+            )
+            assert_allclose(first_result, current_result, err_msg=msg)
+
+    if "np_list" in type_tag:
+        estimator = _clone_estimator(estimator_orig, 1)
+        X_t = [x for x in X]
+
+        func = _get_func(estimator)
+        estimator.fit(X_t, y)
+        current_result = func(X_t)
+
+        # we must already have a first result if we reach here
+        msg = f"Results for {name} differ between input types using function {func}."
+        assert_allclose(first_result, current_result, err_msg=msg)
 
 
 @ignore_warnings(category=FutureWarning)
@@ -204,7 +273,3 @@ def check_estimator_handles_unequal_data(name, estimator_orig):
 @ignore_warnings(category=FutureWarning)
 def check_n_features_unequal(name, estimator_orig):
     pass
-
-
-# @ignore_warnings(category=FutureWarning)
-# X_types

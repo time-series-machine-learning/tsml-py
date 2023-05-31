@@ -374,7 +374,7 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
         Changes state by creating a fitted model that updates attributes
         ending in "_" and sets is_fitted flag to True.
         """
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2, y_numeric=True)
         X = self._convert_X(X)
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape

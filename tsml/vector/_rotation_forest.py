@@ -638,7 +638,9 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
         if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], -1))
 
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2, dtype=np.float32)
+        X, y = self._validate_data(
+            X=X, y=y, ensure_min_samples=2, dtype=np.float32, y_numeric=True
+        )
 
         self._n_jobs = check_n_jobs(self.n_jobs)
 

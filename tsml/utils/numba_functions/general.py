@@ -6,6 +6,8 @@ __all__ = [
     "unique_count",
     "first_order_differences",
     "first_order_differences_2d",
+    "first_order_differences_3d",
+    "z_normalise_series_with_mean",
     "z_normalise_series",
     "z_normalise_series_2d",
     "z_normalise_series_3d",

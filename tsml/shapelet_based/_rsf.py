@@ -212,7 +212,7 @@ class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         super(RandomShapeletForestRegressor, self).__init__()
 
     def fit(self, X, y):
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2, y_numeric=True)
         X = self._convert_X(X)
 
         self._n_jobs = check_n_jobs(self.n_jobs)
