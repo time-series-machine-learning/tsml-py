@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from tsml.compose import ChannelEnsembleClassifier
+from tsml.compose._channel_ensemble import ChannelEnsembleClassifier
 from tsml.interval_based import TSFClassifier
 from tsml.utils.testing import generate_3d_test_data
 
