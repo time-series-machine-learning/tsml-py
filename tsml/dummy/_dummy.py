@@ -222,7 +222,9 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
     def fit(self, X, y):
         """"""
         if self.validate:
-            _, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
+            _, y = self._validate_data(
+                X=X, y=y, ensure_min_series_length=1, y_numeric=True
+            )
 
         self.reg_ = SklearnDummyRegressor(
             strategy=self.strategy, constant=self.constant, quantile=self.quantile

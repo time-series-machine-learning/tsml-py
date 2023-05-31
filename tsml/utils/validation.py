@@ -135,6 +135,7 @@ def check_X_y(
     ensure_min_samples: int = 1,
     ensure_min_channels: int = 1,
     ensure_min_series_length: int = 2,
+    ensure_equal_length: bool = False,
     estimator: Union[str, BaseEstimator, None] = None,
     y_numeric: bool = False,
 ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[List[np.ndarray], np.ndarray]]:
@@ -189,6 +190,8 @@ def check_X_y(
         its third axis (second axis of all items for list of 2D numpy array). Setting
         to 0 disables this check.
         The default value of 2 rejects empty datasets and non-series.
+    ensure_equal_length:  bool, default=False
+        Make sure that all series have the same length. Setting to False disables this.
     y_numeric : bool, default=False
         Whether to ensure that y has a numeric type. If dtype of y is object,
         it is converted to float64. Should only be used for regression
@@ -238,7 +241,6 @@ def check_X_y(
     return X, y
 
 
-
 def check_X(
     X: object,
     dtype: Union[str, type, None] = "numeric",
@@ -248,6 +250,7 @@ def check_X(
     ensure_min_samples: int = 1,
     ensure_min_channels: int = 1,
     ensure_min_series_length: int = 2,
+    ensure_equal_length: bool = False,
     estimator: Union[str, BaseEstimator, None] = None,
 ) -> Union[np.ndarray, list]:
     """Input validation on a numpy array or list dataset.

@@ -403,8 +403,7 @@ def _check_transformer(name, transformer_orig, X, y):
     X_pred3 = transformer.fit_transform(X, y=y)
 
     if _safe_tags(transformer_orig, key="non_deterministic"):
-        msg = name + " is non deterministic"
-        raise SkipTest(msg)
+        raise SkipTest(name + " is non deterministic")
 
     if isinstance(X_pred, tuple) and isinstance(X_pred2, tuple):
         for x_pred, x_pred2, x_pred3 in zip(X_pred, X_pred2, X_pred3):

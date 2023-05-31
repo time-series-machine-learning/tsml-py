@@ -13,6 +13,7 @@ __all__ = [
     # "SFATransformer",
     "RandomShapeletTransformer",
     "SevenNumberSummaryTransformer",
+    "TransformerConcatenator",
 ]
 
 from tsml.transformations._acf import AutocorrelationFunctionTransformer
@@ -27,3 +28,4 @@ from tsml.transformations._interval_extraction import (
 from tsml.transformations._periodogram import PeriodogramTransformer
 from tsml.transformations._shapelet_transform import RandomShapeletTransformer
 from tsml.transformations._summary_features import SevenNumberSummaryTransformer
+from tsml.transformations._transform_concatenator import TransformerConcatenator
