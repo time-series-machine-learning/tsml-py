@@ -12,6 +12,7 @@ __all__ = [
     "PeriodogramTransformer",
     # "SFATransformer",
     "RandomShapeletTransformer",
+    "RandomDilatedShapeletTransformer",
     "SevenNumberSummaryTransformer",
     "TransformerConcatenator",
 ]
@@ -26,6 +27,9 @@ from tsml.transformations._interval_extraction import (
     SupervisedIntervalTransformer,
 )
 from tsml.transformations._periodogram import PeriodogramTransformer
-from tsml.transformations._shapelet_transform import RandomShapeletTransformer
+from tsml.transformations._shapelet_transform import (
+    RandomDilatedShapeletTransformer,
+    RandomShapeletTransformer,
+)
 from tsml.transformations._summary_features import SevenNumberSummaryTransformer
 from tsml.transformations._transform_concatenator import TransformerConcatenator

@@ -95,8 +95,6 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         as the number of series_transformers.
 
         Ignored for supervised interval_selection_method inputs.
-    dilation:
-        todo
     interval_features : TransformerMixin, callable, list, tuple, or None, default=None
         The features to extract from the intervals using transformers or callable
         functions. If None, uses the mean, standard deviation, and slope of the series.
@@ -175,7 +173,6 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         n_intervals="sqrt",
         min_interval_length=3,
         max_interval_length=np.inf,
-        dilation=None,
         interval_features=None,
         series_transformers=None,
         att_subsample_size=None,
@@ -193,7 +190,6 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         self.n_intervals = n_intervals
         self.min_interval_length = min_interval_length
         self.max_interval_length = max_interval_length
-        self.dilation = dilation
         self.interval_features = interval_features
         self.series_transformers = series_transformers
         self.att_subsample_size = att_subsample_size
@@ -460,9 +456,6 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             elif n > Xt[i].shape[2]:
                 self._max_interval_length[i] = Xt[i].shape[2]
 
-        # todo dilation
-        self._dilation = [self.dilation] * len(Xt)
-
         # we store whether each series_transformer contains a transformer and/or
         # function in its interval_features
         self._interval_transformer = [False] * len(Xt)
@@ -592,7 +585,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                     if is_transformer(transformer):
                         params = inspect.signature(transformer.__init__).parameters
 
-                        # the BaseTransformer must have a parameter with one of the
+                        # the transformer must have a parameter with one of the
                         # names listed in transformer_feature_selection as a way to
                         # select which features the transformer should transform
                         has_params = False
@@ -605,7 +598,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                         if not has_params:
                             raise ValueError()  # todo error for invalid invalid self.att_subsample_size
 
-                        # the BaseTransformer must have an attribute with one of the
+                        # the transformer must have an attribute with one of the
                         # names listed in transformer_feature_names as a list or tuple
                         # of valid options for the previous parameter
                         has_feature_names = False
@@ -689,9 +682,9 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                     delayed(self._fit_estimator)(
                         Xt,
                         y,
-                        i,
+                        rng.randint(np.iinfo(np.int32).max),
                     )
-                    for i in range(self._n_jobs)
+                    for _ in range(self._n_jobs)
                 )
 
                 (
@@ -717,9 +710,9 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 delayed(self._fit_estimator)(
                     Xt,
                     y,
-                    i,
+                    rng.randint(np.iinfo(np.int32).max),
                 )
-                for i in range(self._n_estimators)
+                for _ in range(self._n_estimators)
             )
 
             (
@@ -790,15 +783,9 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         )
         return output
 
-    def _fit_estimator(self, Xt, y, i):
+    def _fit_estimator(self, Xt, y, seed):
         # random state for this estimator
-        rs = 255 if self.random_state == 0 else self.random_state
-        rs = (
-            None
-            if self.random_state is None
-            else (rs * 37 * (i + 1)) % np.iinfo(np.int32).max
-        )
-        rng = check_random_state(rs)
+        rng = check_random_state(seed)
 
         intervals = []
         transform_data_lengths = []
@@ -869,7 +856,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
                         # tell this transformer to only transform the selected features
                         if len(t_features) > 0:
-                            new_transformer = _clone_estimator(transformer, rs)
+                            new_transformer = _clone_estimator(transformer, seed)
                             setattr(
                                 new_transformer,
                                 self._transformer_feature_selection[r][n],
@@ -886,7 +873,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                     )
                     for feature in self._interval_features[r]:
                         if is_transformer(feature):
-                            features.append(_clone_estimator(feature, rs))
+                            features.append(_clone_estimator(feature, seed))
                         else:
                             features.append(feature)
             # add all features while cloning estimators if not subsampling
@@ -894,7 +881,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 features = []
                 for feature in self._interval_features[r]:
                     if is_transformer(feature):
-                        features.append(_clone_estimator(feature, rs))
+                        features.append(_clone_estimator(feature, seed))
                     else:
                         features.append(feature)
 
@@ -904,9 +891,8 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                     n_intervals=self._n_intervals[r],
                     min_interval_length=self._min_interval_length[r],
                     max_interval_length=self._max_interval_length[r],
-                    dilation=self._dilation[r],
                     features=features,
-                    random_state=rs,
+                    random_state=seed,
                 )
             elif self.interval_selection_method == "supervised":
                 selector = SupervisedIntervalTransformer(
@@ -914,7 +900,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                     min_interval_length=self._min_interval_length[r],
                     features=features,
                     randomised_split_point=False,
-                    random_state=rs,
+                    random_state=seed,
                 )
             elif self.interval_selection_method == "random-supervised":
                 selector = SupervisedIntervalTransformer(
@@ -922,7 +908,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                     min_interval_length=self._min_interval_length[r],
                     features=features,
                     randomised_split_point=True,
-                    random_state=rs,
+                    random_state=seed,
                 )
             else:
                 raise ValueError()  # todo error for invalid self.interval_selection_method, should not get here
@@ -950,7 +936,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             )
 
         # clone and fit the base estimator using the transformed data
-        tree = _clone_estimator(self._base_estimator, random_state=rs)
+        tree = _clone_estimator(self._base_estimator, random_state=seed)
         tree.fit(interval_features, y)
 
         # find the features used in the tree and inform the interval selectors to not

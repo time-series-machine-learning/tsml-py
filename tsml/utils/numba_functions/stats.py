@@ -31,6 +31,8 @@ __all__ = [
     "ppv",
     "row_ppv",
     "fisher_score",
+    "prime_up_to",
+    "is_prime",
 ]
 
 import numpy as np
@@ -821,3 +823,55 @@ def fisher_score(X: np.ndarray, y: np.ndarray) -> float:
         return 0
     else:
         return accum_numerator / accum_denominator
+
+
+@njit(fastmath=True, cache=True)
+def prime_up_to(n: int) -> np.ndarray:
+    """Check if any number from 1 to n is a prime number and return the ones which are.
+
+    Parameters
+    ----------
+    n : int
+        Number up to which the search for prime number will go
+
+    Returns
+    -------
+    array
+        Prime numbers up to n
+
+    Examples
+    --------
+    >>> from tsml.utils.numba_functions.stats import prime_up_to
+    >>> p = prime_up_to(50)
+    """
+    is_p = np.zeros(n + 1, dtype=np.bool_)
+    for i in range(n + 1):
+        is_p[i] = is_prime(i)
+    return np.where(is_p)[0]
+
+
+@njit(fastmath=True, cache=True)
+def is_prime(n: int) -> bool:
+    """Check if the input number is a prime number.
+
+    Parameters
+    ----------
+    n : int
+        The number to test
+
+    Returns
+    -------
+    bool
+        Wheter n is a prime number
+
+    Examples
+    --------
+    >>> from tsml.utils.numba_functions.stats import is_prime
+    >>> p = is_prime(7)
+    """
+    if (n % 2 == 0 and n > 2) or n == 0 or n == 1:
+        return False
+    for i in range(3, int(n**0.5) + 1, 2):
+        if not n % i:
+            return False
+    return True

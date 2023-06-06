@@ -7,6 +7,8 @@ A transformer for the extraction of features on randomly selected intervals.
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["RandomIntervalTransformer", "SupervisedIntervalTransformer"]
 
+import inspect
+
 import numpy as np
 from joblib import Parallel
 from sklearn import preprocessing
@@ -16,6 +18,7 @@ from sklearn.utils.fixes import delayed
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
+from tsml.utils._tags import _safe_tags
 from tsml.utils.numba_functions.general import z_normalise_series_3d
 from tsml.utils.numba_functions.stats import (
     fisher_score,
@@ -168,7 +171,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 then the return is a `Panel` object of type `pd-multiindex`
                 Example: i-th instance of the output is the i-th window running over `X`
         """
-        X, y = self._fit_setup(X, y)
+        X, y, rng = self._fit_setup(X, y)
 
         fit = Parallel(
             n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
@@ -176,10 +179,10 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             delayed(self._generate_interval)(
                 X,
                 y,
-                i,
+                rng.randint(np.iinfo(np.int32).max),
                 True,
             )
-            for i in range(self.n_intervals)
+            for _ in range(self.n_intervals)
         )
 
         (
@@ -197,7 +200,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return Xt
 
     def fit(self, X, y=None):
-        X, y = self._fit_setup(X, y)
+        X, y, rng = self._fit_setup(X, y)
 
         fit = Parallel(
             n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
@@ -205,10 +208,10 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             delayed(self._generate_interval)(
                 X,
                 y,
-                i,
+                rng.randint(np.iinfo(np.int32).max),
                 False,
             )
-            for i in range(self.n_intervals)
+            for _ in range(self.n_intervals)
         )
 
         (
@@ -317,16 +320,12 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         self._n_jobs = check_n_jobs(self.n_jobs)
 
-        return X, y
+        rng = check_random_state(self.random_state)
 
-    def _generate_interval(self, X, y, idx, transform):
-        rs = 255 if self.random_state == 0 else self.random_state
-        rs = (
-            None
-            if self.random_state is None
-            else (rs * 37 * (idx + 1)) % np.iinfo(np.int32).max
-        )
-        rng = check_random_state(rs)
+        return X, y, rng
+
+    def _generate_interval(self, X, y, seed, transform):
+        rng = check_random_state(seed)
 
         dim = rng.randint(self.n_dims_)
 
@@ -376,7 +375,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 if transform:
                     feature = _clone_estimator(
                         feature,
-                        rs,
+                        seed,
                     )
 
                     t = feature.fit_transform(
@@ -542,9 +541,13 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         the following statistics used in [2]:
         [mean, median, std, slope, min, max, iqr, count_mean_crossing,
         count_above_mean].
+    metric :
+
     randomised_split_point : bool, default=True
         If True, the split point for interval extraction is randomised as is done in [2]
         rather than split in half.
+    normalise_for_search:
+
     n_jobs : int, default=1
         The number of jobs to run in parallel for both `fit` and `transform`.
         ``-1`` means using all processors.
@@ -594,7 +597,9 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         n_intervals=50,
         min_interval_length=3,
         features=None,
+        metric="fisher",
         randomised_split_point=True,
+        normalise_for_search=True,
         random_state=None,
         n_jobs=1,
         parallel_backend=None,
@@ -602,12 +607,25 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         self.n_intervals = n_intervals
         self.min_interval_length = min_interval_length
         self.features = features
+        self.metric = metric
         self.randomised_split_point = randomised_split_point
+        self.normalise_for_search = normalise_for_search
         self.random_state = random_state
         self.n_jobs = n_jobs
         self.parallel_backend = parallel_backend
 
         super(SupervisedIntervalTransformer, self).__init__()
+
+    # if features contains a transformer, it must contain a parameter name from
+    # transformer_feature_selection and an attribute name (or property) from
+    # transformer_feature_names to allow a single feature to be transformed at a time.
+    transformer_feature_selection = ["features"]
+    transformer_feature_names = [
+        "features_arguments_",
+        "_features_arguments",
+        "get_features_arguments",
+        "_get_features_arguments",
+    ]
 
     def fit_transform(self, X, y=None):
         """Fit to data, then transform it.
@@ -665,9 +683,9 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 then the return is a `Panel` object of type `pd-multiindex`
                 Example: i-th instance of the output is the i-th window running over `X`
         """
-        X, y = self._fit_setup(X, y)
+        X, y, rng = self._fit_setup(X, y)
 
-        X_norm = z_normalise_series_3d(X)
+        X_norm = z_normalise_series_3d(X) if self.normalise_for_search else X
 
         fit = Parallel(
             n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
@@ -676,10 +694,10 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 X,
                 X_norm,
                 y,
-                i,
+                rng.randint(np.iinfo(np.int32).max),
                 True,
             )
-            for i in range(self.n_intervals)
+            for _ in range(self.n_intervals)
         )
 
         (
@@ -699,9 +717,9 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return Xt
 
     def fit(self, X, y=None):
-        X, y = self._fit_setup(X, y)
+        X, y, rng = self._fit_setup(X, y)
 
-        X_norm = z_normalise_series_3d(X)
+        X_norm = z_normalise_series_3d(X) if self.normalise_for_search else X
 
         fit = Parallel(
             n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
@@ -710,10 +728,10 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 X,
                 X_norm,
                 y,
-                i,
+                rng.randint(np.iinfo(np.int32).max),
                 False,
             )
-            for i in range(self.n_intervals)
+            for _ in range(self.n_intervals)
         )
 
         (
@@ -787,30 +805,72 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 row_count_above_mean,
             ]
 
-        li = []
         if not isinstance(self._features, list):
             self._features = [self._features]
 
+        rng = check_random_state(self.random_state)
+
+        msg = (
+            "Transformers must have a parameter from 'transformer_feature_names' to "
+            "allow selecting single features, and a list of feature names in "
+            "'transformer_feature_names'. Transformers which require 'fit' are "
+            "currently unsupported."
+        )
+
+        li = []
         for f in self._features:
             if callable(f):
                 li.append(f)
+            elif is_transformer(f):
+                if _safe_tags(f, key="requires_fit") is True:
+                    raise ValueError(msg)
+
+                params = inspect.signature(f.__init__).parameters
+
+                att_name = None
+                for n in self.transformer_feature_selection:
+                    if params.get(n, None) is not None:
+                        att_name = n
+                        break
+
+                if att_name is None:
+                    raise ValueError(msg)
+
+                t_features = None
+                for n in self.transformer_feature_names:
+                    if hasattr(f, n) and isinstance(getattr(f, n), (list, tuple)):
+                        t_features = getattr(f, n)
+                        break
+
+                if t_features is None:
+                    raise ValueError(msg)
+
+                for t_f in t_features:
+                    new_transformer = _clone_estimator(f, rng)
+                    setattr(
+                        new_transformer,
+                        att_name,
+                        t_f,
+                    )
+                    li.append(new_transformer)
             else:
                 raise ValueError()
         self._features = li
 
+        if callable(self.metric):
+            self._metric = self.metric
+        elif self.metric == "fisher":
+            self._metric = fisher_score
+        else:
+            raise ValueError("metric must be callable or 'fisher'")
+
         self._n_jobs = check_n_jobs(self.n_jobs)
 
         le = preprocessing.LabelEncoder()
-        return X, le.fit_transform(y)
+        return X, le.fit_transform(y), rng
 
-    def _generate_intervals(self, X, X_norm, y, idx, keep_transform):
-        rs = 255 if self.random_state == 0 else self.random_state
-        rs = (
-            None
-            if self.random_state is None
-            else (rs * 37 * (idx + 1)) % np.iinfo(np.int32).max
-        )
-        rng = check_random_state(rs)
+    def _generate_intervals(self, X, X_norm, y, seed, keep_transform):
+        rng = check_random_state(seed)
 
         Xt = np.empty((self.n_instances_, 0)) if keep_transform else None
         intervals = []
@@ -835,6 +895,7 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                     X[:, i, :],
                     rng,
                     keep_transform,
+                    is_transformer(feature),
                 )
                 intervals.extend(intervals_L)
 
@@ -850,6 +911,7 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                     X[:, i, :],
                     rng,
                     keep_transform,
+                    is_transformer(feature),
                 )
                 intervals.extend(intervals_R)
 
@@ -863,10 +925,23 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             return np.zeros(X.shape[0])
 
         start, end, dim, feature = self.intervals_[idx]
-        return feature(X[:, dim, start:end])
+
+        if is_transformer(feature):
+            return feature.transform(X[:, dim, start:end]).flatten()
+        else:
+            return feature(X[:, dim, start:end])
 
     def _supervised_search(
-        self, X, y, ini_idx, feature, dim, X_ori, rng, keep_transform
+        self,
+        X,
+        y,
+        ini_idx,
+        feature,
+        dim,
+        X_ori,
+        rng,
+        keep_transform,
+        feature_is_transformer,
     ):
         intervals = []
         Xt = np.empty((X.shape[0], 0)) if keep_transform else None
@@ -885,11 +960,15 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             sub_interval_0 = X[:, :div_point]
             sub_interval_1 = X[:, div_point:]
 
-            interval_feature_0 = feature(sub_interval_0)
-            interval_feature_1 = feature(sub_interval_1)
+            if feature_is_transformer:
+                interval_feature_0 = feature.transform(sub_interval_0).flatten()
+                interval_feature_1 = feature.transform(sub_interval_1).flatten()
+            else:
+                interval_feature_0 = feature(sub_interval_0)
+                interval_feature_1 = feature(sub_interval_1)
 
-            score_0 = fisher_score(interval_feature_0, y)
-            score_1 = fisher_score(interval_feature_1, y)
+            score_0 = self._metric(interval_feature_0, y)
+            score_1 = self._metric(interval_feature_1, y)
 
             if score_0 >= score_1 and score_0 != 0:
                 end = ini_idx + len(sub_interval_0[0])
@@ -897,8 +976,17 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 intervals.append((ini_idx, end, dim, feature))
                 X = sub_interval_0
 
-                interval_feature_to_use = feature(X_ori[:, ini_idx:end])
                 if keep_transform:
+                    if self.normalise_for_search:
+                        if feature_is_transformer:
+                            interval_feature_to_use = feature.transform(
+                                X_ori[:, ini_idx:end]
+                            ).flatten()
+                        else:
+                            interval_feature_to_use = feature(X_ori[:, ini_idx:end])
+                    else:
+                        interval_feature_to_use = interval_feature_0
+
                     Xt = np.hstack(
                         (
                             Xt,
@@ -915,8 +1003,17 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 intervals.append((ini_idx, end, dim, feature))
                 X = sub_interval_1
 
-                interval_feature_to_use = feature(X_ori[:, ini_idx:end])
                 if keep_transform:
+                    if self.normalise_for_search:
+                        if feature_is_transformer:
+                            interval_feature_to_use = feature.transform(
+                                X_ori[:, ini_idx:end]
+                            ).flatten()
+                        else:
+                            interval_feature_to_use = feature(X_ori[:, ini_idx:end])
+                    else:
+                        interval_feature_to_use = interval_feature_1
+
                     Xt = np.hstack(
                         (
                             Xt,

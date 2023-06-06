@@ -157,6 +157,7 @@ def _yield_transformer_checks(transformer):
 
     yield patched_checks.check_transformer_general
     yield partial(patched_checks.check_transformer_general, readonly_memmap=True)
+    yield check_transformer_fit_no_y
 
     if not tags["no_validation"]:
         yield patched_checks.check_transformer_data_not_an_array
@@ -272,4 +273,9 @@ def check_estimator_handles_unequal_data(name, estimator_orig):
 
 @ignore_warnings(category=FutureWarning)
 def check_n_features_unequal(name, estimator_orig):
+    pass
+
+
+@ignore_warnings(category=FutureWarning)
+def check_transformer_fit_no_y(name, estimator_orig):
     pass
