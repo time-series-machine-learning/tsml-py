@@ -527,6 +527,9 @@ class RandomShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         return to_keep
 
+    def _more_tags(self):
+        return {"requires_y": True}
+
     @classmethod
     def get_test_params(cls, parameter_set="default"):
         """Return testing parameter settings for the estimator.
@@ -993,6 +996,9 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
                     "The threshold_percentiles param should be an array of size 2"
                 )
             self.threshold_percentiles_ = np.asarray(self.threshold_percentiles_)
+
+    def _more_tags(self):
+        return {"requires_y": True}
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):

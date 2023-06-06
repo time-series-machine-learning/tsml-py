@@ -3,6 +3,7 @@
 
 __author__ = ["MatthewMiddlehurst"]
 
+import inspect
 import warnings
 from functools import partial
 
@@ -157,7 +158,6 @@ def _yield_transformer_checks(transformer):
 
     yield patched_checks.check_transformer_general
     yield partial(patched_checks.check_transformer_general, readonly_memmap=True)
-    yield check_transformer_fit_no_y
 
     if not tags["no_validation"]:
         yield patched_checks.check_transformer_data_not_an_array
@@ -167,6 +167,9 @@ def _yield_transformer_checks(transformer):
 
     if tags["requires_fit"]:
         yield patched_checks.check_estimators_unfitted
+
+    if not tags["requires_y"]:
+        yield check_transformer_fit_no_y
 
 
 def _yield_clustering_checks(clusterer):
@@ -278,4 +281,13 @@ def check_n_features_unequal(name, estimator_orig):
 
 @ignore_warnings(category=FutureWarning)
 def check_transformer_fit_no_y(name, estimator_orig):
-    pass
+    """Check that transformers treat y=None as valid input."""
+    X, y = test_utils.generate_3d_test_data(n_samples=5)
+
+    estimator = _clone_estimator(estimator_orig)
+    estimator.fit(X)
+
+    estimator = _clone_estimator(estimator_orig)
+    estimator.fit_transform(X)
+
+    assert "y" in inspect.getfullargspec(estimator.fit).args

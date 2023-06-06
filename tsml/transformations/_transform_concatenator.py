@@ -56,7 +56,10 @@ class TransformerConcatenator(TransformerMixin, BaseTimeSeriesEstimator):
             FunctionTransformer class instance.
         """
         if self.validate:
-            self._validate_data(X, ensure_min_series_length=1)
+            if any([_safe_tags(t, key="requires_y") for t in self.transformers]):
+                self._validate_data(X=X, y=y, ensure_min_series_length=1)
+            else:
+                self._validate_data(X=X, ensure_min_series_length=1)
         else:
             self._check_n_features(X, True)
 
@@ -84,7 +87,7 @@ class TransformerConcatenator(TransformerMixin, BaseTimeSeriesEstimator):
             transformers = self.transformers
 
         if self.validate:
-            X = self._validate_data(X, reset=False, ensure_min_series_length=1)
+            X = self._validate_data(X=X, reset=False, ensure_min_series_length=1)
 
         arr = transformers[0].transform(X)
         for transformer in transformers[1:]:
@@ -97,6 +100,9 @@ class TransformerConcatenator(TransformerMixin, BaseTimeSeriesEstimator):
             "no_validation": not self.validate,
             "requires_fit": any(
                 [_safe_tags(t, key="requires_fit") for t in self.transformers]
+            ),
+            "requires_y": any(
+                [_safe_tags(t, key="requires_y") for t in self.transformers]
             ),
             "X_types": ["3darray", "2darray", "np_list"],
             "_xfail_checks": {

@@ -357,13 +357,6 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         return c22
 
-    def _more_tags(self):
-        return {
-            "X_types": ["np_list", "3darray"],
-            "requires_fit": False,
-            "optional_dependency": self.use_pycatch22,
-        }
-
     @property
     def get_features_arguments(self):
         return (
@@ -375,6 +368,13 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
                 else feature_names
             )
         )
+
+    def _more_tags(self):
+        return {
+            "X_types": ["np_list", "3darray"],
+            "requires_fit": False,
+            "optional_dependency": self.use_pycatch22,
+        }
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):

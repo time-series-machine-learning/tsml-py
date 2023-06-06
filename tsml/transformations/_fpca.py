@@ -37,7 +37,7 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         super(FPCATransformer, self).__init__()
 
-    def fit_transform(self, X, y=None, **fit_params):
+    def fit_transform(self, X, y=None):
         """
         Convert the X to its functional form.
 
@@ -50,7 +50,7 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
         from skfda.preprocessing.dim_reduction import FPCA
         from skfda.representation.basis import BSplineBasis
 
-        X, y = self._fit_setup(X, y)
+        X = self._fit_setup(X)
 
         X_t = np.zeros((self.n_instances_, self.n_dims_, self._n_components))
         for j in range(self.n_dims_):
@@ -79,7 +79,7 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
         from skfda.preprocessing.dim_reduction import FPCA
         from skfda.representation.basis import BSplineBasis
 
-        X, y = self._fit_setup(X, y)
+        X = self._fit_setup(X)
 
         for j in range(self.n_dims_):
             # represent the time X in functional form
@@ -102,8 +102,8 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def _fit_setup(self, X, y):
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+    def _fit_setup(self, X):
+        X = self._validate_data(X=X, ensure_min_samples=2)
         X = self._convert_X(X)
 
         if self.bspline:
@@ -117,9 +117,9 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
         self.transformers_ = []
 
-        return X, y
+        return X
 
-    def transform(self, X, y=None):
+    def transform(self, X):
         """
         Transform the X based on the number of coefficients.
 

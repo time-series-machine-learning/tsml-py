@@ -171,7 +171,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 then the return is a `Panel` object of type `pd-multiindex`
                 Example: i-th instance of the output is the i-th window running over `X`
         """
-        X, y, rng = self._fit_setup(X, y)
+        X, rng = self._fit_setup(X)
 
         fit = Parallel(
             n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
@@ -200,7 +200,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return Xt
 
     def fit(self, X, y=None):
-        X, y, rng = self._fit_setup(X, y)
+        X, rng = self._fit_setup(X)
 
         fit = Parallel(
             n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
@@ -263,8 +263,8 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         return Xt
 
-    def _fit_setup(self, X, y):
-        X, y = self._validate_data(X=X, y=y, ensure_min_series_length=3)
+    def _fit_setup(self, X):
+        X = self._validate_data(X=X, ensure_min_series_length=3)
         X = self._convert_X(X)
 
         self.intervals_ = []
@@ -322,7 +322,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         rng = check_random_state(self.random_state)
 
-        return X, y, rng
+        return X, rng
 
     def _generate_interval(self, X, y, seed, transform):
         rng = check_random_state(seed)
@@ -1059,6 +1059,9 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         self._transform_features = arr
 
         return True
+
+    def _more_tags(self):
+        return {"requires_y": True}
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
