@@ -10,8 +10,64 @@ from tsml.utils.validation import _check_optional_dependency
 
 
 class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
-    """
-    Wrapper for https://github.com/mlgig/mrsqm.
+    """Multiple Representations Sequence Miner (MrSQM) classifier.
+
+    This is a wrapper for the MrSQMClassifier algorithm from the `mrsqm` package.
+    MrSQM is not included in all extras as it requires gcc and fftw
+    (http://www.fftw.org/index.html) to be installed for Windows and some Linux OS.
+
+    Overview: MrSQM is an efficient time series classifier utilising symbolic
+    representations of time series. MrSQM implements four different feature selection
+    strategies (R,S,RS,SR) that can quickly select subsequences from multiple symbolic
+    representations of time series data.
+
+    Parameters
+    ----------
+    strat : 'R','S','SR', or 'RS;, default="RS"
+        Feature selection strategy. R and S are single-stage filters while
+        RS and SR are two-stage filters. By default set to 'RS'.
+    features_per_rep : int, default=500
+        The (maximum) number of features selected per representation.
+    selection_per_rep : int, default=2000
+        The (maximum) number of candidate features selected per representation.
+        Only applied in two stages strategies (RS and SR).
+    nsax : int, default=0
+        The number of representations produced by SAX transformation.
+    nsfa : int, default=5
+        The number of representations produced by SFA transformation.
+        Note: including any SFA transformations will prevent the estimator from being
+        serialised (no pickling).
+    custom_config : dict, default=None
+        Customized parameters for the symbolic transformation.
+    random_state : int or None, default=None
+        Random seed for classifier.
+    sfa_norm : bool, default=True
+        Time series normalisation (standardisation).
+
+    Notes
+    -----
+    The `mrsqm` package uses a different license (GPL-3.0) from the aeon BSD3 license
+    covering this interface wrapper.
+    See https://github.com/mlgig/mrsqm for the original implementation.
+
+    References
+    ----------
+    .. [1] Nguyen, Thach Le, and Georgiana Ifrim. "Fast time series classification with
+        random symbolic subsequences." Advanced Analytics and Learning on Temporal Data:
+        7th ECML PKDD Workshop, AALTD 2022, Grenoble, France, September 19–23, 2022.
+    .. [2] Nguyen, Thach Le, and Georgiana Ifrim. "MrSQM: Fast time series
+        classification with symbolic representations." arXiv preprint arXiv:2109.01036
+        (2021).
+
+    Examples
+    --------
+    >>> from tsml.shapelet_based import MrSQMClassifier
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(random_state=0)
+    >>> clf = MrSQMClassifier(random_state=0)  # doctest: +SKIP
+    >>> clf.fit(X, y)  # doctest: +SKIP
+    MrSQMClassifier(...)
+    >>> clf.predict(X)  # doctest: +SKIP
     """
 
     def __init__(
