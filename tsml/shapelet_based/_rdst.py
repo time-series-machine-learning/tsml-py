@@ -28,6 +28,7 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         max_shapelets=10000,
         shapelet_lengths=None,
         proba_normalization=0.8,
+        distance_function=None,
         threshold_percentiles=None,
         alpha_similarity=0.5,
         use_prime_dilations=False,
@@ -38,6 +39,7 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.max_shapelets = max_shapelets
         self.shapelet_lengths = shapelet_lengths
         self.proba_normalization = proba_normalization
+        self.distance_function = distance_function
         self.threshold_percentiles = threshold_percentiles
         self.alpha_similarity = alpha_similarity
         self.use_prime_dilations = use_prime_dilations
@@ -88,6 +90,7 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             max_shapelets=self.max_shapelets,
             shapelet_lengths=self.shapelet_lengths,
             proba_normalization=self.proba_normalization,
+            distance_function=self.distance_function,
             threshold_percentiles=self.threshold_percentiles,
             alpha_similarity=self.alpha_similarity,
             use_prime_dilations=self.use_prime_dilations,
@@ -205,6 +208,7 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         max_shapelets=10000,
         shapelet_lengths=None,
         proba_normalization=0.8,
+        distance_function=None,
         threshold_percentiles=None,
         alpha_similarity=0.5,
         use_prime_dilations=False,
@@ -215,6 +219,7 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self.max_shapelets = max_shapelets
         self.shapelet_lengths = shapelet_lengths
         self.proba_normalization = proba_normalization
+        self.distance_function = distance_function
         self.threshold_percentiles = threshold_percentiles
         self.alpha_similarity = alpha_similarity
         self.use_prime_dilations = use_prime_dilations
@@ -255,6 +260,7 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             max_shapelets=self.max_shapelets,
             shapelet_lengths=self.shapelet_lengths,
             proba_normalization=self.proba_normalization,
+            distance_function=self.distance_function,
             threshold_percentiles=self.threshold_percentiles,
             alpha_similarity=self.alpha_similarity,
             use_prime_dilations=self.use_prime_dilations,
