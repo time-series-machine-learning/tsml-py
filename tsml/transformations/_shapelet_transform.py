@@ -1273,7 +1273,7 @@ def _random_dilated_shapelet_extraction(
                     )
 
                 lower_bound = np.percentile(x_dist, threshold_percentiles[0])
-                upper_bound = np.percentile(x_dist, threshold_percentiles[0])
+                upper_bound = np.percentile(x_dist, threshold_percentiles[1])
 
                 threshold[i_shp] = np.random.uniform(lower_bound, upper_bound)
                 values[i_shp, :, :length] = _val

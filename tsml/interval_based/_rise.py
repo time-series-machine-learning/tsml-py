@@ -50,7 +50,7 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
             replace_nan = 0
 
         interval_features = [
-            PeriodogramTransformer(use_pyfftw=use_pyfftw),
+            PeriodogramTransformer(use_pyfftw=True, pad_with="mean"),
             AutocorrelationFunctionTransformer(lags=acf_lag, min_values=acf_min_values),
         ]
 
@@ -130,7 +130,7 @@ class RISERegressor(RegressorMixin, BaseIntervalForest):
             _check_optional_dependency("pyfftw", "pyfftw", self)
 
         interval_features = [
-            PeriodogramTransformer(use_pyfftw=use_pyfftw),
+            PeriodogramTransformer(use_pyfftw=use_pyfftw, pad_with="mean"),
             AutocorrelationFunctionTransformer(lags=acf_lag, min_values=acf_min_values),
         ]
 

@@ -16,10 +16,14 @@ class PeriodogramTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         self,
         use_pyfftw=True,
         pad_series=True,
+        pad_with="constant",
+        constant_value=0,
         n_jobs=1,
     ):
         self.use_pyfftw = use_pyfftw
         self.pad_series = pad_series
+        self.pad_with = pad_with
+        self.constant_value = constant_value
         self.n_jobs = n_jobs
 
         if use_pyfftw:
@@ -38,14 +42,24 @@ class PeriodogramTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         threads_to_use = check_n_jobs(self.n_jobs)
 
         if self.pad_series:
-            zeroes = np.zeros(
+            kwargs = {"mode": self.pad_with}
+            if self.pad_with == "constant":
+                kwargs["constant_values"] = self.constant_value
+
+            X = np.pad(
+                X,
                 (
-                    X.shape[0],
-                    X.shape[1],
-                    int(math.pow(2, math.ceil(math.log(X.shape[2], 2))) - X.shape[2]),
-                )
+                    (0, 0),
+                    (0, 0),
+                    (
+                        0,
+                        int(
+                            math.pow(2, math.ceil(math.log(X.shape[2], 2))) - X.shape[2]
+                        ),
+                    ),
+                ),
+                **kwargs,
             )
-            X = np.concatenate((X, zeroes), axis=2)
 
         if self.use_pyfftw:
             import pyfftw
