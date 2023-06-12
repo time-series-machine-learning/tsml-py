@@ -4,7 +4,7 @@
 Pipeline classifier using the Catch22 transformer and an estimator.
 """
 
-__author__ = ["MatthewMiddlehurst"]
+__author__ = ["MatthewMiddlehurst", "baraline"]
 __all__ = ["RDSTClassifier", "RDSTRegressor"]
 
 import warnings
