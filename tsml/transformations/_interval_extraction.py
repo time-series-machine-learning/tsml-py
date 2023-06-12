@@ -81,6 +81,8 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         The number of dimensions per case.
     series_length_ : int
         The length of each series.
+    n_intervals_ : int
+
     intervals_ : list of tuples
         Contains information for each feature extracted in fit. Each tuple contains the
         interval start, interval end, interval dimension and the feature(s) extracted.
@@ -190,12 +192,27 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             transformed_intervals,
         ) = zip(*fit)
 
-        for i in intervals:
-            self.intervals_.extend(i)
+        current = []
+        removed_idx = []
+        self.n_intervals_ = 0
+        for i, interval in enumerate(intervals):
+            new_interval = (
+                interval[0][0],
+                interval[0][1],
+                interval[0][2],
+                interval[0][4],
+            )
+            if new_interval not in current:
+                current.append(new_interval)
+                self.intervals_.extend(interval)
+                self.n_intervals_ += 1
+            else:
+                removed_idx.append(i)
 
         Xt = transformed_intervals[0]
         for i in range(1, self.n_intervals):
-            Xt = np.hstack((Xt, transformed_intervals[i]))
+            if i not in removed_idx:
+                Xt = np.hstack((Xt, transformed_intervals[i]))
 
         return Xt
 
@@ -219,8 +236,14 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             _,
         ) = zip(*fit)
 
+        current = []
+        self.n_intervals_ = 0
         for i in intervals:
-            self.intervals_.extend(i)
+            interval = (i[0][0], i[0][1], i[0][2], i[0][4])
+            if interval not in current:
+                current.append(interval)
+                self.intervals_.extend(i)
+                self.n_intervals_ += 1
 
         return self
 
@@ -234,7 +257,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         else:
             count = 0
             transform_features = []
-            for _ in range(self.n_intervals):
+            for _ in range(self.n_intervals_):
                 for feature in self._features:
                     if is_transformer(feature):
                         nf = feature.n_transformed_features
