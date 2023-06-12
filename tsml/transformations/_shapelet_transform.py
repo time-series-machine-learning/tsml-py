@@ -845,7 +845,6 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
         max_shapelets=10000,
         shapelet_lengths=None,
         proba_normalization=0.8,
-        distance_function=None,
         threshold_percentiles=None,
         alpha_similarity=0.5,
         use_prime_dilations=False,
@@ -855,7 +854,6 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
         self.max_shapelets = max_shapelets
         self.shapelet_lengths = shapelet_lengths
         self.proba_normalization = proba_normalization
-        self.distance_function = distance_function
         self.threshold_percentiles = threshold_percentiles
         self.alpha_similarity = alpha_similarity
         self.use_prime_dilations = use_prime_dilations
@@ -916,7 +914,6 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
             self.threshold_percentiles_,
             self.alpha_similarity,
             self.use_prime_dilations,
-            self._distance_function,
             self._random_state,
         )
 
@@ -940,7 +937,7 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
         X = self._validate_data(X=X, reset=False)
         X = self._convert_X(X)
 
-        X_new = _dilated_shapelet_transform(X, self.shapelets_, self._distance_function)
+        X_new = _dilated_shapelet_transform(X, self.shapelets_)
         return X_new
 
     def _check_input_params(self):
@@ -1003,21 +1000,6 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
                     "The threshold_percentiles param should be an array of size 2"
                 )
             self.threshold_percentiles_ = np.asarray(self.threshold_percentiles_)
-
-        if self.distance_function is None:
-            self._distance_function = manhattan_distance
-        else:
-            self._distance_function = self.distance_function
-
-        try:
-            x = np.random.rand(1, 3)
-            y = np.random.rand(1, 3)
-            self._distance_function(x, y)
-        except Exception as err:
-            raise ValueError(
-                "An error occured while trying to use the specified distance function: "
-                + str(err)
-            )
 
     def _more_tags(self):
         return {"requires_y": True}
@@ -1144,7 +1126,6 @@ def _random_dilated_shapelet_extraction(
     threshold_percentiles,
     alpha_similarity,
     use_prime_dilations,
-    distance_function,
     seed,
 ):
     """Randomly generate a set of shapelets given the input parameters.
@@ -1180,10 +1161,6 @@ def _random_dilated_shapelet_extraction(
         If True, restrict the value of the shapelet dilation parameter to be prime
         values. This can greatly speed up the algorithm for long time series and/or
         short shapelet length, possibly at the cost of some accuracy.
-    distance_function : function
-        A distance function defined as a numba function with signature as
-        (x: np.ndarray, y: np.ndarray) -> float. The default distance function is the
-        manhattan distance.
     seed : int
         Seed for random number generation.
 
@@ -1302,9 +1279,7 @@ def _random_dilated_shapelet_extraction(
                     )
                     X_subs = _normalize_subsequences(X_subs, X_means, X_stds)
 
-                x_dist = _compute_shapelet_dist_vector(
-                    X_subs, _val, length, dilation, distance_function
-                )
+                x_dist = _compute_shapelet_dist_vector(X_subs, _val, length)
 
                 lower_bound = np.percentile(x_dist, threshold_percentiles[0])
                 upper_bound = np.percentile(x_dist, threshold_percentiles[1])
@@ -1332,7 +1307,7 @@ def _random_dilated_shapelet_extraction(
 
 
 @njit(fastmath=True, cache=True, parallel=True)
-def _dilated_shapelet_transform(X, shapelets, distance_function):
+def _dilated_shapelet_transform(X, shapelets):
     """Perform the shapelet transform with a set of shapelets and a set of time series.
 
     Parameters
@@ -1388,9 +1363,7 @@ def _dilated_shapelet_transform(X, shapelets, distance_function):
                     X_subs,
                     values[i_shp],
                     length,
-                    dilation,
                     threshold[i_shp],
-                    distance_function,
                 )
 
             idx_norm = id_shps[np.where(normalize[id_shps])[0]]
@@ -1404,9 +1377,7 @@ def _dilated_shapelet_transform(X, shapelets, distance_function):
                         X_subs,
                         values[i_shp],
                         length,
-                        dilation,
                         threshold[i_shp],
-                        distance_function,
                     )
     return X_new
 
@@ -1470,9 +1441,7 @@ def _get_all_subsequences(X, length, dilation):
 
 
 @njit(fastmath=True, cache=True)
-def _compute_shapelet_features(
-    X_subs, values, length, dilation, threshold, distance_function
-):
+def _compute_shapelet_features(X_subs, values, length, threshold):
     """Extract the features from a shapelet distance vector.
 
     Given a shapelet and a time series, extract three features from the resulting
@@ -1490,8 +1459,6 @@ def _compute_shapelet_features(
         The value array of the shapelet
     length : int
         Length of the shapelet
-    dilation : int
-        Dilation of the shapelet
     values : array, shape (n_channels, length)
         The resulting subsequence
     threshold : float
@@ -1513,7 +1480,7 @@ def _compute_shapelet_features(
     n_subsequences = X_subs.shape[0]
 
     for i_sub in prange(n_subsequences):
-        _dist = distance_function(X_subs[i_sub], values[:, :length])
+        _dist = manhattan_distance(X_subs[i_sub], values[:, :length])
 
         if _dist < _min:
             _min = _dist
@@ -1525,7 +1492,7 @@ def _compute_shapelet_features(
 
 
 @njit(fastmath=True, cache=True)
-def _compute_shapelet_dist_vector(X_subs, values, length, dilation, distance_function):
+def _compute_shapelet_dist_vector(X_subs, values, length):
     """Extract the features from a shapelet distance vector.
 
     Given a shapelet and a time series, extract three features from the resulting
@@ -1543,14 +1510,6 @@ def _compute_shapelet_dist_vector(X_subs, values, length, dilation, distance_fun
         The value array of the shapelet
     length : int
         Dilation of the shapelet
-    values : array, shape (n_channels, length)
-        The resulting subsequence
-    threshold : float
-        The threshold parameter of the shapelet
-    distance_function: function
-        A distance function defined as a numba function with signature as
-        (x: np.ndarray, y: np.ndarray) -> float. The default distance function is the
-        manhattan distance.
 
     Returns
     -------
@@ -1560,5 +1519,5 @@ def _compute_shapelet_dist_vector(X_subs, values, length, dilation, distance_fun
     n_subsequences = X_subs.shape[0]
     dist_vector = np.zeros(n_subsequences)
     for i_sub in prange(n_subsequences):
-        dist_vector[i_sub] = distance_function(X_subs[i_sub], values[:, :length])
+        dist_vector[i_sub] = manhattan_distance(X_subs[i_sub], values[:, :length])
     return dist_vector

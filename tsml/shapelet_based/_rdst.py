@@ -7,6 +7,8 @@ Pipeline classifier using the Catch22 transformer and an estimator.
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["RDSTClassifier", "RDSTRegressor"]
 
+import warnings
+
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.linear_model import RidgeClassifierCV, RidgeCV
@@ -28,7 +30,6 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         max_shapelets=10000,
         shapelet_lengths=None,
         proba_normalization=0.8,
-        distance_function=None,
         threshold_percentiles=None,
         alpha_similarity=0.5,
         use_prime_dilations=False,
@@ -39,7 +40,6 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.max_shapelets = max_shapelets
         self.shapelet_lengths = shapelet_lengths
         self.proba_normalization = proba_normalization
-        self.distance_function = distance_function
         self.threshold_percentiles = threshold_percentiles
         self.alpha_similarity = alpha_similarity
         self.use_prime_dilations = use_prime_dilations
@@ -90,7 +90,6 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             max_shapelets=self.max_shapelets,
             shapelet_lengths=self.shapelet_lengths,
             proba_normalization=self.proba_normalization,
-            distance_function=self.distance_function,
             threshold_percentiles=self.threshold_percentiles,
             alpha_similarity=self.alpha_similarity,
             use_prime_dilations=self.use_prime_dilations,
@@ -113,7 +112,14 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             self._estimator.n_jobs = self._n_jobs
 
         X_t = self._transformer.fit_transform(X, y)
-        self._estimator.fit(X_t, y)
+
+        if X_t.shape[1] == 0:
+            warnings.warn("No shapelets found in training data.")
+            self._no_atts = True
+            self._majority_class = np.argmax(np.unique(y, return_counts=True)[1])
+        else:
+            self._no_atts = False
+            self._estimator.fit(X_t, y)
 
         return self
 
@@ -135,6 +141,9 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         # treat case of single class seen in fit
         if self.n_classes_ == 1:
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
+
+        if self._no_atts:
+            return np.repeat([self.classes_[self._majority_class]], X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False)
         X = self._convert_X(X)
@@ -159,6 +168,11 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         # treat case of single class seen in fit
         if self.n_classes_ == 1:
             return np.repeat([[1]], X.shape[0], axis=0)
+
+        if self._no_atts:
+            p = np.zeros((X.shape[0], self.n_classes_))
+            p[:, self._majority_class] = 1
+            return p
 
         X = self._validate_data(X=X, reset=False)
         X = self._convert_X(X)
@@ -208,7 +222,6 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         max_shapelets=10000,
         shapelet_lengths=None,
         proba_normalization=0.8,
-        distance_function=None,
         threshold_percentiles=None,
         alpha_similarity=0.5,
         use_prime_dilations=False,
@@ -219,7 +232,6 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self.max_shapelets = max_shapelets
         self.shapelet_lengths = shapelet_lengths
         self.proba_normalization = proba_normalization
-        self.distance_function = distance_function
         self.threshold_percentiles = threshold_percentiles
         self.alpha_similarity = alpha_similarity
         self.use_prime_dilations = use_prime_dilations
@@ -260,7 +272,6 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             max_shapelets=self.max_shapelets,
             shapelet_lengths=self.shapelet_lengths,
             proba_normalization=self.proba_normalization,
-            distance_function=self.distance_function,
             threshold_percentiles=self.threshold_percentiles,
             alpha_similarity=self.alpha_similarity,
             use_prime_dilations=self.use_prime_dilations,
@@ -271,7 +282,7 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self._estimator = _clone_estimator(
             make_pipeline(
                 StandardScaler(with_mean=False),
-                RidgeCV(alphas=np.logspace(-3, 3, 10)),
+                RidgeCV(alphas=np.logspace(-4, 4, 20)),
             )
             if self.estimator is None
             else self.estimator,
@@ -283,7 +294,14 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             self._estimator.n_jobs = self._n_jobs
 
         X_t = self._transformer.fit_transform(X, y)
-        self._estimator.fit(X_t, y)
+
+        if X_t.shape[1] == 0:
+            warnings.warn("No shapelets found in training data.")
+            self._no_atts = True
+            self._y_mean = np.mean(y)
+        else:
+            self._no_atts = False
+            self._estimator.fit(X_t, y)
 
         return self
 
@@ -301,6 +319,9 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             Predicted class labels.
         """
         check_is_fitted(self)
+
+        if self._no_atts:
+            return np.full(X.shape[0], self._y_mean)
 
         X = self._validate_data(X=X, reset=False)
         X = self._convert_X(X)
