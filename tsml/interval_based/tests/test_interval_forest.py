@@ -94,6 +94,7 @@ def test_interval_forest_n_intervals(n_intervals, n_intervals_len):
         n_intervals=n_intervals,
         series_transformers=[None, FunctionTransformer(np.log1p)],
         save_transformed_data=True,
+        random_state=0,
     )
     est.fit(X, y)
     est.predict_proba(X)
@@ -140,6 +141,7 @@ def test_interval_forest_attribute_subsample(features, output_len):
         interval_features=features,
         replace_nan=0,
         save_transformed_data=True,
+        random_state=0,
     )
     est.fit(X, y)
     est.predict_proba(X)
@@ -166,6 +168,7 @@ def test_interval_forest_invalid_attribute_subsample():
 @pytest.mark.parametrize(
     "series_transformer",
     [
+        FunctionTransformer(np.log1p),
         [None, FunctionTransformer(np.log1p)],
         [FunctionTransformer(np.log1p), ARCoefficientTransformer()],
     ],
@@ -179,9 +182,13 @@ def test_interval_forest_series_transformer(series_transformer):
         n_intervals=2,
         series_transformers=series_transformer,
         save_transformed_data=True,
+        random_state=0,
     )
     est.fit(X, y)
     est.predict_proba(X)
 
     data = est.transformed_data_
-    assert data[0].shape[1] == 12
+    expected = (
+        len(series_transformer) * 6 if isinstance(series_transformer, list) else 6
+    )
+    assert data[0].shape[1] == expected

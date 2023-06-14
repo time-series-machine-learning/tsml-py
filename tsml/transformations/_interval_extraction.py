@@ -44,6 +44,9 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     Transforms each interval sub-series using the given transformer(s)/features and
     concatenates them into a feature vector in transform.
 
+    Identical intervals are pruned at the end of fit, as such the number of features may
+    be less than expected from n_intervals.
+
     Parameters
     ----------
     n_intervals : int, default=100,
@@ -118,61 +121,6 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     transformer_feature_skip = ["transform_features_", "_transform_features"]
 
     def fit_transform(self, X, y=None):
-        """Fit to data, then transform it.
-
-        Fits the transformer to X and y and returns a transformed version of X.
-
-        State change:
-            Changes state to "fitted".
-
-        Writes to self:
-        _is_fitted : flag is set to True.
-        _X : X, coerced copy of X, if remember_data tag is True
-            possibly coerced to inner type or update_data compatible type
-            by reference, when possible
-        model attributes (ending in "_") : dependent on estimator
-
-        Parameters
-        ----------
-        X : Series or Panel, any supported mtype
-            Data to be transformed, of python type as follows:
-                Series: pd.Series, pd.DataFrame, or np.ndarray (1D or 2D)
-                Panel: pd.DataFrame with 2-level MultiIndex, list of pd.DataFrame,
-                    nested pd.DataFrame, or pd.DataFrame in long/wide format
-                subject to sktime mtype format specifications, for further details see
-                    examples/AA_datatypes_and_datasets.ipynb
-        y : Series or Panel, default=None
-            Additional data, e.g., labels for transformation
-
-        Returns
-        -------
-        transformed version of X
-        type depends on type of X and scitype:transform-output tag:
-            |   `X`    | `tf-output`  |     type of return     |
-            |----------|--------------|------------------------|
-            | `Series` | `Primitives` | `pd.DataFrame` (1-row) |
-            | `Panel`  | `Primitives` | `pd.DataFrame`         |
-            | `Series` | `Series`     | `Series`               |
-            | `Panel`  | `Series`     | `Panel`                |
-            | `Series` | `Panel`      | `Panel`                |
-        instances in return correspond to instances in `X`
-        combinations not in the table are currently not supported
-
-        Explicitly, with examples:
-            if `X` is `Series` (e.g., `pd.DataFrame`) and `transform-output` is `Series`
-                then the return is a single `Series` of the same mtype
-                Example: detrending a single series
-            if `X` is `Panel` (e.g., `pd-multiindex`) and `transform-output` is `Series`
-                then the return is `Panel` with same number of instances as `X`
-                    (the transformer is applied to each input Series instance)
-                Example: all series in the panel are detrended individually
-            if `X` is `Series` or `Panel` and `transform-output` is `Primitives`
-                then the return is `pd.DataFrame` with as many rows as instances in `X`
-                Example: i-th row of the return has mean and variance of the i-th series
-            if `X` is `Series` and `transform-output` is `Panel`
-                then the return is a `Panel` object of type `pd-multiindex`
-                Example: i-th instance of the output is the i-th window running over `X`
-        """
         X, rng = self._fit_setup(X)
 
         fit = Parallel(
