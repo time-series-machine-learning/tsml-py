@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """"""
 
 __author__ = ["MatthewMiddlehurst"]
@@ -95,7 +94,7 @@ class TransformerConcatenator(TransformerMixin, BaseTimeSeriesEstimator):
 
         return arr
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {
             "no_validation": not self.validate,
             "requires_fit": any(
@@ -106,7 +105,8 @@ class TransformerConcatenator(TransformerMixin, BaseTimeSeriesEstimator):
             ),
             "X_types": ["3darray", "2darray", "np_list"],
             "_xfail_checks": {
-                "check_parameters_default_constructible": "Intentional required parameter."
+                "check_parameters_default_constructible": "Intentional required "
+                "parameter."
             },
         }
 

@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Distance based estimators."""
+"""Distance-based estimators."""
 
 __all__ = [
     "ProximityForestClassifier",

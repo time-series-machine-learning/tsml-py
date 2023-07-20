@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """Continuous interval tree (CIT) vector classifier (aka Time Series Tree).
 
 Continuous Interval Tree aka Time Series Tree, base classifier originally used
-in the time series forest interval based classification algorithm. Fits sklearn
+in the time series forest interval-based classification algorithm. Fits sklearn
 conventions.
 """
 
@@ -11,8 +10,10 @@ __all__ = ["CITClassifier"]
 
 import math
 import sys
+from typing import Union
 
 import numpy as np
+import pandas as pd
 from numba import njit
 from sklearn import preprocessing
 from sklearn.base import BaseEstimator, ClassifierMixin
@@ -45,19 +46,16 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
 
     Attributes
     ----------
-    classes_ : list
-        The unique class labels in the training set.
-    n_classes_ : int
-        The number of unique classes in the training set.
     n_instances_ : int
         The number of train cases in the training set.
     n_atts_ : int
         The number of attributes in the training set.
-
-    See Also
-    --------
-    CanonicalIntervalForest
-    DrCIF
+    n_classes_ : int
+        Number of classes. Extracted from the data.
+    classes_ : ndarray of shape (n_classes_)
+        Holds the label for each class.
+    class_dictionary_ : dict
+        A dictionary mapping class labels to class indices in classes_.
 
     Notes
     -----
@@ -68,18 +66,18 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
     References
     ----------
     .. [1] H.Deng, G.Runger, E.Tuv and M.Vladimir, "A time series forest for
-       classification and feature extraction",Information Sciences, 239, 2013
+       classification and feature extraction", Information Sciences, 239, 2013
 
     Examples
     --------
     >>> from tsml.vector import CITClassifier
-    >>> from tsml.datasets import load_minimal_chinatown
-    >>> X_train, y_train = load_minimal_chinatown(split="train")
-    >>> X_test, y_test = load_minimal_chinatown(split="test")
-    >>> clf = CITClassifier()
-    >>> clf.fit(X_train, y_train)
+    >>> from tsml.utils.testing import generate_2d_test_data
+    >>> X, y = generate_2d_test_data(n_samples=8, random_state=0)
+    >>> clf = CITClassifier(random_state=0)
+    >>> clf.fit(X, y)
     CITClassifier(...)
-    >>> y_pred = clf.predict(X_test)
+    >>> clf.predict(X)
+    array([0, 1, 0, 0, 0, 0, 0, 1])
     """
 
     def __init__(
@@ -94,28 +92,20 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
 
         super(CITClassifier, self).__init__()
 
-    def fit(self, X, y):
-        """Fit a tree on cases (X,y), where y is the target variable.
-
-        Build an information gain based tree for continuous attributes using the
-        margin gain metric for ties.
+    def fit(self, X: Union[np.ndarray, pd.DataFrame], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 2d ndarray or DataFrame of shape = [n_instances, n_attributes]
+        X : 2d ndarray or DataFrame of shape (n_instances, n_atts)
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_".
         """
         if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], -1))
@@ -129,9 +119,9 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
         self.n_instances_, self.n_atts_ = X.shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
-        self._class_dictionary = {}
+        self.class_dictionary_ = {}
         for index, class_val in enumerate(self.classes_):
-            self._class_dictionary[class_val] = index
+            self.class_dictionary_[class_val] = index
 
         # escape if only one class seen
         if self.n_classes_ == 1:
@@ -167,34 +157,34 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
         self._is_fitted = True
         return self
 
-    def predict(self, X):
-        """Predict for all cases in X. Built on top of predict_proba.
+    def predict(self, X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+        """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 2d ndarray or DataFrame of shape = [n_instances, n_attributes]
-            The data to make predictions for.
+        X : 2d ndarray or DataFrame of shape (n_instances, n_atts)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
+        y : array-like of shape (n_instances)
             Predicted class labels.
         """
         return np.array(
             [self.classes_[int(np.argmax(prob))] for prob in self.predict_proba(X)]
         )
 
-    def predict_proba(self, X):
-        """Probability estimates for each class for all cases in X.
+    def predict_proba(self, X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
 
         Parameters
         ----------
-        X : 2d ndarray or DataFrame of shape = [n_instances, n_attributes]
-            The data to make predictions for.
+        X : 2d ndarray or DataFrame of shape (n_instances, n_atts)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances, n_classes_]
+        y : array-like of shape (n_instances, n_classes_)
             Predicted probabilities using the ordering in classes_.
         """
         check_is_fitted(self)
@@ -232,7 +222,7 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
             if next_node.best_split > -1:
                 self._find_splits_gain(next_node, splits, gains)
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {"allow_nan": True}
 
 

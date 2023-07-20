@@ -1,7 +1,9 @@
-# -*- coding: utf-8 -*-
+"""Interval extraction test code."""
+
 from tsml.transformations import (
     Catch22Transformer,
     RandomIntervalTransformer,
+    SevenNumberSummaryTransformer,
     SupervisedIntervalTransformer,
 )
 from tsml.utils.numba_functions.stats import row_mean, row_median
@@ -22,6 +24,20 @@ def test_interval_prune():
     assert rit.transform(X).shape == (10, 16)
 
 
+def test_random_interval_transformer():
+    X, y = generate_3d_test_data(random_state=0, n_channels=2, series_length=10)
+
+    rit = RandomIntervalTransformer(
+        features=SevenNumberSummaryTransformer(),
+        n_intervals=5,
+        random_state=2,
+    )
+    X_t = rit.fit_transform(X, y)
+
+    assert X_t.shape == (10, 35)
+    assert rit.transform(X).shape == (10, 35)
+
+
 def test_supervised_transformers():
     X, y = generate_3d_test_data(random_state=0)
 
@@ -37,4 +53,4 @@ def test_supervised_transformers():
     )
     X_t = sit.fit_transform(X, y)
 
-    assert X_t.shape == (X.shape[0], 8)
+    assert X_t.shape == (X.shape[0], 7)

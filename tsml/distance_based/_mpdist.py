@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
-""""""
+"""Matrix Profile Distance 1-NN Classifier."""
 
 __author__ = ["TonyBagnall", "patrickzib", "MatthewMiddlehurst"]
 __all__ = ["MPDistClassifier"]
+
+from typing import List, Union
 
 import numpy as np
 import stumpy
@@ -16,7 +17,50 @@ from tsml.utils.validation import check_n_jobs
 
 
 class MPDistClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
-    """MPDist 1-NN classifier-adaptor."""
+    """Matrix Profile Distance 1-NN Classifier.
+
+    Calculates the matrix profile distance to the training data for each case and
+    returns the label of the nearest neighbour.
+
+    Parameters
+    ----------
+    window : int or float, default=10
+        Window size for the matrix profile. If float, will use a proportion of the
+        series length.
+    n_jobs : int, default=1
+        The number of jobs to run in parallel for both `fit` and `predict`.
+        ``-1`` means using all processors.
+
+    Attributes
+    ----------
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set.
+    n_classes_ : int
+        Number of classes. Extracted from the data.
+    classes_ : ndarray of shape (n_classes_)
+        Holds the label for each class.
+    class_dictionary_ : dict
+        A dictionary mapping class labels to class indices in classes_.
+
+    References
+    ----------
+    .. [1] Gharghabi, Shaghayegh, et al. "Matrix profile xii: Mpdist: a novel time
+        series distance measure to allow data mining in more challenging scenarios."
+        2018 IEEE International Conference on Data Mining (ICDM). IEEE, 2018.
+
+    Examples
+    --------
+    >>> from tsml.distance_based import MPDistClassifier
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
+    >>> clf = MPDistClassifier()
+    >>> clf.fit(X, y)
+    MPDistClassifier(...)
+    >>> clf.predict(X)
+    array([0, 1, 1, 0, 0, 1, 0, 1])
+    """
 
     def __init__(self, window=10, n_jobs=1):
         self.window = window
@@ -24,13 +68,27 @@ class MPDistClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         super(MPDistClassifier, self).__init__()
 
-    def fit(self, X, y):
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
+
+        Parameters
+        ----------
+        X : 2D np.ndarray of shape (n_instances, n_timepoints)
+            The training data.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
+
+        Returns
+        -------
+        self :
+            Reference to self.
+        """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
         check_classification_targets(y)
 
-        self.n_instances_, self.series_length_ = X.shape
+        self.n_instances_, self.n_timepoints_ = X.shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
@@ -47,7 +105,19 @@ class MPDistClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 2D np.array of shape (n_instances, n_timepoints)
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Predicted class labels.
+        """
         check_is_fitted(self)
 
         # treat case of single class seen in fit
@@ -58,7 +128,7 @@ class MPDistClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         X = self._convert_X(X)
 
         window = (
-            self.window if self.window >= 1 else int(self.window * self.series_length_)
+            self.window if self.window >= 1 else int(self.window * self.n_timepoints_)
         )
 
         distance_matrix = pairwise.pairwise_distances(
@@ -70,35 +140,29 @@ class MPDistClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self._y_train[np.argmin(distance_matrix, axis=1)]
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {
             "X_types": ["2darray"],
             "optional_dependency": True,
         }
 
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
-
         return {
             "window": 0.8,
         }

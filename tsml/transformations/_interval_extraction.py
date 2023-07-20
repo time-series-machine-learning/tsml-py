@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Random interval features.
 
 A transformer for the extraction of features on randomly selected intervals.
@@ -56,20 +55,25 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         The minimum length of extracted intervals. Minimum value of 3.
     max_interval_length : int, default=3
         The maximum length of extracted intervals. Minimum value of min_interval_length.
-    features : sktime transformer, a function taking a 2d numpy array parameter, or list
+    features : BaseTransformer, a function taking a 2d numpy array parameter, or list
             of said transformers and functions, default=None
         Transformers and functions used to extract features from selected intervals.
         If None, defaults to [mean, median, min, max, std, 25% quantile, 75% quantile]
-    dilation :
-        add dilation to intervals
-        no dilation if None, add same dilation to all of int, randomly select if list of
-         int
-        -= 1 until min interval
-    random_state : int or None, default=None
-        Seed for random number generation.
+    dilation : int, list or None, default=None
+        Add dilation to extracted intervals. No dilation is added if None or 1. If a
+        list of ints, a random dilation value is selected from the list for each
+        interval.
+
+        The dilation value is selected after the interval star and end points. If the
+        amount of values in the dilated interval is less than the min_interval_length,
+        the amount of dilation applied is reduced.
+    random_state : None, int or instance of RandomState, default=None
+        Seed or RandomState object used for random number generation.
+        If random_state is None, use the RandomState singleton used by np.random.
+        If random_state is an int, use a new RandomState instance seeded with seed.
     n_jobs : int, default=1
-        The number of jobs to run in parallel for both `fit` and `predict`.
-        ``-1`` means using all processors.
+        The number of jobs to run in parallel for both `fit` and `transform` functions.
+        `-1` means using all processors.
     parallel_backend : str, ParallelBackendBase instance or None, default=None
         Specify the parallelisation backend implementation in joblib, if None a 'prefer'
         value of "threads" is used by default.
@@ -85,15 +89,29 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     series_length_ : int
         The length of each series.
     n_intervals_ : int
-
+        The number of intervals extracted after pruning identical intervals.
     intervals_ : list of tuples
         Contains information for each feature extracted in fit. Each tuple contains the
-        interval start, interval end, interval dimension and the feature(s) extracted.
+        interval start, interval end, interval dimension, the feature(s) extracted and
+        the dilation.
         Length will be n_intervals*len(features).
 
     See Also
     --------
-    SupervisedIntervals
+    SupervisedIntervalTransformer
+
+    Examples
+    --------
+    >>> from tsml.transformations import RandomIntervalTransformer
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, _ = generate_3d_test_data(n_samples=4, series_length=12, random_state=0)
+    >>> tnf = RandomIntervalTransformer(n_intervals=2, random_state=0)
+    >>> tnf.fit(X)
+    RandomIntervalTransformer(...)
+    >>> print(tnf.transform(X)[0])
+    [1.04753424 0.14925939 0.8473096  1.20552675 1.08976637 0.96853798
+    1.14764656 1.07628806 0.18170775 0.8473096  1.29178823 1.08976637
+    0.96853798 1.1907773 ]
     """
 
     def __init__(
@@ -279,7 +297,9 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             elif callable(feature):
                 li.append(feature)
             else:
-                raise ValueError()  # todo
+                raise ValueError(
+                    "Input features must be a list of callables or aeon transformers."
+                )
         self._features = li
 
         if self.dilation is None:
@@ -434,10 +454,9 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 ) or not hasattr(feature, "n_transformed_features"):
                     if raise_error:
                         raise ValueError(
-                            "Transformer must have one of {} as an attribute and a "
-                            "n_transformed_features attribute.".format(
-                                self.transformer_feature_skip
-                            )
+                            "Transformer must have one of "
+                            f"{self.transformer_feature_skip} as an attribute and "
+                            "a n_transformed_features attribute."
                         )
                     else:
                         return False
@@ -486,7 +505,7 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     """Supervised interval feature transformer.
 
     Extracts intervals in fit using the supervised process described in [1].
-    Interval sub-series are extracted for each input feature, and the usefulness of that
+    Interval subseries are extracted for each input feature, and the usefulness of that
     feature extracted on an interval is evaluated using the Fisher score metric.
     Intervals are continually split in half, with the better scoring half retained as a
     feature for the transform.
@@ -494,7 +513,7 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     Multivariate capability is added by running the supervised interval extraction
     process on each dimension of the input data.
 
-    As the extracted interval features are already extracted for the supervised
+    As the interval features are already extracted for the supervised
     evaluation in fit, the fit_transform method is recommended if the transformed fit
     data is required.
 
@@ -506,24 +525,31 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         series length, number of dimensions and the number of features.
     min_interval_length : int, default=3
         The minimum length of extracted intervals. Minimum value of 3.
-    features : function with a single 2d array-like parameter or list of said functions,
-            default=None
-        Functions used to extract features from selected intervals. If None, defaults to
-        the following statistics used in [2]:
+    features : callable, list of callables, default=None
+        Functions used to extract features from selected intervals. Must take a 2d
+        array of shape (n_instances, interval_length) and return a 1d array of shape
+        (n_instances) containing the features.
+        If None, defaults to the following statistics used in [2]:
         [mean, median, std, slope, min, max, iqr, count_mean_crossing,
         count_above_mean].
-    metric :
-
+    metric : ["fisher"] or callable, default="fisher"
+        The metric used to evaluate the usefulness of a feature extracted on an
+        interval. If "fisher", the Fisher score is used. If a callable, it must take
+        a 1d array of shape (n_instances) and return a 1d array of scores of shape
+        (n_instances).
     randomised_split_point : bool, default=True
         If True, the split point for interval extraction is randomised as is done in [2]
         rather than split in half.
-    normalise_for_search:
-
+    normalise_for_search : bool, default=True
+        If True, the data is normalised for the supervised interval search process.
+        Features extracted for the transform output will not use normalised data.
+    random_state : None, int or instance of RandomState, default=None
+        Seed or RandomState object used for random number generation.
+        If random_state is None, use the RandomState singleton used by np.random.
+        If random_state is an int, use a new RandomState instance seeded with seed.
     n_jobs : int, default=1
-        The number of jobs to run in parallel for both `fit` and `transform`.
-        ``-1`` means using all processors.
-    random_state : int or None, default=None
-        Seed for random number generation.
+        The number of jobs to run in parallel for both `fit` and `transform` functions.
+        `-1` means using all processors.
     parallel_backend : str, ParallelBackendBase instance or None, default=None
         Specify the parallelisation backend implementation in joblib, if None a 'prefer'
         value of "threads" is used by default.
@@ -561,6 +587,16 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         arXiv:2105.14876.
 
     Examples
+    --------
+    >>> from tsml.transformations import SupervisedIntervalTransformer
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=10, series_length=12, random_state=0)
+    >>> tnf = SupervisedIntervalTransformer(n_intervals=1, random_state=0)
+    >>> tnf.fit(X, y)
+    SupervisedIntervalTransformer(...)
+    >>> print(tnf.transform(X)[0])
+    [1.4237989  1.20552675 0.45060352 0.13125638 0.10101093 0.76688304
+     1.92732552 0.54651945 3.         2.        ]
     """
 
     def __init__(
@@ -599,61 +635,6 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     ]
 
     def fit_transform(self, X, y=None):
-        """Fit to data, then transform it.
-
-        Fits the transformer to X and y and returns a transformed version of X.
-
-        State change:
-            Changes state to "fitted".
-
-        Writes to self:
-        _is_fitted : flag is set to True.
-        _X : X, coerced copy of X, if remember_data tag is True
-            possibly coerced to inner type or update_data compatible type
-            by reference, when possible
-        model attributes (ending in "_") : dependent on estimator
-
-        Parameters
-        ----------
-        X : Series or Panel, any supported mtype
-            Data to be transformed, of python type as follows:
-                Series: pd.Series, pd.DataFrame, or np.ndarray (1D or 2D)
-                Panel: pd.DataFrame with 2-level MultiIndex, list of pd.DataFrame,
-                    nested pd.DataFrame, or pd.DataFrame in long/wide format
-                subject to sktime mtype format specifications, for further details see
-                    examples/AA_datatypes_and_datasets.ipynb
-        y : Series or Panel, default=None
-            Additional data, e.g., labels for transformation
-
-        Returns
-        -------
-        transformed version of X
-        type depends on type of X and scitype:transform-output tag:
-            |   `X`    | `tf-output`  |     type of return     |
-            |----------|--------------|------------------------|
-            | `Series` | `Primitives` | `pd.DataFrame` (1-row) |
-            | `Panel`  | `Primitives` | `pd.DataFrame`         |
-            | `Series` | `Series`     | `Series`               |
-            | `Panel`  | `Series`     | `Panel`                |
-            | `Series` | `Panel`      | `Panel`                |
-        instances in return correspond to instances in `X`
-        combinations not in the table are currently not supported
-
-        Explicitly, with examples:
-            if `X` is `Series` (e.g., `pd.DataFrame`) and `transform-output` is `Series`
-                then the return is a single `Series` of the same mtype
-                Example: detrending a single series
-            if `X` is `Panel` (e.g., `pd-multiindex`) and `transform-output` is `Series`
-                then the return is `Panel` with same number of instances as `X`
-                    (the transformer is applied to each input Series instance)
-                Example: all series in the panel are detrended individually
-            if `X` is `Series` or `Panel` and `transform-output` is `Primitives`
-                then the return is `pd.DataFrame` with as many rows as instances in `X`
-                Example: i-th row of the return has mean and variance of the i-th series
-            if `X` is `Series` and `transform-output` is `Panel`
-                then the return is a `Panel` object of type `pd-multiindex`
-                Example: i-th instance of the output is the i-th window running over `X`
-        """
         X, y, rng = self._fit_setup(X, y)
 
         X_norm = z_normalise_series_3d(X) if self.normalise_for_search else X
@@ -1031,7 +1012,7 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         return True
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {"requires_y": True}
 
     @classmethod

@@ -63,14 +63,20 @@ dev = [
     "pytest-xdist",
     "pytest-cov",
 ]
+binder = [
+    "notebook",
+    "jupyterlab",
+]
 docs = [
     "sphinx",
     "sphinx-design",
-    "sphinx-gallery",
     "nbsphinx",
     "numpydoc",
     "jupyter",
     "furo",
+    "sphinx_issues",
+    "myst-parser",
+    "sphinx-copybutton",
 ]
 
 [project.urls]
@@ -92,15 +98,10 @@ ignore = [
     ".coveragerc",
 ]
 
-[tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203"]
-
 [tool.pytest.ini_options]
+testpaths = "tsml"
 addopts = '''
-    --ignore examples
-    --ignore docs
-    --durations 10
+    --durations 20
     --timeout 600
     --showlocals
     --doctest-modules

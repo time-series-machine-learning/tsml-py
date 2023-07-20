@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """"""
 
 __author__ = ["MatthewMiddlehurst"]
@@ -99,7 +98,7 @@ class FunctionTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         return func(X, **(self.kw_args if self.kw_args else {}))
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {
             "no_validation": not self.validate,
             "requires_fit": False,

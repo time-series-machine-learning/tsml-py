@@ -1,12 +1,13 @@
-# -*- coding: utf-8 -*-
-"""FPCRegressor.
+"""FPCA pipeline estimators.
 
-Classical Scalar on Function Regression approach that allows transforming
+Classical Scalar on Function approach that allows transforming
 via B-spline if desired.
 """
 
 __author__ = ["dguijo", "MatthewMiddlehurst"]
 __all__ = ["FPCAClassifier", "FPCARegressor"]
+
+from typing import List, Union
 
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
@@ -20,43 +21,117 @@ from tsml.utils.validation import _check_optional_dependency, check_n_jobs
 
 
 class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
-    """Scalar on Function Regression using Functional Principal Component Analysis."""
+    """Functional Principal Component Analysis pipeline classifier.
+
+    This classifier simply transforms the input data using the FPCA
+    transformer and builds a provided estimator using the transformed data.
+
+    Parameters
+    ----------
+    n_components: int, default=10
+        Number of principal components to keep from functional principal component
+        analysis.
+    centering: bool, default=True
+        Set to ``False`` when the functional data is already known to be centered
+        and there is no need to center it. Otherwise, the mean of the functional
+        data object is calculated and the data centered before fitting.
+    bspline: bool, default=False
+        Set to ``True`` to use a B-spline basis for the functional principal
+        component analysis.
+    n_basis: int, default=None
+        Number of functions in the basis. Only used if `bspline` is `True`.
+    order: int, default=None
+        Order of the splines. One greater than their degree. Only used if
+        `bspline` is `True`.
+    estimator : sklearn classifier, optional, default=None
+        An sklearn estimator to be built using the transformed data.
+        Defaults to sklearn LogisticRegression.
+    random_state : int, RandomState instance or None, default=None
+        If `int`, random_state is the seed used by the random number generator;
+        If `RandomState` instance, random_state is the random number generator;
+        If `None`, the random number generator is the `RandomState` instance used
+        by `np.random`.
+    n_jobs : int, default=1
+        The number of jobs to run in parallel for both `fit` and `predict`.
+        ``-1`` means using all processors.
+
+    Attributes
+    ----------
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels_ : int
+        The number of dimensions per case in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set.
+    n_classes_ : int
+        Number of classes. Extracted from the data.
+    classes_ : ndarray of shape (n_classes_)
+        Holds the label for each class.
+    class_dictionary_ : dict
+        A dictionary mapping class labels to class indices in classes_.
+
+    See Also
+    --------
+    FPCATransformer
+    FPCARegressor
+
+    Examples
+    --------
+    >>> from tsml.feature_based import FPCAClassifier
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
+    >>> clf = FPCAClassifier(random_state=0, n_components=6)
+    >>> clf.fit(X, y)
+    FPCAClassifier(...)
+    >>> clf.predict(X)
+    array([0, 1, 1, 0, 0, 1, 0, 1])
+    """
 
     def __init__(
         self,
         n_components=10,
         centering=True,
-        regularization=None,
-        components_basis=None,
         bspline=False,
         n_basis=None,
         order=None,
         estimator=None,
-        n_jobs=1,
         random_state=None,
+        n_jobs=1,
     ):
         self.n_components = n_components
         self.centering = centering
-        self.regularization = regularization
-        self.components_basis = components_basis
         self.bspline = bspline
         self.n_basis = n_basis
         self.order = order
         self.estimator = estimator
-        self.n_jobs = n_jobs
         self.random_state = random_state
+        self.n_jobs = n_jobs
 
         _check_optional_dependency("scikit-fda", "skfda", self)
 
         super(FPCAClassifier, self).__init__()
 
-    def fit(self, X, y):
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+            The training data.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
+
+        Returns
+        -------
+        self :
+            Reference to self.
+        """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
         check_classification_targets(y)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
@@ -71,17 +146,13 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self._transformer = FPCATransformer(
             n_components=self.n_components,
             centering=self.centering,
-            regularization=self.regularization,
-            components_basis=self.components_basis,
             bspline=self.bspline,
             n_basis=self.n_basis,
             order=self.order,
         )
 
         self._estimator = _clone_estimator(
-            LogisticRegression(fit_intercept=True)
-            if self.estimator is None
-            else self.estimator,
+            LogisticRegression() if self.estimator is None else self.estimator,
             self.random_state,
         )
 
@@ -94,7 +165,19 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Predicted class labels.
+        """
         check_is_fitted(self)
 
         # treat case of single class seen in fit
@@ -108,7 +191,19 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             self._transformer.transform(X).reshape((X.shape[0], -1))
         )
 
-    def predict_proba(self, X) -> np.ndarray:
+    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances, n_classes_)
+            Predicted probabilities using the ordering in classes_.
+        """
         check_is_fitted(self)
 
         # treat case of single class seen in fit
@@ -132,27 +227,27 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
                 dists[i, self.class_dictionary_[preds[i]]] = 1
             return dists
 
+    def _more_tags(self) -> dict:
+        return {
+            "optional_dependency": True,
+        }
+
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
         return {
             "n_components": 2,
@@ -160,14 +255,72 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
 
 class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
-    """Scalar on Function Regression using Functional Principal Component Analysis."""
+    """Scalar on Function Regression using Functional Principal Component Analysis.
+
+    This regressor simply transforms the input data using the FPCA
+    transformer and builds a provided estimator using the transformed data.
+
+    Parameters
+    ----------
+    n_components: int, default=10
+        Number of principal components to keep from functional principal component
+        analysis.
+    centering: bool, default=True
+        Set to ``False`` when the functional data is already known to be centered
+        and there is no need to center it. Otherwise, the mean of the functional
+        data object is calculated and the data centered before fitting.
+    bspline: bool, default=False
+        Set to ``True`` to use a B-spline basis for the functional principal
+        component analysis.
+    n_basis: int, default=None
+        Number of functions in the basis. Only used if `bspline` is `True`.
+    order: int, default=None
+        Order of the splines. One greater than their degree. Only used if
+        `bspline` is `True`.
+    estimator : sklearn regressor, optional, default=None
+        An sklearn estimator to be built using the transformed data.
+        Defaults to sklearn LinearRegression.
+    random_state : int, RandomState instance or None, default=None
+        If `int`, random_state is the seed used by the random number generator;
+        If `RandomState` instance, random_state is the random number generator;
+        If `None`, the random number generator is the `RandomState` instance used
+        by `np.random`.
+    n_jobs : int, default=1
+        The number of jobs to run in parallel for both `fit` and `predict`.
+        ``-1`` means using all processors.
+
+    Attributes
+    ----------
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels_ : int
+        The number of dimensions per case in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set.
+
+    See Also
+    --------
+    FPCATransformer
+    FPCAClassifier
+
+    Examples
+    --------
+    >>> from tsml.feature_based import FPCARegressor
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10,
+    ...                              regression_target=True, random_state=0)
+    >>> reg = FPCARegressor(random_state=0, n_components=6)
+    >>> reg.fit(X, y)
+    FPCARegressor(...)
+    >>> reg.predict(X)
+    array([0.31804196, 1.4151935 , 1.06572351, 0.68621331, 0.56749254,
+           1.26541066, 0.52730157, 1.09266818])
+    """
 
     def __init__(
         self,
         n_components=10,
         centering=True,
-        regularization=None,
-        components_basis=None,
         bspline=False,
         n_basis=None,
         order=None,
@@ -177,8 +330,6 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
     ):
         self.n_components = n_components
         self.centering = centering
-        self.regularization = regularization
-        self.components_basis = components_basis
         self.bspline = bspline
         self.n_basis = n_basis
         self.order = order
@@ -190,28 +341,38 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         super(FPCARegressor, self).__init__()
 
-    def fit(self, X, y=None):
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+            The training data.
+        y : 1D np.ndarray of shape (n_instances)
+            The target labels for fitting, indices correspond to instance indices in X
+
+        Returns
+        -------
+        self :
+            Reference to self.
+        """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
 
         self._n_jobs = check_n_jobs(self.n_jobs)
 
         self._transformer = FPCATransformer(
             n_components=self.n_components,
             centering=self.centering,
-            regularization=self.regularization,
-            components_basis=self.components_basis,
             bspline=self.bspline,
             n_basis=self.n_basis,
             order=self.order,
         )
 
         self._estimator = _clone_estimator(
-            LinearRegression(fit_intercept=True)
-            if self.estimator is None
-            else self.estimator,
+            LinearRegression() if self.estimator is None else self.estimator,
             self.random_state,
         )
 
@@ -224,7 +385,19 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Predicted target labels.
+        """
         check_is_fitted(self)
 
         X = self._validate_data(X=X, reset=False)
@@ -234,27 +407,27 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
             self._transformer.transform(X).reshape((X.shape[0], -1))
         )
 
+    def _more_tags(self) -> dict:
+        return {
+            "optional_dependency": True,
+        }
+
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
         return {
             "n_components": 2,

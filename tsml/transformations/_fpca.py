@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functional Principal Component Analysis."""
 
 __author__ = ["dguijo", "MatthewMiddlehurst"]
@@ -13,22 +12,39 @@ from tsml.utils.validation import _check_optional_dependency
 
 
 class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
-    """Apply FPCA on a set of time X to transform the X into a reduced dimension."""
+    """Apply FPCA on a set of time X to transform the X into a reduced dimension.
+
+    Wraps the Functional Principal Component Analysis from scikit-fda.
+
+    Parameters
+    ----------
+    n_components: int, default=10
+        Number of principal components to keep from functional principal component
+        analysis.
+    centering: bool, default=True
+        Set to ``False`` when the functional data is already known to be centered
+        and there is no need to center it. Otherwise, the mean of the functional
+        data object is calculated and the data centered before fitting.
+    bspline: bool, default=False
+        Set to ``True`` to use a B-spline basis for the functional principal
+        component analysis.
+    n_basis: int, default=None
+        Number of functions in the basis. Only used if `bspline` is `True`.
+    order: int, default=None
+        Order of the splines. One greater than their degree. Only used if
+        `bspline` is `True`.
+    """
 
     def __init__(
         self,
         n_components=10,
         centering=True,
-        regularization=None,
-        components_basis=None,
         bspline=False,
         n_basis=None,
         order=None,
     ):
         self.n_components = n_components
         self.centering = centering
-        self.regularization = regularization
-        self.components_basis = components_basis
         self.bspline = bspline
         self.n_basis = n_basis
         self.order = order
@@ -65,8 +81,6 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
             individual_transformer = FPCA(
                 n_components=self._n_components,
                 centering=self.centering,
-                regularization=self.regularization,
-                components_basis=self.components_basis,
             )
 
             X_t[:, j, :] = individual_transformer.fit_transform(fd)
@@ -93,8 +107,6 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
             individual_transformer = FPCA(
                 n_components=self._n_components,
                 centering=self.centering,
-                regularization=self.regularization,
-                components_basis=self.components_basis,
             )
 
             individual_transformer.fit(fd)

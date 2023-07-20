@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""A base class for interval extracting forest estimators"""
+"""A base class for interval extracting forest estimators."""
 
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["BaseIntervalForest"]
@@ -8,6 +7,7 @@ import inspect
 import time
 import warnings
 from abc import ABCMeta, abstractmethod
+from typing import List, Union
 
 import numpy as np
 from joblib import Parallel
@@ -64,7 +64,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
         A list or tuple of ints and/or strs will extract the number of intervals using
         the above rules and sum the results for the final n_intervals. i.e. [4, "sqrt"]
-        will extract sqrt(series_length) + 4 intervals.
+        will extract sqrt(n_timepoints) + 4 intervals.
 
         Different number of intervals for each series_transformers series can be
         specified using a nested list or tuple. Any list or tuple input containing
@@ -107,8 +107,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         The transformers to apply to the series before extracting intervals. If None,
         use the series as is.
 
-        Both transformers and functions should be able to take a 3D np.ndarray input.
-        A list or tuple of transformers and/or functions will extract intervals from
+        A list or tuple of transformers will extract intervals from
         all transformations concatenate the output. Including None in the list or tuple
         will use the series as is for interval extraction.
     att_subsample_size : int, float, list, tuple or None, default=None
@@ -151,24 +150,28 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         The number of train cases.
     n_channels_ : int
         The number of channels per case.
-    series_length_ : int
+    n_timepoints_ : int
         The length of each series.
     total_intervals_ : int
         Total number of intervals per tree from all representations.
     estimators_ : list of shape (n_estimators) of BaseEstimator
         The collections of estimators trained in fit.
-    intervals_ : list of shape (n_estimators) of ndarray with shape (total_intervals,2)
-        Stores indexes of each intervals start and end points for all classifiers.
+    intervals_ : list of shape (n_estimators) of TransformerMixin
+        Stores the interval extraction transformer for all estimators.
     transformed_data_ : list of shape (n_estimators) of ndarray with shape
-    (n_instances,total_intervals * att_subsample_size)
-        The transformed dataset for all classifiers. Only saved when
+    (n_instances_ ,total_intervals * att_subsample_size)
+        The transformed dataset for all estimators. Only saved when
         save_transformed_data is true.
 
     References
     ----------
-    .. [1]
-    .. [2]
-    .. [3]
+    .. [1] H.Deng, G.Runger, E.Tuv and M.Vladimir, "A time series forest for
+       classification and feature extraction", Information Sciences, 239, 2013
+    .. [2] Matthew Middlehurst and James Large and Anthony Bagnall. "The Canonical
+       Interval Forest (CIF) Classifier for Time Series Classification."
+       IEEE International Conference on Big Data 2020
+    .. [3] Cabello, Nestor, et al. "Fast and Accurate Time Series Classification
+       Through Supervised Interval Search." IEEE ICDM 2020
     """
 
     @abstractmethod
@@ -208,6 +211,8 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         self.n_jobs = n_jobs
         self.parallel_backend = parallel_backend
 
+        super(BaseIntervalForest, self).__init__()
+
     # if subsampling attributes, an interval_features transformer must contain a
     # parameter name from transformer_feature_selection and an attribute name
     # (or property) from transformer_feature_names to allow features to be subsampled
@@ -222,13 +227,27 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
     # be able to skip transforming features in predict
     transformer_feature_skip = ["transform_features_", "_transform_features"]
 
-    def fit(self, X, y):
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+            The training data.
+        y : 1D np.ndarray of shape (n_instances)
+            The target labels for fitting, indices correspond to instance indices in X
+
+        Returns
+        -------
+        self :
+            Reference to self.
+        """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
         rng = check_random_state(self.random_state)
 
-        self.n_instances_, self.n_channels_, self.series_length_ = X.shape
+        self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
         if is_classifier(self):
             check_classification_targets(y)
 
@@ -477,7 +496,7 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                 is_transformer(item) or callable(item)
                 for item in self.interval_features
             ):
-                for i, feature in enumerate(self.interval_features):
+                for feature in self.interval_features:
                     if is_transformer(feature):
                         self._interval_transformer[0] = True
                     elif callable(feature):
@@ -686,11 +705,6 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
         self._n_jobs = check_n_jobs(self.n_jobs)
 
-        # flags for testing. not used in the actual algorithm
-        self._efficient_predictions = True
-        if not hasattr(self, "_test_flag"):
-            self._test_flag = False
-
         if self.time_limit_in_minutes is not None and self.time_limit_in_minutes > 0:
             time_limit = self.time_limit_in_minutes * 60
             start_time = time.time()
@@ -754,7 +768,19 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
         return self
 
-    def predict(self, X):
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Predicted target labels.
+        """
         if is_regressor(self):
             check_is_fitted(self)
 
@@ -902,7 +928,8 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
                     warnings.warn(
                         f"Attribute subsample size {att_subsample_size} is larger than "
                         f"or equal to the number of attributes {num_features} for "
-                        f"series {self._series_transformers[r]}"
+                        f"series {self._series_transformers[r]}",
+                        stacklevel=2,
                     )
                     for feature in self._interval_features[r]:
                         if is_transformer(feature):
@@ -972,40 +999,32 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
         # find the features used in the tree and inform the interval selectors to not
         # transform these features if possible
-        if not self._test_flag:
-            relevant_features = None
-            if isinstance(tree, BaseDecisionTree):
-                relevant_features = np.unique(
-                    tree.tree_.feature[tree.tree_.feature >= 0]
+        self._efficient_predictions = True
+        relevant_features = None
+        if isinstance(tree, BaseDecisionTree):
+            relevant_features = np.unique(tree.tree_.feature[tree.tree_.feature >= 0])
+        elif isinstance(tree, CITClassifier):
+            relevant_features, _ = tree.tree_node_splits_and_gain()
+
+        if relevant_features is not None:
+            features_to_transform = [False] * interval_features.shape[1]
+            for i in relevant_features:
+                features_to_transform[i] = True
+
+            count = 0
+            for r in range(len(Xt)):
+                intervals[r].transformer_feature_skip = self.transformer_feature_skip
+
+                # if the transformers don't have valid attributes to skip False is
+                # returned
+                completed = intervals[r].set_features_to_transform(
+                    features_to_transform[count : count + transform_data_lengths[r]],
+                    raise_error=False,
                 )
-            elif isinstance(tree, CITClassifier):
-                relevant_features, _ = tree.tree_node_splits_and_gain()
+                count += transform_data_lengths[r]
 
-            if relevant_features is not None:
-                features_to_transform = [False] * interval_features.shape[1]
-                for i in relevant_features:
-                    features_to_transform[i] = True
-
-                count = 0
-                for r in range(len(Xt)):
-                    intervals[
-                        r
-                    ].transformer_feature_skip = self.transformer_feature_skip
-
-                    # if the transformers don't have valid attributes to skip False is
-                    # returned
-                    completed = intervals[r].set_features_to_transform(
-                        features_to_transform[
-                            count : count + transform_data_lengths[r]
-                        ],
-                        raise_error=False,
-                    )
-                    count += transform_data_lengths[r]
-
-                    if not completed:
-                        self._efficient_predictions = False
-            else:
-                self._efficient_predictions = False
+                if not completed:
+                    self._efficient_predictions = False
         else:
             self._efficient_predictions = False
 
@@ -1019,14 +1038,14 @@ class BaseIntervalForest(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         X = self._validate_data(X=X, reset=False)
         X = self._convert_X(X)
 
-        n_instances, n_channels, series_length = X.shape
+        n_instances, n_channels, n_timepoints = X.shape
 
         if n_channels != self.n_channels_:
             raise ValueError(
                 "The number of channels in the train data does not match the number "
                 "of channels in the test data"
             )
-        if series_length != self.series_length_:
+        if n_timepoints != self.n_timepoints_:
             raise ValueError(
                 "The series length of the train data does not match the series length "
                 "of the test data"

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Shapelet transformers.
 
 A transformer from the time domain into the shapelet domain.
@@ -527,7 +526,7 @@ class RandomShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         return to_keep
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {"requires_y": True}
 
     @classmethod
@@ -758,6 +757,10 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
         - SO(d(S,X), threshold): The number of point in the distance vector that are
         bellow the threshold parameter of the shapelet.
 
+    This is a duplicate of the original implementation in aeon, adapted for bugfixing
+    and experimentation. All credit to the original author @baraline for the
+    implementation.
+
     Parameters
     ----------
     max_shapelets : int, default=10000
@@ -815,9 +818,6 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
     affecting a random feature subsets to each shapelet as done in the original
     implementation. See `convst
     https://github.com/baraline/convst/blob/main/convst/transformers/rdst.py`_.
-    It also speeds up the shapelet computation with early abandoning, online
-    normalization and use of the dot product to compute z-normalized squared Euclidean
-    distances.
 
     References
     ----------
@@ -966,7 +966,8 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
             if not np.all(self.shapelet_lengths_ >= 2):
                 warnings.warn(
                     "Some values in 'shapelet_lengths' are inferior to 2."
-                    "These values will be ignored."
+                    "These values will be ignored.",
+                    stacklevel=2,
                 )
                 self.shapelet_lengths_ = self.shapelet_lengths[
                     self.shapelet_lengths_ >= 2
@@ -975,7 +976,8 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
             if not np.all(self.shapelet_lengths_ <= self.series_length_):
                 warnings.warn(
                     "All the values in 'shapelet_lengths' must be lower or equal to"
-                    + "the series length. Shapelet lengths above it will be ignored."
+                    + "the series length. Shapelet lengths above it will be ignored.",
+                    stacklevel=2,
                 )
                 self.shapelet_lengths_ = self.shapelet_lengths_[
                     self.shapelet_lengths_ <= self.series_length_
@@ -1001,7 +1003,7 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
                 )
             self.threshold_percentiles_ = np.asarray(self.threshold_percentiles_)
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {"requires_y": True}
 
     @classmethod
@@ -1386,6 +1388,7 @@ def _dilated_shapelet_transform(X, shapelets):
 def _normalize_subsequences(X_subs, X_means, X_stds):
     """
     Generate subsequences from a time series given the length and dilation parameters.
+
     Parameters
     ----------
     X_subs : array, shape (n_timestamps-(length-1)*dilation, n_channels, length)
@@ -1394,6 +1397,7 @@ def _normalize_subsequences(X_subs, X_means, X_stds):
         Length of the subsequences to generate.
     X_stds : array, shape (n_channels, n_timestamps-(length-1)*dilation)
         Dilation parameter to apply when generating the strides.
+
     Returns
     -------
     array, shape = (n_timestamps-(length-1)*dilation, n_channels, length)
@@ -1415,6 +1419,7 @@ def _normalize_subsequences(X_subs, X_means, X_stds):
 def _get_all_subsequences(X, length, dilation):
     """
     Generate subsequences from a time series given the length and dilation parameters.
+
     Parameters
     ----------
     X : array, shape = (n_channels, n_timestamps)
@@ -1423,6 +1428,7 @@ def _get_all_subsequences(X, length, dilation):
         Length of the subsequences to generate.
     dilation : int
         Dilation parameter to apply when generating the strides.
+
     Returns
     -------
     array, shape = (n_timestamps-(length-1)*dilation, n_channels, length)

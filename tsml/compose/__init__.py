@@ -1,7 +1,11 @@
-# -*- coding: utf-8 -*-
 """Composable estimators."""
 
 __all__ = [
-    # "ChannelEnsembleClassifier",
-    # "ChannelEnsembleRegressor",
+    "ChannelEnsembleClassifier",
+    "ChannelEnsembleRegressor",
 ]
+
+from tsml.compose._channel_ensemble import (
+    ChannelEnsembleClassifier,
+    ChannelEnsembleRegressor,
+)

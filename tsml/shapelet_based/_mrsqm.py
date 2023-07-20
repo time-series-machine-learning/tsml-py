@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+"""MrSQM classifier wrapper."""
+from typing import List, Union
+
 import numpy as np
 import pandas as pd
 from sklearn.base import ClassifierMixin
@@ -37,17 +39,15 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         The number of representations produced by SFA transformation.
         Note: including any SFA transformations will prevent the estimator from being
         serialised (no pickling).
+    sfa_norm : bool, default=True
+        Time series normalisation (standardisation).
     custom_config : dict, default=None
         Customized parameters for the symbolic transformation.
     random_state : int or None, default=None
         Random seed for classifier.
-    sfa_norm : bool, default=True
-        Time series normalisation (standardisation).
 
     Notes
     -----
-    The `mrsqm` package uses a different license (GPL-3.0) from the aeon BSD3 license
-    covering this interface wrapper.
     See https://github.com/mlgig/mrsqm for the original implementation.
 
     References
@@ -63,11 +63,12 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     --------
     >>> from tsml.shapelet_based import MrSQMClassifier
     >>> from tsml.utils.testing import generate_3d_test_data
-    >>> X, y = generate_3d_test_data(random_state=0)
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
     >>> clf = MrSQMClassifier(random_state=0)  # doctest: +SKIP
     >>> clf.fit(X, y)  # doctest: +SKIP
     MrSQMClassifier(...)
     >>> clf.predict(X)  # doctest: +SKIP
+    array([0, 1, 1, 0, 0, 1, 0, 1])
     """
 
     def __init__(
@@ -94,7 +95,21 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         super(MrSQMClassifier, self).__init__()
 
-    def fit(self, X, y):
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+            The training data.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
+
+        Returns
+        -------
+        self :
+            Reference to self.
+        """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
@@ -128,7 +143,19 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Predicted class labels.
+        """
         check_is_fitted(self)
 
         # treat case of single class seen in fit
@@ -140,7 +167,19 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict(_convert_data(X))
 
-    def predict_proba(self, X) -> np.ndarray:
+    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances, n_classes_)
+            Predicted probabilities using the ordering in classes_.
+        """
         check_is_fitted(self)
 
         # treat case of single class seen in fit
@@ -152,35 +191,30 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict_proba(_convert_data(X))
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {
             "non_deterministic": True,
             "_xfail_checks": {"check_estimators_pickle": "External failure to pickle."},
+            "optional_dependency": True,
         }
 
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
-
         return {
             "features_per_rep": 50,
             "selection_per_rep": 200,

@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
-"""ChannelEnsembleClassifier: For Multivariate Time Series Classification.
+"""Channel ensemble estimator classes.
 
-Builds classifiers on each dimension (channel) independently.
+For multivariate time series machine learning. Builds estimators on each dimension
+(channel) independently.
 """
 
 __author__ = ["abostrom", "MatthewMiddlehurst"]
 __all__ = ["ChannelEnsembleClassifier", "ChannelEnsembleRegressor"]
 
 from abc import ABCMeta
+from typing import List, Union
 
 import numpy as np
-import pandas as pd
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted, check_random_state
@@ -28,27 +28,45 @@ class _BaseChannelEnsemble(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
     _required_parameters = ["estimators"]
 
-    def _validate_estimators(self, required_predict_method="predict"):
-        if self.estimators is None or len(self.estimators) == 0:
+    def _validate_estimators(self, base_type, required_predict_method="predict"):
+        self.estimators_ = (
+            [self.estimators]
+            if isinstance(self.estimators, tuple)
+            and isinstance(self.estimators[0], str)
+            else self.estimators
+        )
+
+        if self.estimators_ is None or len(self.estimators_) == 0:
             raise AttributeError(
-                "Invalid estimators attribute, estimators should be a list of "
-                "(string, estimator, dimensions) tuples"
+                "Invalid estimators attribute, estimators should be a "
+                "(string, estimator, dimensions) tuple or list of tuples"
             )
 
-        names, estimators, _ = zip(*self.estimators)
+        names, estimators, channels = zip(*self.estimators_)
 
         self._check_names(names)
 
         # validate estimators
-        for t in estimators:
+        self.estimators_ = []
+        for i, t in enumerate(estimators):
             if t == "drop":
                 continue
-            if not hasattr(t, "fit") or not hasattr(t, required_predict_method):
+            elif (
+                not t._estimator_type == base_type
+                or not hasattr(t, "fit")
+                or not hasattr(t, required_predict_method)
+            ):
                 raise TypeError(
-                    "All estimators should implement fit and "
-                    f"{required_predict_method}, or can be 'drop' specifiers. '{t}' "
-                    f"(type {type(t)}) doesn't."
+                    f"All estimators should implement fit, {required_predict_method} "
+                    "and be of the correct estimator type. They can be also be 'drop' "
+                    f"specifiers. '{t}' (type {type(t)}) doesn't match."
                 )
+            elif channels[i] == "all-split":
+                self.estimators_.extend(
+                    [(names[i] + "-" + str(n), t, n) for n in range(self.n_channels_)]
+                )
+            else:
+                self.estimators_.append((names[i], t, channels[i]))
 
     def _check_names(self, names):
         if len(set(names)) != len(names):
@@ -70,31 +88,43 @@ class _BaseChannelEnsemble(BaseTimeSeriesEstimator, metaclass=ABCMeta):
     def _validate_channels(self, X):
         """Convert callable channel specifications."""
         channels = []
-        for _, _, channel in self.estimators:
+
+        for _, _, channel in self.estimators_:
             if callable(channel):
                 channel = channel(X)
             if channel == "all":
                 channel = list(range(X[0].shape[0]))
+
+            if not _check_key_type(channel):
+                raise ValueError(
+                    "Selected estimator channels must be a int, list/tuple of ints or "
+                    "slice (or a callable resulting in one of the preceding)."
+                )
+
             channels.append(channel)
 
         self._channels = channels
 
-    def _validate_remainder(self, X):
+    def _validate_remainder(self, base_type):
         """Validate remainder and defines _remainder."""
-        is_estimator = hasattr(self.remainder, "fit") and hasattr(
-            self.remainder, "predict"
+        is_correct_estimator = (
+            hasattr(self.remainder, "fit")
+            and hasattr(self.remainder, "predict")
+            and self.remainder._estimator_type == base_type
         )
-        if self.remainder != "drop" and not is_estimator:
+        if self.remainder != "drop" and not is_correct_estimator:
             raise ValueError(
-                f"The remainder keyword needs to be 'drop', {self.remainder} was "
-                "passed instead"
+                "The remainder needs to be and valid estimator or the 'drop' keyword. "
+                f"{self.remainder} was passed instead."
             )
 
-        n_channels = X.shape[1]
         cols = []
+        all_channels = np.arange(self.n_channels_)
         for channels in self._channels:
-            cols.extend(_get_channel_indices(X, channels))
-        remaining_idx = sorted(list(set(range(n_channels)) - set(cols))) or None
+            if isinstance(channels, int):
+                channels = [channels]
+            cols.extend(all_channels[channels])
+        remaining_idx = sorted(list(set(all_channels) - set(cols))) or None
 
         self._remainder = ("remainder", self.remainder, remaining_idx)
 
@@ -102,7 +132,7 @@ class _BaseChannelEnsemble(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         """Generate (name, estimator, channel) tuples."""
         estimators = [
             (name, estimator, channel)
-            for (name, estimator, _), channel in zip(self.estimators, self._channels)
+            for (name, estimator, _), channel in zip(self.estimators_, self._channels)
         ]
 
         # add tuple for remainder
@@ -116,35 +146,75 @@ class _BaseChannelEnsemble(BaseTimeSeriesEstimator, metaclass=ABCMeta):
 
 
 class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
-    """Applies estimators to channels of an array.
+    """Applies classifiers to selected chanels of the input data to form an ensemble.
 
     This estimator allows different channels or channel subsets of the input
-    to be transformed separately and the features generated by each
-    transformer will be ensembled to form a single output.
+    to be extracted and used to build different classifiers. These classifiers are
+    ensembled to form a single output.
 
     Parameters
     ----------
-    estimators : list of tuples
-        List of (name, estimator, channel(s)) tuples specifying the transformer
+    estimators : tuple or list of tuples
+        Tuple or List of (name, estimator, channel(s)) tuples specifying the classifier
         objects to be applied to subsets of the data.
 
         name : string
-            Like in Pipeline and FeatureUnion, this allows the
-            transformer and its parameters to be set using ``set_params`` and searched
-            in grid search.
-        estimator :  or {'drop'}
+            Name of the estimator and channel combination in the ensemble. Must be
+            unique.
+        estimator : ClassifierMixin or "drop"
             Estimator must support `fit` and `predict_proba`. Special-cased
-            strings 'drop' and 'passthrough' are accepted as well, to
-            indicate to drop the channels.
-        channels(s) : array-like of int, slice, boolean mask array. Integer channels
-        are indexed from 0? "all"
-    remainder : "drop" or estimator, default "drop"
-        By default, only the specified channels in `transformations` are
-        transformed and combined in the output, and the non-specified
-        channels are dropped. (default of ``'drop'``).
-        By setting ``remainder`` to be an estimator, the remaining
-        non-specified channels will use the ``remainder`` estimator. The
-        estimator must support `fit` and `transform`.
+            string 'drop' is accepted as well, to indicate to drop the columns.
+        channels(s) : int, array-like of int, slice, "all", "all-split" or callable
+            Channel(s) to be used with the estimator. If "all", all channels
+            are used for the estimator. "all-split" will create a separate estimator
+            for each channel. int, array-like of int and slice are used to select
+            channels. A callable is passed the input data and should return
+            the channel(s) to be used.
+    remainder : ClassifierMixin or "drop", default="drop"
+        By default, only the specified columns in `estimators` are
+        used and combined in the output, and the non-specified
+        columns are dropped.
+        By setting `remainder` to be an estimator, the remaining
+        non-specified columns will use the `remainder` estimator. The
+        estimator must support `fit` and `predict`.
+
+    Attributes
+    ----------
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels_ : int
+        The number of dimensions per case in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set. If input is a list, the length
+        of the first series is used.
+    n_classes_ : int
+        Number of classes. Extracted from the data.
+    classes_ : ndarray of shape (n_classes_)
+        Holds the label for each class.
+    class_dictionary_ : dict
+        A dictionary mapping class labels to class indices in classes_.
+    estimators_ : list of tuples
+        List of (name, estimator, channel(s)) tuples specifying the ensemble
+        classifiers.
+
+    See Also
+    --------
+    ChannelEnsembleRegressor
+
+    Examples
+    --------
+    >>> from tsml.compose import ChannelEnsembleClassifier
+    >>> from tsml.interval_based import TSFClassifier
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
+    >>> reg = ChannelEnsembleClassifier(
+    ...     estimators=("tsf", TSFClassifier(n_estimators=2), "all-split"),
+    ...     random_state=0,
+    ... )
+    >>> reg.fit(X, y)
+    ChannelEnsembleClassifier(...)
+    >>> reg.predict(X)
+    array([0, 1, 1, 0, 0, 1, 0, 1])
     """
 
     def __init__(self, estimators, remainder="drop", random_state=None):
@@ -152,23 +222,30 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
             estimators, remainder, random_state
         )
 
-    def fit(self, X, y):
-        """Fit all estimators, fit the data.
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The training data.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
 
-        y : array-like, shape = [n_instances]
-            The class labels.
-
+        Returns
+        -------
+        self :
+            Reference to self.
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
         check_classification_targets(y)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_ = len(X)
+        self.n_channels_, self.n_timepoints_ = X[0].shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
@@ -178,9 +255,9 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
         if self.n_classes_ == 1:
             return self
 
-        self._validate_estimators(required_predict_method="predict_proba")
+        self._validate_estimators("classifier", required_predict_method="predict_proba")
         self._validate_channels(X)
-        self._validate_remainder(X)
+        self._validate_remainder("classifier")
 
         rng = check_random_state(self.random_state)
 
@@ -193,7 +270,22 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
         self.estimators_ = estimators_
         return self
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                2D np.ndarray of shape (n_instances, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Predicted class labels.
+        """
         check_is_fitted(self)
 
         # treat case of single class seen in fit
@@ -204,8 +296,21 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
             [self.classes_[int(np.argmax(prob))] for prob in self.predict_proba(X)]
         )
 
-    def predict_proba(self, X) -> np.ndarray:
-        """Predict class probabilities for X using 'soft' voting."""
+    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances, n_classes_)
+            Predicted probabilities using the ordering in classes_.
+        """
         check_is_fitted(self)
 
         # treat case of single class seen in fit
@@ -224,32 +329,27 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
 
         return np.average(probas, axis=0)
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {
             "X_types": ["np_list", "3darray"],
         }
 
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            ChannelEnsembleClassifier provides the following special sets:
-                 "results_comparison" - used in some classifiers to compare against
-                    previously generated results where the default set of parameters
-                    cannot produce suitable probability estimates
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
         from tsml.interval_based import TSFClassifier
 
@@ -262,40 +362,70 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
 
 
 class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
-    """Applies estimators to columns of an array or pandas DataFrame.
+    """Applies regressors to selected chanels of the input data to form an ensemble.
 
-    This estimator allows different columns or column subsets of the input
-    to be transformed separately and the features generated by each
-    transformer will be ensembled to form a single output.
+    This estimator allows different channels or channel subsets of the input
+    to be extracted and used to build different regressors. These regressors are
+    ensembled to form a single output.
 
     Parameters
     ----------
-    estimators : list of tuples
-        List of (name, estimator, column(s)) tuples specifying the transformer
+    estimators : tuple or list of tuples
+        Tuple or List of (name, estimator, channel(s)) tuples specifying the regressor
         objects to be applied to subsets of the data.
 
         name : string
-            Like in Pipeline and FeatureUnion, this allows the
-            transformer and its parameters to be set using ``set_params`` and searched
-            in grid search.
-        estimator :  or {'drop'}
-            Estimator must support `fit` and `predict_proba`. Special-cased
-            strings 'drop' and 'passthrough' are accepted as well, to
-            indicate to drop the columns.
-        channels(s) : array-like of int, slice, boolean mask array. Integer channels
-        are indexed from 0? "all"
+            Name of the estimator and channel combination in the ensemble. Must be
+            unique.
+        estimator : RegressorMixin or "drop"
+            Estimator must support `fit` and `predict`. Special-cased
+            string 'drop' is accepted as well, to indicate to drop the columns.
+        channels(s) : int, array-like of int, slice, "all", "all-split" or callable
+            Channel(s) to be used with the estimator. If "all", all channels
+            are used for the estimator. "all-split" will create a separate estimator
+            for each channel. int, array-like of int and slice are used to select
+            channels. A callable is passed the input data and should return
+            the channel(s) to be used.
+    remainder : RegressorMixin or "drop", default="drop"
+        By default, only the specified columns in `estimators` are
+        used and combined in the output, and the non-specified
+        columns are dropped.
+        By setting `remainder` to be an estimator, the remaining
+        non-specified columns will use the `remainder` estimator. The
+        estimator must support `fit` and `predict`.
 
-    remainder : {'drop', 'passthrough'} or estimator, default 'drop'
-        By default, only the specified columns in `transformations` are
-        transformed and combined in the output, and the non-specified
-        columns are dropped. (default of ``'drop'``).
-        By specifying ``remainder='passthrough'``, all remaining columns
-        that were not specified in `transformations` will be automatically passed
-        through. This subset of columns is concatenated with the output of
-        the transformations.
-        By setting ``remainder`` to be an estimator, the remaining
-        non-specified columns will use the ``remainder`` estimator. The
-        estimator must support `fit` and `transform`.
+    Attributes
+    ----------
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels_ : int
+        The number of dimensions per case in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set.
+    estimators_ : list of tuples
+        List of (name, estimator, channel(s)) tuples specifying the ensemble
+        regressors.
+
+    See Also
+    --------
+    ChannelEnsembleClassifier
+
+    Examples
+    --------
+    >>> from tsml.compose import ChannelEnsembleRegressor
+    >>> from tsml.interval_based import TSFRegressor
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10,
+    ...                              regression_target=True, random_state=0)
+    >>> reg = ChannelEnsembleRegressor(
+    ...     estimators=("tsf", TSFRegressor(n_estimators=2), "all-split"),
+    ...     random_state=0,
+    ... )
+    >>> reg.fit(X, y)
+    ChannelEnsembleRegressor(...)
+    >>> reg.predict(X)
+    array([0.31798318, 1.41426301, 1.06414747, 0.6924721 , 0.56660146,
+           1.26538944, 0.52324808, 1.0939405 ])
     """
 
     def __init__(self, estimators, remainder="drop", random_state=None):
@@ -303,27 +433,32 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
             estimators, remainder, random_state
         )
 
-    def fit(self, X, y):
-        """Fit all estimators, fit the data.
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The training data.
+        y : 1D np.ndarray of shape (n_instances)
+            The target labels for fitting, indices correspond to instance indices in X
 
-        y : array-like, shape = [n_instances]
-            The class labels.
-
+        Returns
+        -------
+        self :
+            Reference to self.
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2, y_numeric=True)
         X = self._convert_X(X)
 
-        print(type(X))
+        self.n_instances_ = len(X)
+        self.n_channels_, self.n_timepoints_ = X[0].shape
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
-
-        self._validate_estimators()
+        self._validate_estimators("regressor")
         self._validate_channels(X)
-        self._validate_remainder(X)
+        self._validate_remainder("regressor")
 
         rng = check_random_state(self.random_state)
 
@@ -336,13 +471,25 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
         self.estimators_ = estimators_
         return self
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Predicted target labels.
+        """
         check_is_fitted(self)
 
         X = self._validate_data(X=X, reset=False)
         X = self._convert_X(X)
-
-        print(type(X))
 
         preds = np.asarray(
             [
@@ -353,32 +500,27 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
 
         return np.average(preds, axis=0)
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {
             "X_types": ["np_list", "3darray"],
         }
 
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
         from tsml.interval_based import TSFRegressor
 
@@ -391,141 +533,40 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
 
 
 def _is_empty_channel_selection(channel):
-    """Check if column selection is empty.
-
-    Both an empty list or all-False boolean array are considered empty.
-    """
-    if hasattr(channel, "dtype") and np.issubdtype(channel.dtype, np.bool_):
-        return not channel.any()
-    elif hasattr(channel, "__len__"):
+    """Check if column selection is empty."""
+    if hasattr(channel, "__len__"):
         return len(channel) == 0
     else:
         return False
 
 
-def _get_channel_indices(X, key):
-    """
-    Get feature channel indices for input data X and key.
-
-    For accepted values of `key`, see the docstring of _get_channel
-
-    """
-    n_channels = X.shape[1]
-
-    if (
-        _check_key_type(key, int)
-        or hasattr(key, "dtype")
-        and np.issubdtype(key.dtype, np.bool_)
-    ):
-        # Convert key into positive indexes
-        idx = np.arange(n_channels)[key]
-        return np.atleast_1d(idx).tolist()
-    elif _check_key_type(key, str):
-        try:
-            all_columns = list(X.columns)
-        except AttributeError as e:
-            raise ValueError(
-                "Specifying the columns using strings is only "
-                "supported for pandas DataFrames"
-            ) from e
-        if isinstance(key, str):
-            columns = [key]
-        elif isinstance(key, slice):
-            start, stop = key.start, key.stop
-            if start is not None:
-                start = all_columns.index(start)
-            if stop is not None:
-                # pandas indexing with strings is endpoint included
-                stop = all_columns.index(stop) + 1
-            else:
-                stop = n_channels + 1
-            return list(range(n_channels)[slice(start, stop)])
-        else:
-            columns = list(key)
-
-        return [all_columns.index(col) for col in columns]
-    else:
-        raise ValueError(
-            "No valid specification of the columns. Only a "
-            "scalar, list or slice of all integers or all "
-            "strings, or boolean mask is allowed"
-        )
-
-
 def _get_channel(X, key):
-    """
-    Get time series channel(s) from input data X.
-
-    Supported input types (X): numpy arrays
-
-    Supported key types (key):
-    - scalar: output is 1D
-    - lists, slices, boolean masks: output is 2D
-    - callable that returns any of the above
-
-    Supported key data types:
-
-    - integer or boolean mask (positional):
-        - supported for arrays and sparse matrices
-    - string (key-based):
-        - only supported for dataframes
-        - So no keys other than strings are allowed (while in principle you
-          can use any hashable object as key).
-
-    """
-    # check whether we have string channel names or integers
-    if _check_key_type(key, int):
-        channel_names = False
-    elif hasattr(key, "dtype") and np.issubdtype(key.dtype, np.bool_):
-        # boolean mask
-        channel_names = True
+    """Get time series channel(s) from input data X."""
+    if isinstance(X, np.ndarray):
+        return X[:, key]
     else:
-        raise ValueError(
-            "No valid specification of the channels. Only a "
-            "scalar, list or slice of all integers or all "
-            "strings, or boolean mask is allowed"
-        )
-
-    if isinstance(key, (int, str)):
-        key = [key]
-
-    if not channel_names:
-        return X[:, key] if isinstance(X, np.ndarray) else X.iloc[:, key]
-    if not isinstance(X, pd.DataFrame):
-        raise ValueError(
-            f"X must be a pd.DataFrame if channel names are "
-            f"specified, but found: {type(X)}"
-        )
-    return X.loc[:, key]
+        li = [x[key] for x in X]
+        if li[0].ndim == 1:
+            li = [x.reshape(1, -1) for x in li]
+        return li
 
 
-def _check_key_type(key, superclass):
+def _check_key_type(key):
     """
-    Check that scalar, list or slice is of a certain type.
-
-    This is only used in _get_channel and _get_channel_indices to check
-    if the `key` (channel specification) is fully integer or fully string-like.
+    Check that key is an int, list/tuple of ints or slice.
 
     Parameters
     ----------
-    key : scalar, list, slice, array-like
+    key : object
         The channel specification to check
-    superclass : int or str
-        The type for which to check the `key`
-
     """
-    if isinstance(key, superclass):
+    if isinstance(key, int):
         return True
-    if isinstance(key, slice):
-        return isinstance(key.start, (superclass, type(None))) and isinstance(
-            key.stop, (superclass, type(None))
+    elif isinstance(key, slice):
+        return isinstance(key.start, (int, type(None))) and isinstance(
+            key.stop, (int, type(None))
         )
-    if isinstance(key, list):
-        return all(isinstance(x, superclass) for x in key)
-    if hasattr(key, "dtype"):
-        if superclass is int:
-            return key.dtype.kind == "i"
-        else:
-            # superclass = str
-            return key.dtype.kind in ("O", "U", "S")
-    return False
+    elif isinstance(key, (list, tuple)):
+        return all(isinstance(x, int) for x in key)
+    else:
+        return False

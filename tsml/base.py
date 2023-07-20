@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Base classes for estimators."""
 
 __author__ = ["MatthewMiddlehurst"]
@@ -267,13 +266,8 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
         params : dict or list of dict
             Parameters to create testing instances of the class.
         """
-        if parameter_set is None:
-            # default parameters = empty dict
-            return {}
-        else:
-            raise ValueError(
-                f"No parameter set {parameter_set} defined for {cls.__name__}"
-            )
+        # default parameters = empty dict
+        return {}
 
 
 def _clone_estimator(

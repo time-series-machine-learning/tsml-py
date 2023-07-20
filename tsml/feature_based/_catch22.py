@@ -1,11 +1,12 @@
-# -*- coding: utf-8 -*-
 """Catch22 Classifier.
 
-Pipeline classifier using the Catch22 transformer and an estimator.
+Pipeline estimator using the Catch22 transformer and an estimator.
 """
 
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["Catch22Classifier", "Catch22Regressor"]
+
+from typing import List, Union
 
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
@@ -42,7 +43,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
             "SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1",
             "SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1",
             "SB_TransitionMatrix_3ac_sumdiagcov", "PD_PeriodicityWang_th0_01"]
-    catch24 : bool, optional, default=False
+    catch24 : bool, optional, default=True
         Extract the mean and standard deviation as well as the 22 Catch22 features if
         true. If a List of specific features to extract is provided, "Mean" and/or
         "StandardDeviation" must be added to the List to extract these features.
@@ -51,31 +52,47 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         while to process for large values.
     replace_nans : bool, optional, default=True
         Replace NaN or inf values from the Catch22 transform with 0.
-    use_pycatch22 : bool, optional, default=True
+    use_pycatch22 : bool, optional, default=False
         Wraps the C based pycatch22 implementation for tsml.
         (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
         ``pycatch22`` package to be installed if True.
     estimator : sklearn classifier, optional, default=None
         An sklearn estimator to be built using the transformed data.
         Defaults to sklearn RandomForestClassifier(n_estimators=200)
-    n_jobs : int, optional, default=1
+    random_state : int, RandomState instance or None, default=None
+        If `int`, random_state is the seed used by the random number generator;
+        If `RandomState` instance, random_state is the random number generator;
+        If `None`, the random number generator is the `RandomState` instance used
+        by `np.random`.
+    n_jobs : int, default=1
         The number of jobs to run in parallel for both `fit` and `predict`.
         ``-1`` means using all processors.
-    random_state : int or None, optional, default=None
-        Seed for random, integer.
+    parallel_backend : str, ParallelBackendBase instance or None, default=None
+        Specify the parallelisation backend implementation in joblib for Catch22,
+        if None a 'prefer' value of "threads" is used by default.
+        Valid options are "loky", "multiprocessing", "threading" or a custom backend.
+        See the joblib Parallel documentation for more details.
 
     Attributes
     ----------
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels_ : int
+        The number of dimensions per case in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set. If input is a list, the length
+        of the first series is used.
     n_classes_ : int
         Number of classes. Extracted from the data.
     classes_ : ndarray of shape (n_classes_)
         Holds the label for each class.
-    estimator_ : ClassifierPipeline
-        Catch22Classifier as a ClassifierPipeline, fitted to data internally
+    class_dictionary_ : dict
+        A dictionary mapping class labels to class indices in classes_.
 
     See Also
     --------
-    Catch22
+    Catch22Transformer
+    Catch22Regressor
 
     Notes
     -----
@@ -89,18 +106,30 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
     .. [1] Lubba, Carl H., et al. "catch22: Canonical time-series characteristics."
         Data Mining and Knowledge Discovery 33.6 (2019): 1821-1852.
         https://link.springer.com/article/10.1007/s10618-019-00647-x
+
+    Examples
+    --------
+    >>> from tsml.feature_based import Catch22Classifier
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
+    >>> clf = Catch22Classifier(random_state=0)
+    >>> clf.fit(X, y)
+    Catch22Classifier(...)
+    >>> clf.predict(X)
+    array([0, 1, 1, 0, 0, 1, 0, 1])
     """
 
     def __init__(
         self,
         features="all",
-        catch24=False,
+        catch24=True,
         outlier_norm=False,
         replace_nans=True,
-        use_pycatch22=True,
+        use_pycatch22=False,
         estimator=None,
-        n_jobs=1,
         random_state=None,
+        n_jobs=1,
+        parallel_backend=None,
     ):
         self.features = features
         self.catch24 = catch24
@@ -108,41 +137,39 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.replace_nans = replace_nans
         self.use_pycatch22 = use_pycatch22
         self.estimator = estimator
-
-        self.n_jobs = n_jobs
         self.random_state = random_state
+        self.n_jobs = n_jobs
+        self.parallel_backend = parallel_backend
 
         if use_pycatch22:
             _check_optional_dependency("pycatch22", "pycatch22", self)
 
         super(Catch22Classifier, self).__init__()
 
-    def fit(self, X, y):
-        """Fit a pipeline on cases (X,y), where y is the target variable.
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_" and sets is_fitted flag to True.
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
         check_classification_targets(y)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_ = len(X)
+        self.n_channels_, self.n_timepoints_ = X[0].shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
@@ -161,6 +188,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
             replace_nans=self.replace_nans,
             use_pycatch22=self.use_pycatch22,
             n_jobs=self._n_jobs,
+            parallel_backend=self.parallel_backend,
         )
 
         self._estimator = _clone_estimator(
@@ -179,17 +207,19 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
-        """Predict class values of n instances in X.
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predictions for.
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
+        y : array-like of shape (n_instances)
             Predicted class labels.
         """
         check_is_fitted(self)
@@ -203,17 +233,19 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self._estimator.predict(self._transformer.transform(X))
 
-    def predict_proba(self, X) -> np.ndarray:
-        """Predict class probabilities for n instances in X.
+    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predict probabilities for.
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances, n_classes_]
+        y : array-like of shape (n_instances, n_classes_)
             Predicted probabilities using the ordering in classes_.
         """
         check_is_fitted(self)
@@ -235,149 +267,174 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
                 dists[i, self.class_dictionary_[preds[i]]] = 1
             return dists
 
+    def _more_tags(self) -> dict:
+        return {
+            "X_types": ["np_list", "3darray"],
+            "equal_length_only": False,
+            "optional_dependency": self.use_pycatch22,
+        }
+
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
-        if parameter_set == "results_comparison":
-            return {
-                "estimator": RandomForestClassifier(n_estimators=10),
-                "features": (
-                    "Mean",
-                    "DN_HistogramMode_5",
-                    "SB_BinaryStats_mean_longstretch1",
-                ),
-                "catch24": True,
-                "replace_nans": True,
-                "outlier_norm": True,
-            }
-        else:
-            return {
-                "estimator": RandomForestClassifier(n_estimators=2),
-                "features": (
-                    "Mean",
-                    "DN_HistogramMode_5",
-                    "SB_BinaryStats_mean_longstretch1",
-                ),
-                "catch24": True,
-                "replace_nans": True,
-            }
+        return {
+            "estimator": RandomForestClassifier(n_estimators=2),
+            "features": (
+                "Mean",
+                "DN_HistogramMode_5",
+                "SB_BinaryStats_mean_longstretch1",
+            ),
+        }
 
 
 class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
-    """Canonical Time-series Characteristics (catch22) classifier.
+    """Canonical Time-series Characteristics (catch22) regressor.
 
-    This classifier simply transforms the input data using the Catch22 [1]
+    This regressor simply transforms the input data using the Catch22 [1]
     transformer and builds a provided estimator using the transformed data.
-
-    Shorthand for the pipeline `Catch22(outlier_norm, replace_nans) * estimator`
 
     Parameters
     ----------
+    features : int/str or List of int/str, optional, default="all"
+        The Catch22 features to extract by feature index, feature name as a str or as a
+        list of names or indices for multiple features. If "all", all features are
+        extracted.
+        Valid features are as follows:
+            ["DN_HistogramMode_5", "DN_HistogramMode_10",
+            "SB_BinaryStats_diff_longstretch0", "DN_OutlierInclude_p_001_mdrmd",
+            "DN_OutlierInclude_n_001_mdrmd", "CO_f1ecac", "CO_FirstMin_ac",
+            "SP_Summaries_welch_rect_area_5_1", "SP_Summaries_welch_rect_centroid",
+            "FC_LocalSimple_mean3_stderr", "CO_trev_1_num", "CO_HistogramAMI_even_2_5",
+            "IN_AutoMutualInfoStats_40_gaussian_fmmi", "MD_hrv_classic_pnn40",
+            "SB_BinaryStats_mean_longstretch1", "SB_MotifThree_quantile_hh",
+            "FC_LocalSimple_mean1_tauresrat", "CO_Embed2_Dist_tau_d_expfit_meandiff",
+            "SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1",
+            "SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1",
+            "SB_TransitionMatrix_3ac_sumdiagcov", "PD_PeriodicityWang_th0_01"]
+    catch24 : bool, optional, default=True
+        Extract the mean and standard deviation as well as the 22 Catch22 features if
+        true. If a List of specific features to extract is provided, "Mean" and/or
+        "StandardDeviation" must be added to the List to extract these features.
     outlier_norm : bool, optional, default=False
         Normalise each series during the two outlier Catch22 features, which can take a
         while to process for large values.
     replace_nans : bool, optional, default=True
         Replace NaN or inf values from the Catch22 transform with 0.
-    estimator : sklearn classifier, optional, default=None
+    use_pycatch22 : bool, optional, default=False
+        Wraps the C based pycatch22 implementation for tsml.
+        (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
+        ``pycatch22`` package to be installed if True.
+    estimator : sklearn regressor, optional, default=None
         An sklearn estimator to be built using the transformed data.
-        Defaults to sklearn RandomForestClassifier(n_estimators=200)
-    n_jobs : int, optional, default=1
+        Defaults to sklearn RandomForestRegressor(n_estimators=200)
+    random_state : int, RandomState instance or None, default=None
+        If `int`, random_state is the seed used by the random number generator;
+        If `RandomState` instance, random_state is the random number generator;
+        If `None`, the random number generator is the `RandomState` instance used
+        by `np.random`.
+    n_jobs : int, default=1
         The number of jobs to run in parallel for both `fit` and `predict`.
         ``-1`` means using all processors.
-    random_state : int or None, optional, default=None
-        Seed for random, integer.
+    parallel_backend : str, ParallelBackendBase instance or None, default=None
+        Specify the parallelisation backend implementation in joblib for Catch22,
+        if None a 'prefer' value of "threads" is used by default.
+        Valid options are "loky", "multiprocessing", "threading" or a custom backend.
+        See the joblib Parallel documentation for more details.
 
     Attributes
     ----------
-    n_classes_ : int
-        Number of classes. Extracted from the data.
-    classes_ : ndarray of shape (n_classes_)
-        Holds the label for each class.
-    estimator_ : ClassifierPipeline
-        Catch22Classifier as a ClassifierPipeline, fitted to data internally
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels_ : int
+        The number of dimensions per case in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set.
 
     See Also
     --------
-    Catch22
-
-    Notes
-    -----
-    Authors `catch22ForestClassifier <https://github.com/chlubba/sktime-catch22>`_.
-
-    For the Java version, see `tsml <https://github.com/uea-machine-learning/tsml/blob
-    /master/src/main/java/tsml/classifiers/hybrids/Catch22Classifier.java>`_.
+    Catch22Transformer
+    Catch22Classifier
 
     References
     ----------
     .. [1] Lubba, Carl H., et al. "catch22: Canonical time-series characteristics."
         Data Mining and Knowledge Discovery 33.6 (2019): 1821-1852.
         https://link.springer.com/article/10.1007/s10618-019-00647-x
+
+    Examples
+    --------
+    >>> from tsml.feature_based import Catch22Regressor
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10,
+    ...                              regression_target=True, random_state=0)
+    >>> reg = Catch22Regressor(random_state=0)
+    >>> reg.fit(X, y)
+    Catch22Regressor(...)
+    >>> reg.predict(X)
+    array([0.42955043, 1.31287811, 1.03757454, 0.68456511, 0.61327938,
+           1.2048977 , 0.56586089, 1.1263876 ])
     """
 
     def __init__(
         self,
         features="all",
-        catch24=False,
+        catch24=True,
         outlier_norm=False,
         replace_nans=True,
+        use_pycatch22=False,
         estimator=None,
-        n_jobs=1,
         random_state=None,
+        n_jobs=1,
+        parallel_backend=None,
     ):
         self.features = features
         self.catch24 = catch24
         self.outlier_norm = outlier_norm
         self.replace_nans = replace_nans
+        self.use_pycatch22 = use_pycatch22
         self.estimator = estimator
-
-        self.n_jobs = n_jobs
         self.random_state = random_state
+        self.n_jobs = n_jobs
+        self.parallel_backend = parallel_backend
 
         super(Catch22Regressor, self).__init__()
 
-    def fit(self, X, y):
-        """Fit a pipeline on cases (X,y), where y is the target variable.
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The target labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_" and sets is_fitted flag to True.
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2, y_numeric=True)
         X = self._convert_X(X)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_ = len(X)
+        self.n_channels_, self.n_timepoints_ = X[0].shape
 
         self._n_jobs = check_n_jobs(self.n_jobs)
 
@@ -387,6 +444,7 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
             outlier_norm=self.outlier_norm,
             replace_nans=self.replace_nans,
             n_jobs=self._n_jobs,
+            parallel_backend=self.parallel_backend,
         )
 
         self._estimator = _clone_estimator(
@@ -405,18 +463,20 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
-        """Predict class values of n instances in X.
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predictions for.
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
-            Predicted class labels.
+        y : array-like of shape (n_instances)
+            Predicted target labels.
         """
         check_is_fitted(self)
 
@@ -425,48 +485,35 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self._estimator.predict(self._transformer.transform(X))
 
+    def _more_tags(self) -> dict:
+        return {
+            "X_types": ["np_list", "3darray"],
+            "equal_length_only": False,
+            "optional_dependency": self.use_pycatch22,
+        }
+
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
-        if parameter_set == "results_comparison":
-            return {
-                "estimator": RandomForestRegressor(n_estimators=10),
-                "features": (
-                    "Mean",
-                    "DN_HistogramMode_5",
-                    "SB_BinaryStats_mean_longstretch1",
-                ),
-                "catch24": True,
-                "replace_nans": True,
-                "outlier_norm": True,
-            }
-        else:
-            return {
-                "estimator": RandomForestRegressor(n_estimators=2),
-                "features": (
-                    "Mean",
-                    "DN_HistogramMode_5",
-                    "SB_BinaryStats_mean_longstretch1",
-                ),
-                "catch24": True,
-                "replace_nans": True,
-            }
+        return {
+            "estimator": RandomForestRegressor(n_estimators=2),
+            "features": (
+                "Mean",
+                "DN_HistogramMode_5",
+                "SB_BinaryStats_mean_longstretch1",
+            ),
+        }

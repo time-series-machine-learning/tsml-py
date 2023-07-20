@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Interval based estimators."""
+"""Interval-based estimators."""
 
 __all__ = [
     "BaseIntervalForest",

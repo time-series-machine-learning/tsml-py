@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
 """Dummy time series estimators."""
 
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["DummyClassifier", "DummyRegressor", "DummyClusterer"]
+
+from typing import List, Union
 
 import numpy as np
 from sklearn.base import ClassifierMixin, ClusterMixin, RegressorMixin
@@ -37,66 +38,90 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             "constant"}, default="prior"
         Strategy to use to generate predictions.
 
-        * "most_frequent": the `predict` method always returns the most
+        - "most_frequent": the `predict` method always returns the most
           frequent class label in the observed `y` argument passed to `fit`.
           The `predict_proba` method returns the matching one-hot encoded
           vector.
-        * "prior": the `predict` method always returns the most frequent
+        - "prior": the `predict` method always returns the most frequent
           class label in the observed `y` argument passed to `fit` (like
           "most_frequent"). ``predict_proba`` always returns the empirical
           class distribution of `y` also known as the empirical class prior
           distribution.
-        * "stratified": the `predict_proba` method randomly samples one-hot
+        - "stratified": the `predict_proba` method randomly samples one-hot
           vectors from a multinomial distribution parametrized by the empirical
           class prior probabilities.
           The `predict` method returns the class label which got probability
           one in the one-hot vector of `predict_proba`.
           Each sampled row of both methods is therefore independent and
           identically distributed.
-        * "uniform": generates predictions uniformly at random from the list
+        - "uniform": generates predictions uniformly at random from the list
           of unique classes observed in `y`, i.e. each class has equal
           probability.
-        * "constant": always predicts a constant label that is provided by
+        - "constant": always predicts a constant label that is provided by
           the user. This is useful for metrics that evaluate a non-majority
           class.
-    random_state : int, RandomState instance or None, default=None
-        Controls the randomness to generate the predictions when
-        ``strategy='stratified'`` or ``strategy='uniform'``.
-        Pass an int for reproducible output across multiple function calls.
-        See :term:`Glossary <random_state>`.
     constant : int or str or array-like of shape (n_outputs,), default=None
         The explicit constant as predicted by the "constant" strategy. This
         parameter is useful only for the "constant" strategy.
+    validate : bool, default=False
+        Whether to perform validation checks on X and y.
+    random_state : int, RandomState instance or None, default=None
+        Controls the randomness to generate the predictions when
+        ``strategy='stratified'`` or ``strategy='uniform'``.
+        If `int`, random_state is the seed used by the random number generator;
+        If `RandomState` instance, random_state is the random number generator;
+        If `None`, the random number generator is the `RandomState` instance used
+        by `np.random`.
 
     See Also
     --------
     DummyRegressor : Regressor that makes predictions using simple rules.
+    DummyClusterer : Clusterer that makes predictions using simple rules.
 
     Examples
     --------
     >>> from tsml.dummy import DummyClassifier
-    >>> from tsml.datasets import load_minimal_chinatown
-    >>> X_train, y_train = load_minimal_chinatown(split="train")
-    >>> X_test, y_test = load_minimal_chinatown(split="test")
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
     >>> clf = DummyClassifier(strategy="most_frequent")
-    >>> clf.fit(X_train, y_train)
-    DummyClassifier(strategy='most_frequent')
-    >>> clf.score(X_test, y_test)
+    >>> clf.fit(X, y)
+    DummyClassifier(...)
+    >>> clf.score(X, y)
     0.5
     """
 
     def __init__(
-        self, strategy="prior", validate=False, random_state=None, constant=None
+        self,
+        strategy="prior",
+        constant=None,
+        validate=False,
+        random_state=None,
     ):
         self.strategy = strategy
+        self.constant = constant
         self.validate = validate
         self.random_state = random_state
-        self.constant = constant
 
         super(DummyClassifier, self).__init__()
 
-    def fit(self, X, y):
-        """"""
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                2D np.ndarray of shape (n_instances, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The training data.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
+
+        Returns
+        -------
+        self :
+            Reference to self.
+        """
         if self.validate:
             X, y = self._validate_data(X=X, y=y, ensure_min_series_length=1)
 
@@ -122,8 +147,22 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
-        """"""
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                2D np.ndarray of shape (n_instances, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Predicted class labels.
+        """
         check_is_fitted(self)
 
         if self.validate:
@@ -137,8 +176,22 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict(np.zeros((_num_samples(X), 2)))
 
-    def predict_proba(self, X) -> np.ndarray:
-        """"""
+    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                2D np.ndarray of shape (n_instances, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances, n_classes_)
+            Predicted probabilities using the ordering in classes_.
+        """
         check_is_fitted(self)
 
         if self.validate:
@@ -150,7 +203,7 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict_proba(np.zeros((_num_samples(X), 2)))
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {
             "X_types": ["3darray", "2darray", "np_list"],
             "equal_length_only": False,
@@ -180,11 +233,11 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
     strategy : {"mean", "median", "quantile", "constant"}, default="mean"
         Strategy to use to generate predictions.
 
-        * "mean": always predicts the mean of the training set
-        * "median": always predicts the median of the training set
-        * "quantile": always predicts a specified quantile of the training set,
+        - "mean": always predicts the mean of the training set
+        - "median": always predicts the median of the training set
+        - "quantile": always predicts a specified quantile of the training set,
           provided with the quantile parameter.
-        * "constant": always predicts a constant value that is provided by
+        - "constant": always predicts a constant value that is provided by
           the user.
     constant : int or float or array-like of shape (n_outputs,), default=None
         The explicit constant as predicted by the "constant" strategy. This
@@ -193,34 +246,53 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         The quantile to predict using the "quantile" strategy. A quantile of
         0.5 corresponds to the median, while 0.0 to the minimum and 1.0 to the
         maximum.
+    validate : bool, default=False
+        Whether to perform validation checks on X and y.
 
     See Also
     --------
     DummyClassifier : Classifier that makes predictions using simple rules.
+    DummyClusterer : Clusterer that makes predictions using simple rules.
 
     Examples
     --------
     >>> from tsml.dummy import DummyRegressor
-    >>> from tsml.datasets import load_minimal_gas_prices
-    >>> X_train, y_train = load_minimal_gas_prices(split="train")
-    >>> X_test, y_test = load_minimal_gas_prices(split="test")
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10,
+    ...                              regression_target=True, random_state=0)
     >>> reg = DummyRegressor()
-    >>> reg.fit(X_train, y_train)
-    DummyRegressor()
-    >>> reg.score(X_test, y_test)
-    -0.07184048625633688
+    >>> reg.fit(X, y)
+    DummyRegressor(...)
+    >>> reg.score(X, y)
+    0.0
     """
 
-    def __init__(self, strategy="mean", validate=False, constant=None, quantile=None):
+    def __init__(self, strategy="mean", constant=None, quantile=None, validate=False):
         self.strategy = strategy
-        self.validate = validate
         self.constant = constant
         self.quantile = quantile
+        self.validate = validate
 
         super(DummyRegressor, self).__init__()
 
-    def fit(self, X, y):
-        """"""
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                2D np.ndarray of shape (n_instances, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The training data.
+        y : 1D np.ndarray of shape (n_instances)
+            The target labels for fitting, indices correspond to instance indices in X
+
+        Returns
+        -------
+        self :
+            Reference to self.
+        """
         if self.validate:
             _, y = self._validate_data(
                 X=X, y=y, ensure_min_series_length=1, y_numeric=True
@@ -233,8 +305,22 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X):
-        """"""
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                2D np.ndarray of shape (n_instances, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Predicted target labels.
+        """
         check_is_fitted(self)
 
         if self.validate:
@@ -242,7 +328,7 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self.reg_.predict(np.zeros((_num_samples(X), 2)))
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {
             "X_types": ["3darray", "2darray", "np_list"],
             "equal_length_only": False,
@@ -252,7 +338,7 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
 
 class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
-    """DummyRegressor makes predictions that ignore the input features.
+    """DummyClusterer makes predictions that ignore the input features.
 
     This cluster makes no effort to form reasonable clusters, and is primarily used
     for interface testing. Do not use it for real problems.
@@ -260,34 +346,72 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
     All strategies make predictions that ignore the input feature values passed
     as the `X` argument to `fit` and `predict`.
 
+    Parameters
+    ----------
+    strategy : {"single", "unique", "random"}, default="single"
+        Strategy to use to generate clusters.
+        - "single": all cases are assigned to cluster 0.
+        - "unique": all cases are assigned thier own cluster.
+        - "random": randomly assigned cases to one of ``n_clusters`` clusters.
+    n_clusters : int, default=2
+        The number of clusters to generate when ``strategy='random'``.
+    validate : bool, default=False
+        Whether to perform validation checks on X and y.
+    random_state : int, RandomState instance or None, default=None
+        Controls the randomness to generate the clusters when ``strategy='random'``
+        If `int`, random_state is the seed used by the random number generator;
+        If `RandomState` instance, random_state is the random number generator;
+        If `None`, the random number generator is the `RandomState` instance used
+        by `np.random`.
+
+    See Also
+    --------
+    DummyClassifier : DummyClassifier is a classifier that makes predictions
+    DummyRegressor : Regressor that makes predictions using simple rules.
+
     Examples
     --------
     >>> from tsml.dummy import DummyClusterer
-    >>> from tsml.datasets import load_minimal_chinatown
     >>> from sklearn.metrics import adjusted_rand_score
-    >>> X_train, y_train = load_minimal_chinatown(split="train")
-    >>> X_test, y_test = load_minimal_chinatown(split="test")
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
     >>> clu = DummyClusterer(strategy="random", random_state=0)
-    >>> clu.fit(X_train)
-    DummyClusterer(random_state=0, strategy='random')
-    >>> adjusted_rand_score(clu.labels_, y_train)
-    0.2087729039422543
-    >>> adjusted_rand_score(clu.predict(X_test), y_test)
-    0.2087729039422543
+    >>> clu.fit(X)
+    DummyClusterer(...)
+    >>> adjusted_rand_score(clu.labels_, y)
+    0.16
     """
 
     def __init__(
-        self, strategy="single", validate=False, n_clusters=2, random_state=None
+        self, strategy="single", n_clusters=2, validate=False, random_state=None
     ):
         self.strategy = strategy
-        self.validate = validate
         self.n_clusters = n_clusters
+        self.validate = validate
         self.random_state = random_state
 
         super(DummyClusterer, self).__init__()
 
-    def fit(self, X, y=None):
-        """"""
+    def fit(
+        self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] = None
+    ) -> object:
+        """Fit the estimator to training data.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                2D np.ndarray of shape (n_instances, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The input data.
+        y : 1D np.ndarray of shape (n_instances), default=None
+            Label placeholder for compatability. Not used.
+
+        Returns
+        -------
+        self :
+            Reference to self.
+        """
         if self.validate:
             X = self._validate_data(X=X, ensure_min_series_length=1)
 
@@ -303,8 +427,22 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X):
-        """"""
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Assign clusters labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints) or
+                2D np.ndarray of shape (n_instances, n_timepoints) or
+                list of size (n_instances) of 2D np.ndarray (n_channels,
+                n_timepoints_i), where n_timepoints_i is length of series i
+            The input data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Assigned cluster labels.
+        """
         check_is_fitted(self)
 
         if self.validate:
@@ -320,7 +458,7 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
         else:
             raise ValueError(f"Unknown strategy {self.strategy}")
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {
             "X_types": ["3darray", "2darray", "np_list"],
             "equal_length_only": False,

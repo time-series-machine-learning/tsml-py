@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """A rotation forest (RotF) vector classifier.
 
 A rotation Forest sktime implementation for continuous values only. Fits sklearn
@@ -9,8 +8,10 @@ __author__ = ["MatthewMiddlehurst"]
 __all__ = ["RotationForestClassifier", "RotationForestRegressor"]
 
 import time
+from typing import List, Union
 
 import numpy as np
+import pandas as pd
 from joblib import Parallel
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.decomposition import PCA
@@ -67,23 +68,21 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
 
     Attributes
     ----------
-    classes_ : list
-        The unique class labels in the training set.
-    n_classes_ : int
-        The number of unique classes in the training set.
     n_instances_ : int
         The number of train cases in the training set.
     n_atts_ : int
         The number of attributes in the training set.
+    n_classes_ : int
+        Number of classes. Extracted from the data.
+    classes_ : ndarray of shape (n_classes_)
+        Holds the label for each class.
+    class_dictionary_ : dict
+        A dictionary mapping class labels to class indices in classes_.
     transformed_data_ : list of shape (n_estimators) of ndarray
         The transformed training dataset for all classifiers. Only saved when
         ``save_transformed_data`` is `True`.
     estimators_ : list of shape (n_estimators) of BaseEstimator
         The collections of estimators trained in fit.
-
-    See Also
-    --------
-    ShapeletTransformClassifier: A shapelet-based classifier using Rotation Forest.
 
     Notes
     -----
@@ -103,13 +102,13 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
     Examples
     --------
     >>> from tsml.vector import RotationForestClassifier
-    >>> from tsml.datasets import load_minimal_chinatown
-    >>> X_train, y_train = load_minimal_chinatown(split="train")
-    >>> X_test, y_test = load_minimal_chinatown(split="test")
-    >>> clf = RotationForestClassifier(n_estimators=10)
-    >>> clf.fit(X_train, y_train)
+    >>> from tsml.utils.testing import generate_2d_test_data
+    >>> X, y = generate_2d_test_data(n_samples=8, random_state=0)
+    >>> clf = RotationForestClassifier(random_state=0)
+    >>> clf.fit(X, y)
     RotationForestClassifier(...)
-    >>> y_pred = clf.predict(X_test)
+    >>> clf.predict(X)
+    array([0, 1, 0, 0, 0, 0, 0, 1])
     """
 
     def __init__(
@@ -138,25 +137,20 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
 
         super(RotationForestClassifier, self).__init__()
 
-    def fit(self, X, y):
-        """Fit a forest of trees on cases (X,y), where y is the target variable.
+    def fit(self, X: Union[np.ndarray, pd.DataFrame], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 2d ndarray or DataFrame of shape = [n_instances, n_attributes]
+        X : 2d ndarray or DataFrame of shape (n_instances, n_atts)
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_".
         """
         if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], -1))
@@ -170,9 +164,9 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
         self.n_instances_, self.n_atts_ = X.shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
-        self._class_dictionary = {}
+        self.class_dictionary_ = {}
         for index, class_val in enumerate(self.classes_):
-            self._class_dictionary[class_val] = index
+            self.class_dictionary_[class_val] = index
 
         # escape if only one class seen
         if self.n_classes_ == 1:
@@ -248,34 +242,34 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
 
         return self
 
-    def predict(self, X):
-        """Predict for all cases in X. Built on top of predict_proba.
+    def predict(self, X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+        """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 2d ndarray or DataFrame of shape = [n_instances, n_attributes]
-            The data to make predictions for.
+        X : 2d ndarray or DataFrame of shape (n_instances, n_atts)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
+        y : array-like of shape (n_instances)
             Predicted class labels.
         """
         return np.array(
             [self.classes_[int(np.argmax(prob))] for prob in self.predict_proba(X)]
         )
 
-    def predict_proba(self, X):
-        """Probability estimates for each class for all cases in X.
+    def predict_proba(self, X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
 
         Parameters
         ----------
-        X : 2d ndarray or DataFrame of shape = [n_instances, n_attributes]
-            The data to make predictions for.
+        X : 2d ndarray or DataFrame of shape (n_instances, n_atts)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances, n_classes_]
+        y : array-like of shape (n_instances, n_classes_)
             Predicted probabilities using the ordering in classes_.
         """
         check_is_fitted(self)
@@ -436,7 +430,7 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
         if probas.shape[1] != self.n_classes_:
             new_probas = np.zeros((probas.shape[0], self.n_classes_))
             for i, cls in enumerate(clf.classes_):
-                cls_idx = self._class_dictionary[cls]
+                cls_idx = self.class_dictionary_[cls]
                 new_probas[:, cls_idx] = probas[:, i]
             probas = new_probas
 
@@ -466,7 +460,7 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
         if probas.shape[1] != self.n_classes_:
             new_probas = np.zeros((probas.shape[0], self.n_classes_))
             for i, cls in enumerate(clf.classes_):
-                cls_idx = self._class_dictionary[cls]
+                cls_idx = self.class_dictionary_[cls]
                 new_probas[:, cls_idx] = probas[:, i]
             probas = new_probas
 
@@ -476,7 +470,9 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
         return [results, oob]
 
     @classmethod
-    def get_test_params(cls, parameter_set=None):
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
         """Return unit test parameter settings for the estimator.
 
         Parameters
@@ -487,30 +483,23 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        params : dict or list of dict, default = {}
-            Parameters to create testing instances of the class
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`
+        params : dict or list of dict
+            Parameters to create testing instances of the class.
         """
-        if parameter_set is None:
-            return {"n_estimators": 2}
-        else:
-            raise ValueError(
-                f"No parameter set {parameter_set} defined for {cls.__name__}"
-            )
+        return {"n_estimators": 2}
 
 
 class RotationForestRegressor(RegressorMixin, BaseEstimator):
-    """A Rotation Forest (RotF) classifier.
+    """A Rotation Forest (RotF) regressor.
 
-    Implementation of the Rotation Forest classifier described in Rodriguez et al
-    (2013) [1]. Builds a forest of trees build on random portions of the data
-    transformed using PCA.
+    Implementation of the Rotation Forest regressor based on the classifier described
+    in Rodriguez et al (2013) [1]. Builds a forest of trees build on random portions
+    of the data transformed using PCA.
 
-    Intended as a benchmark for time series data and a base classifier for
-    transformation based appraoches such as ShapeletTransformClassifier, this tsml
-    implementation only works with continuous attributes.
+    Intended as a benchmark for time series data and a base regressor for
+    transformation based appraoches this tsml implementation only works with continuous
+    attributes. Compares to the classification version, the only alteration is the
+    base tree used and the removal of class subsampling.
 
     Parameters
     ----------
@@ -524,7 +513,7 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
         The proportion of cases to be removed per group.
     base_estimator : BaseEstimator or None, default="None"
         Base estimator for the ensemble. By default, uses the sklearn
-        `DecisionTreeClassifier` using entropy as a splitting measure.
+        `DecisionTreeRegressor` using squared error as a splitting measure.
     time_limit_in_minutes : int, default=0
         Time contract to limit build time in minutes, overriding ``n_estimators``.
         Default of `0` means ``n_estimators`` is used.
@@ -544,10 +533,6 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
 
     Attributes
     ----------
-    classes_ : list
-        The unique class labels in the training set.
-    n_classes_ : int
-        The number of unique classes in the training set.
     n_instances_ : int
         The number of train cases in the training set.
     n_atts_ : int
@@ -557,16 +542,6 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
         ``save_transformed_data`` is `True`.
     estimators_ : list of shape (n_estimators) of BaseEstimator
         The collections of estimators trained in fit.
-
-    See Also
-    --------
-    ShapeletTransformClassifier: A shapelet-based classifier using Rotation Forest.
-
-    Notes
-    -----
-    For the Java version, see
-    `tsml <https://github.com/uea-machine-learning/tsml/blob/master/src/main/java
-    /weka/classifiers/meta/RotationForest.java>`_.
 
     References
     ----------
@@ -579,14 +554,16 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
 
     Examples
     --------
-    >>> from tsml.vector import RotationForestClassifier
-    >>> from tsml.datasets import load_minimal_chinatown
-    >>> X_train, y_train = load_minimal_chinatown(split="train")
-    >>> X_test, y_test = load_minimal_chinatown(split="test")
-    >>> clf = RotationForestClassifier(n_estimators=10)
-    >>> clf.fit(X_train, y_train)
-    RotationForestClassifier(...)
-    >>> y_pred = clf.predict(X_test)
+    >>> from tsml.vector import RotationForestRegressor
+    >>> from tsml.utils.testing import generate_2d_test_data
+    >>> X, y = generate_2d_test_data(n_samples=8, regression_target=True,
+    ...                              random_state=0)
+    >>> reg = RotationForestRegressor(random_state=0)
+    >>> reg.fit(X, y)
+    RotationForestRegressor(...)
+    >>> reg.predict(X)
+    array([0.19658236, 1.36872518, 0.82099324, 0.09710128, 0.83794492,
+           0.09609841, 0.97645944, 1.46865118])
     """
 
     def __init__(
@@ -615,25 +592,20 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
 
         super(RotationForestRegressor, self).__init__()
 
-    def fit(self, X, y):
-        """Fit a forest of trees on cases (X,y), where y is the target variable.
+    def fit(self, X: Union[np.ndarray, pd.DataFrame], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 2d ndarray or DataFrame of shape = [n_instances, n_attributes]
+        X : 2d ndarray or DataFrame of shape (n_instances, n_atts)
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The target labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_".
         """
         if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
             X = np.reshape(X, (X.shape[0], -1))
@@ -711,18 +683,18 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
 
         return self
 
-    def predict(self, X):
-        """Predict for all cases in X. Built on top of predict_proba.
+    def predict(self, X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+        """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 2d ndarray or DataFrame of shape = [n_instances, n_attributes]
-            The data to make predictions for.
+        X : 2d ndarray or DataFrame of shape (n_instances, n_atts)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
-            Predicted class labels.
+        y : array-like of shape (n_instances)
+            Predicted target labels.
         """
         check_is_fitted(self)
 
@@ -817,7 +789,9 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
         return clf.predict(X_t)
 
     @classmethod
-    def get_test_params(cls, parameter_set=None):
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
         """Return unit test parameter settings for the estimator.
 
         Parameters
@@ -828,18 +802,10 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
 
         Returns
         -------
-        params : dict or list of dict, default = {}
-            Parameters to create testing instances of the class
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`
+        params : dict or list of dict
+            Parameters to create testing instances of the class.
         """
-        if parameter_set is None:
-            return {"n_estimators": 2}
-        else:
-            raise ValueError(
-                f"No parameter set {parameter_set} defined for {cls.__name__}"
-            )
+        return {"n_estimators": 2}
 
 
 def _generate_groups(rng, n_atts, min_group, max_group):

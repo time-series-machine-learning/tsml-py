@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+"""Distance functions."""
 
 __all__ = [
     "manhattan_distance",

@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Feature pipeline based estimators."""
+"""Feature-based estimators."""
 
 __all__ = [
     "Catch22Classifier",

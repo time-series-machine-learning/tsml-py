@@ -1,13 +1,14 @@
-# -*- coding: utf-8 -*-
-"""Catch22 Classifier.
+"""Random Dilated Shapelet Transform (RDST) estimators.
 
-Pipeline classifier using the Catch22 transformer and an estimator.
+Random Dilated Shapelet Transform estimator pipelines that simply perform a random
+shapelet dilated transform and build (by default) a RidgeCV on the output.
 """
 
 __author__ = ["MatthewMiddlehurst", "baraline"]
 __all__ = ["RDSTClassifier", "RDSTRegressor"]
 
 import warnings
+from typing import List, Union
 
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
@@ -23,7 +24,104 @@ from tsml.utils.validation import check_n_jobs
 
 
 class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
-    """RDST"""
+    """A random dilated shapelet transform (RDST) classifier.
+
+    Implementation of the random dilated shapelet transform classifier pipeline
+    along the lines of [1][2]. Transforms the data using the
+    `RandomDilatedShapeletTransform` and then builds a `RidgeClassifierCV` classifier
+    with standard scalling.
+
+    This is a duplicate of the original implementation in aeon, adapted for bugfixing
+    and experimentation. All credit to the original author @baraline for the
+    implementation.
+
+    Parameters
+    ----------
+    estimator : BaseEstimator or None, default=None
+        Base estimator for the ensemble, can be supplied a sklearn `BaseEstimator`. If
+        `None` a default `RidgeClassifierCV` classifier is used with standard scalling.
+    max_shapelets : int, default=10000
+        The maximum number of shapelet to keep for the final transformation.
+        A lower number of shapelets can be kept if alpha similarity have discarded the
+        whole dataset.
+    shapelet_lengths : array, default=None
+        The set of possible length for shapelets. Each shapelet length is uniformly
+        drawn from this set. If None, the shapelets length will be equal to
+        min(max(2,series_length//2),11).
+    proba_normalization : float, default=0.8
+        This probability (between 0 and 1) indicate the chance of each shapelet to be
+        initialized such as it will use a z-normalized distance, inducing either scale
+        sensitivity or invariance. A value of 1 would mean that all shapelets will use
+        a z-normalized distance.
+    threshold_percentiles : array, default=None
+        The two perceniles used to select the threshold used to compute the Shapelet
+        Occurrence feature. If None, the 5th and the 10th percentiles (i.e. [5,10])
+        will be used.
+    alpha_similarity : float, default=0.5
+        The strenght of the alpha similarity pruning. The higher the value, the lower
+        the allowed number of common indexes with previously sampled shapelets
+        when sampling a new candidate with the same dilation parameter.
+        It can cause the number of sampled shapelets to be lower than max_shapelets if
+        the whole search space has been covered. The default is 0.5, and the maximum is
+        1. Value above it have no effect for now.
+    use_prime_dilations : bool, default=False
+        If True, restrict the value of the shapelet dilation parameter to be prime
+        values. This can greatly speed-up the algorithm for long time series and/or
+        short shapelet length, possibly at the cost of some accuracy.
+    save_transformed_data : bool, default=False
+        Save the data transformed in fit in ``transformed_data_``.
+    n_jobs : int, default=1
+        The number of jobs to run in parallel for both ``fit`` and ``predict``.
+        `-1` means using all processors.
+    random_state : int, RandomState instance or None, default=None
+        If `int`, random_state is the seed used by the random number generator;
+        If `RandomState` instance, random_state is the random number generator;
+        If `None`, the random number generator is the `RandomState` instance used
+        by `np.random`.
+
+    Attributes
+    ----------
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels_ : int
+        The number of dimensions per case in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set.
+    n_classes_ : int
+        Number of classes. Extracted from the data.
+    classes_ : ndarray of shape (n_classes_)
+        Holds the label for each class.
+    class_dictionary_ : dict
+        A dictionary mapping class labels to class indices in classes_.
+    transformed_data_ : list of shape (n_estimators) of ndarray
+        The transformed training dataset for all classifiers. Only saved when
+        ``save_transformed_data`` is `True`.
+
+    See Also
+    --------
+    RDSTRegressor
+    RandomDilatedShapeletTransformer
+
+    References
+    ----------
+    .. [1] Antoine Guillaume et al. "Random Dilated Shapelet Transform: A New Approach
+       for Time Series Shapelets", Pattern Recognition and Artificial Intelligence.
+       ICPRAI 2022.
+    .. [2] Antoine Guillaume, "Time series classification with shapelets: Application
+       to predictive maintenance on event logs", PhD Thesis, University of Orléans,
+       2023.
+
+    Examples
+    --------
+    >>> from tsml.shapelet_based import RDSTClassifier
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
+    >>> clf = RDSTClassifier(random_state=0)
+    >>> clf.fit(X, y)
+    RDSTClassifier(...)
+    >>> clf.predict(X)
+    array([0, 1, 1, 0, 0, 1, 0, 1])
+    """
 
     def __init__(
         self,
@@ -34,6 +132,7 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         alpha_similarity=0.5,
         use_prime_dilations=False,
         estimator=None,
+        save_transformed_data=False,
         n_jobs=1,
         random_state=None,
     ):
@@ -44,37 +143,33 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.alpha_similarity = alpha_similarity
         self.use_prime_dilations = use_prime_dilations
         self.estimator = estimator
+        self.save_transformed_data = save_transformed_data
         self.n_jobs = n_jobs
         self.random_state = random_state
 
         super(RDSTClassifier, self).__init__()
 
-    def fit(self, X, y):
-        """Fit a pipeline on cases (X,y), where y is the target variable.
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_" and sets is_fitted flag to True.
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
         check_classification_targets(y)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
@@ -112,9 +207,13 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             self._estimator.n_jobs = self._n_jobs
 
         X_t = self._transformer.fit_transform(X, y)
+        X_t = np.nan_to_num(X_t, nan=0.0, posinf=0.0, neginf=0.0)
+
+        if self.save_transformed_data:
+            self.transformed_data_ = X_t
 
         if X_t.shape[1] == 0:
-            warnings.warn("No shapelets found in training data.")
+            warnings.warn("No shapelets found in training data.", stacklevel=2)
             self._no_atts = True
             self._majority_class = np.argmax(np.unique(y, return_counts=True)[1])
         else:
@@ -123,17 +222,17 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
-        """Predict class values of n instances in X.
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predictions for.
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
+        y : array-like of shape (n_instances)
             Predicted class labels.
         """
         check_is_fitted(self)
@@ -153,17 +252,17 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self._estimator.predict(X_t)
 
-    def predict_proba(self, X) -> np.ndarray:
-        """Predict class probabilities for n instances in X.
+    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predict probabilities for.
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances, n_classes_]
+        y : array-like of shape (n_instances, n_classes_)
             Predicted probabilities using the ordering in classes_.
         """
         check_is_fitted(self)
@@ -193,32 +292,22 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
                 dists[i, self.class_dictionary_[preds[i]]] = 1
             return dists
 
-    def _more_tags(self):
-        return {
-            "non_deterministic": True,  # bug, only for MacOS
-        }
-
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
         return {
             "max_shapelets": 10,
@@ -226,7 +315,96 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
 
 class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
-    """RDST"""
+    """A random dilated shapelet transform (RDST) regressor.
+
+    Implementation of the random dilated shapelet transform pipeline
+    along the lines of [1][2]. Transforms the data using the
+    `RandomDilatedShapeletTransform` and then builds a `RidgeCV` regressor
+    with standard scalling.
+
+    Parameters
+    ----------
+    estimator : BaseEstimator or None, default=None
+        Base estimator for the ensemble, can be supplied a sklearn `BaseEstimator`. If
+        `None` a default `RidgeCV` regressor is used with standard scalling.
+    max_shapelets : int, default=10000
+        The maximum number of shapelet to keep for the final transformation.
+        A lower number of shapelets can be kept if alpha similarity have discarded the
+        whole dataset.
+    shapelet_lengths : array, default=None
+        The set of possible length for shapelets. Each shapelet length is uniformly
+        drawn from this set. If None, the shapelets length will be equal to
+        min(max(2,series_length//2),11).
+    proba_normalization : float, default=0.8
+        This probability (between 0 and 1) indicate the chance of each shapelet to be
+        initialized such as it will use a z-normalized distance, inducing either scale
+        sensitivity or invariance. A value of 1 would mean that all shapelets will use
+        a z-normalized distance.
+    threshold_percentiles : array, default=None
+        The two perceniles used to select the threshold used to compute the Shapelet
+        Occurrence feature. If None, the 5th and the 10th percentiles (i.e. [5,10])
+        will be used.
+    alpha_similarity : float, default=0.5
+        The strenght of the alpha similarity pruning. The higher the value, the lower
+        the allowed number of common indexes with previously sampled shapelets
+        when sampling a new candidate with the same dilation parameter.
+        It can cause the number of sampled shapelets to be lower than max_shapelets if
+        the whole search space has been covered. The default is 0.5, and the maximum is
+        1. Value above it have no effect for now.
+    use_prime_dilations : bool, default=False
+        If True, restrict the value of the shapelet dilation parameter to be prime
+        values. This can greatly speed-up the algorithm for long time series and/or
+        short shapelet length, possibly at the cost of some accuracy.
+    save_transformed_data : bool, default=False
+        Save the data transformed in fit in ``transformed_data_``.
+    n_jobs : int, default=1
+        The number of jobs to run in parallel for both ``fit`` and ``predict``.
+        `-1` means using all processors.
+    random_state : int, RandomState instance or None, default=None
+        If `int`, random_state is the seed used by the random number generator;
+        If `RandomState` instance, random_state is the random number generator;
+        If `None`, the random number generator is the `RandomState` instance used
+        by `np.random`.
+
+    Attributes
+    ----------
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels_ : int
+        The number of dimensions per case in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set.
+    transformed_data_ : list of shape (n_estimators) of ndarray
+        The transformed training dataset for all regressors. Only saved when
+        ``save_transformed_data`` is `True`.
+
+    See Also
+    --------
+    RDSTClassifier
+    RandomDilatedShapeletTransformer
+
+    References
+    ----------
+    .. [1] Antoine Guillaume et al. "Random Dilated Shapelet Transform: A New Approach
+       for Time Series Shapelets", Pattern Recognition and Artificial Intelligence.
+       ICPRAI 2022.
+    .. [2] Antoine Guillaume, "Time series classification with shapelets: Application
+       to predictive maintenance on event logs", PhD Thesis, University of Orléans,
+       2023.
+
+    Examples
+    --------
+    >>> from tsml.shapelet_based import RDSTRegressor
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10,
+    ...                              regression_target=True, random_state=0)
+    >>> reg = RDSTRegressor(random_state=0)
+    >>> reg.fit(X, y)
+    RDSTRegressor(...)
+    >>> reg.predict(X)
+    array([0.31798367, 1.41426266, 1.06414746, 0.69247204, 0.56660161,
+           1.26538904, 0.52324829, 1.09394045])
+    """
 
     def __init__(
         self,
@@ -252,30 +430,25 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         super(RDSTRegressor, self).__init__()
 
-    def fit(self, X, y):
-        """Fit a pipeline on cases (X,y), where y is the target variable.
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The target labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_" and sets is_fitted flag to True.
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2, y_numeric=True)
         X = self._convert_X(X)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
 
         self._n_jobs = check_n_jobs(self.n_jobs)
 
@@ -305,9 +478,10 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             self._estimator.n_jobs = self._n_jobs
 
         X_t = self._transformer.fit_transform(X, y)
+        X_t = np.nan_to_num(X_t, nan=0.0, posinf=0.0, neginf=0.0)
 
         if X_t.shape[1] == 0:
-            warnings.warn("No shapelets found in training data.")
+            warnings.warn("No shapelets found in training data.", stacklevel=2)
             self._no_atts = True
             self._y_mean = np.mean(y)
         else:
@@ -316,18 +490,18 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
-        """Predict class values of n instances in X.
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predictions for.
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
-            Predicted class labels.
+        y : array-like of shape (n_instances)
+            Predicted target labels.
         """
         check_is_fitted(self)
 
@@ -342,32 +516,22 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self._estimator.predict(X_t)
 
-    def _more_tags(self):
-        return {
-            "non_deterministic": True,  # bug, only for MacOS
-        }
-
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
         return {
             "max_shapelets": 10,

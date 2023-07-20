@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """A shapelet transform classifier (STC).
 
 Shapelet transform classifier pipeline that simply performs a (configurable) shapelet
@@ -7,6 +6,8 @@ transform then builds (by default) a rotation forest classifier on the output.
 
 __author__ = ["TonyBagnall", "MatthewMiddlehurst"]
 __all__ = ["ShapeletTransformClassifier"]
+
+from typing import List, Union
 
 import numpy as np
 from sklearn.base import ClassifierMixin
@@ -24,8 +25,8 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
     Implementation of the binary shapelet transform classifier pipeline along the lines
     of [1][2] but with random shapelet sampling. Transforms the data using the
-    configurable `RandomShapeletTransform` and then builds a `RotationForest`
-    classifier.
+    configurable `RandomShapeletTransformer` and then builds a
+    `RotationForestClassifier` classifier.
 
     As some implementations and applications contract the transformation solely,
     contracting is available for the transform only and both classifier and transform.
@@ -75,26 +76,26 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
     Attributes
     ----------
-    classes_ : list
-        The unique class labels in the training set.
-    n_classes_ : int
-        The number of unique classes in the training set.
-    fit_time_  : int
-        The time (in milliseconds) for ``fit`` to run.
     n_instances_ : int
         The number of train cases in the training set.
-    n_dims_ : int
+    n_channels_ : int
         The number of dimensions per case in the training set.
-    series_length_ : int
+    n_timepoints_ : int
         The length of each series in the training set.
+    n_classes_ : int
+        Number of classes. Extracted from the data.
+    classes_ : ndarray of shape (n_classes_)
+        Holds the label for each class.
+    class_dictionary_ : dict
+        A dictionary mapping class labels to class indices in classes_.
     transformed_data_ : list of shape (n_estimators) of ndarray
         The transformed training dataset for all classifiers. Only saved when
         ``save_transformed_data`` is `True`.
 
     See Also
     --------
-    RandomShapeletTransform : The randomly sampled shapelet transform.
-    RotationForest : The default rotation forest classifier used.
+    RandomShapeletTransformer
+    RotationForestClassifier
 
     Notes
     -----
@@ -109,6 +110,17 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     .. [2] A. Bostrom and A. Bagnall, "Binary Shapelet Transform for Multiclass Time
        Series Classification", Transactions on Large-Scale Data and Knowledge Centered
        Systems, 32, 2017.
+
+    Examples
+    --------
+    >>> from tsml.shapelet_based import ShapeletTransformClassifier
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
+    >>> clf = ShapeletTransformClassifier(random_state=0)
+    >>> clf.fit(X, y)
+    ShapeletTransformClassifier(...)
+    >>> clf.predict(X)
+    array([0, 1, 1, 0, 0, 1, 0, 1])
     """
 
     def __init__(
@@ -141,32 +153,27 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         super(ShapeletTransformClassifier, self).__init__()
 
-    def fit(self, X, y):
-        """Fit ShapeletTransformClassifier to training data.
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_".
         """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
         check_classification_targets(y)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
@@ -224,17 +231,17 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predictions for.
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
+        y : array-like of shape (n_instances)
             Predicted class labels.
         """
         check_is_fitted(self)
@@ -248,17 +255,17 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self._estimator.predict(self._transformer.transform(X))
 
-    def predict_proba(self, X) -> np.ndarray:
+    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
         """Predicts labels probabilities for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predict probabilities for.
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances, n_classes_]
+        y : array-like of shape (n_instances, n_classes_)
             Predicted probabilities using the ordering in classes_.
         """
         check_is_fitted(self)
@@ -281,41 +288,25 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return dists
 
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
-        from sklearn.ensemble import RandomForestClassifier
-
-        if parameter_set == "results_comparison":
-            return {
-                "estimator": RandomForestClassifier(n_estimators=5),
-                "n_shapelet_samples": 50,
-                "max_shapelets": 10,
-                "batch_size": 10,
-            }
-        else:
-            return {
-                "estimator": RotationForestClassifier(n_estimators=2),
-                "n_shapelet_samples": 10,
-                "max_shapelets": 3,
-                "batch_size": 5,
-                "save_transformed_data": True,
-            }
+        return {
+            "estimator": RotationForestClassifier(n_estimators=2),
+            "n_shapelet_samples": 10,
+            "max_shapelets": 3,
+            "batch_size": 5,
+        }

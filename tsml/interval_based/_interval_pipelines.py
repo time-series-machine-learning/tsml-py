@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-"""Random Interval Classifier.
+"""Interval Extraction Pipeline Estimators.
 
-Pipeline classifier using summary statistics extracted from random intervals and an
-estimator.
+Pipeline estimators using summary statistics extracted from random or supervised
+ intervals and an estimator.
 """
 
 __author__ = ["MatthewMiddlehurst"]
@@ -12,119 +11,169 @@ __all__ = [
     "SupervisedIntervalClassifier",
 ]
 
+from typing import List, Union
+
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
-from tsml.transformations._catch22 import Catch22Transformer
-from tsml.transformations._interval_extraction import RandomIntervalTransformer
+from tsml.transformations._interval_extraction import (
+    RandomIntervalTransformer,
+    SupervisedIntervalTransformer,
+)
 from tsml.utils.validation import check_n_jobs
-from tsml.vector import RotationForestClassifier
 
 
 class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     """Random Interval Classifier.
 
-    This classifier simply transforms the input data using the RandomIntervals
-    transformer and builds a provided estimator using the transformed data.
+    Extracts multiple intervals with random length, position and dimension from series
+    qnd concatenates them into a feature vector. Builds an estimator on the
+    transformed data.
 
     Parameters
     ----------
     n_intervals : int, default=100,
         The number of intervals of random length, position and dimension to be
         extracted.
-    interval_transformers : transformer or list of transformers, default=None,
-        Transformer(s) used to extract features from each interval. If None, defaults to
-        the Catch22 transformer.
-    estimator : sklearn classifier, default=None
-        An sklearn estimator to be built using the transformed data. Defaults to a
-        Rotation Forest with 200 trees.
+    min_interval_length : int, default=3
+        The minimum length of extracted intervals. Minimum value of 3.
+    max_interval_length : int, default=3
+        The maximum length of extracted intervals. Minimum value of min_interval_length.
+    features : TransformerMixin, a function taking a 2d numpy array parameter, or list
+            of said transformers and functions, default=None
+        Transformers and functions used to extract features from selected intervals.
+        If None, defaults to [mean, median, min, max, std, 25% quantile, 75% quantile]
+    dilation : int, list or None, default=None
+        Add dilation to extracted intervals. No dilation is added if None or 1. If a
+        list of ints, a random dilation value is selected from the list for each
+        interval.
+
+        The dilation value is selected after the interval star and end points. If the
+        number of values in the dilated interval is less than the min_interval_length,
+        the amount of dilation applied is reduced.
+    estimator : sklearn classifier, optional, default=None
+        An sklearn estimator to be built using the transformed data.
+        Defaults to sklearn RandomForestClassifier(n_estimators=200)
+    random_state : None, int or instance of RandomState, default=None
+        Seed or RandomState object used for random number generation.
+        If random_state is None, use the RandomState singleton used by np.random.
+        If random_state is an int, use a new RandomState instance seeded with seed.
     n_jobs : int, default=1
-        The number of jobs to run in parallel for both `fit` and `predict`.
-        ``-1`` means using all processors.
-    random_state : int or None, default=None
-        Seed for random, integer.
+        The number of jobs to run in parallel for both `fit` and `transform` functions.
+        `-1` means using all processors.
+    parallel_backend : str, ParallelBackendBase instance or None, default=None
+        Specify the parallelisation backend implementation in joblib, if None a 'prefer'
+        value of "threads" is used by default.
+        Valid options are "loky", "multiprocessing", "threading" or a custom backend.
+        See the joblib Parallel documentation for more details.
 
     Attributes
     ----------
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels : int
+        The number of dimensions per case in the training set.
+    n_timepoints : int
+        The length of each series in the training set.
     n_classes_ : int
         Number of classes. Extracted from the data.
-    classes_ : ndarray of shape (n_classes)
+    classes_ : ndarray of shape (n_classes_)
         Holds the label for each class.
+    class_dictionary_ : dict
+        A dictionary mapping class labels to class indices in classes_.
 
     See Also
     --------
-    RandomIntervals
+    RandomIntervalTransformer
+    RandomIntervalRegressor
+    SupervisedIntervalClassifier
+
+    Examples
+    --------
+    >>> from tsml.interval_based import RandomIntervalClassifier
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
+    >>> clf = RandomIntervalClassifier(random_state=0)
+    >>> clf.fit(X, y)
+    RandomIntervalClassifier(...)
+    >>> clf.predict(X)
+    array([0, 1, 1, 0, 0, 1, 0, 1])
     """
 
     def __init__(
         self,
         n_intervals=100,
-        interval_transformers=None,
+        min_interval_length=3,
+        max_interval_length=np.inf,
+        features=None,
+        dilation=None,
         estimator=None,
         n_jobs=1,
         random_state=None,
+        parallel_backend=None,
     ):
         self.n_intervals = n_intervals
-        self.interval_transformers = interval_transformers
+        self.min_interval_length = min_interval_length
+        self.max_interval_length = max_interval_length
+        self.features = features
+        self.dilation = dilation
         self.estimator = estimator
-
-        self.n_jobs = n_jobs
         self.random_state = random_state
+        self.n_jobs = n_jobs
+        self.parallel_backend = parallel_backend
 
         super(RandomIntervalClassifier, self).__init__()
 
-    def fit(self, X, y):
-        """Fit a pipeline on cases (X,y), where y is the target variable.
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_" and sets is_fitted flag to True.
         """
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, ensure_min_series_length=3
         )
         X = self._convert_X(X)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
         for index, class_val in enumerate(self.classes_):
             self.class_dictionary_[class_val] = index
 
-        self._n_jobs = check_n_jobs(self.n_jobs)
+        if self.n_classes_ == 1:
+            return self
 
-        interval_transformers = (
-            Catch22Transformer(catch24=True, outlier_norm=True, replace_nans=True)
-            if self.interval_transformers is None
-            else self.interval_transformers
-        )
+        self._n_jobs = check_n_jobs(self.n_jobs)
 
         self._transformer = RandomIntervalTransformer(
             n_intervals=self.n_intervals,
-            features=interval_transformers,
+            min_interval_length=self.min_interval_length,
+            max_interval_length=self.max_interval_length,
+            features=self.features,
+            dilation=self.dilation,
             random_state=self.random_state,
             n_jobs=self._n_jobs,
+            parallel_backend=self.parallel_backend,
         )
 
         self._estimator = _clone_estimator(
-            RotationForestClassifier() if self.estimator is None else self.estimator,
+            RandomForestClassifier(n_estimators=200)
+            if self.estimator is None
+            else self.estimator,
             self.random_state,
         )
 
@@ -137,40 +186,48 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
-        """Predict class values of n instances in X.
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predictions for.
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
+        y : array-like of shape (n_instances)
             Predicted class labels.
         """
         check_is_fitted(self)
+
+        # treat case of single class seen in fit
+        if self.n_classes_ == 1:
+            return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
         X = self._convert_X(X)
 
         return self._estimator.predict(self._transformer.transform(X))
 
-    def predict_proba(self, X) -> np.ndarray:
-        """Predict class probabilities for n instances in X.
+    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predict probabilities for.
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances, n_classes_]
+        y : array-like of shape (n_instances, n_classes_)
             Predicted probabilities using the ordering in classes_.
         """
         check_is_fitted(self)
+
+        # treat case of single class seen in fit
+        if self.n_classes_ == 1:
+            return np.repeat([[1]], X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
         X = self._convert_X(X)
@@ -186,155 +243,166 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return dists
 
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
-        from sklearn.ensemble import RandomForestClassifier
+        from tsml.utils.numba_functions.stats import row_mean, row_numba_min
 
-        if parameter_set == "results_comparison":
-            return {
-                "n_intervals": 5,
-                "estimator": RandomForestClassifier(n_estimators=10),
-                "interval_transformers": Catch22Transformer(
-                    catch24=True,
-                    replace_nans=True,
-                    features=(
-                        "Mean",
-                        "DN_HistogramMode_5",
-                        "SB_BinaryStats_mean_longstretch1",
-                    ),
-                ),
-            }
-        else:
-            return {
-                "n_intervals": 3,
-                "estimator": RandomForestClassifier(n_estimators=2),
-                "interval_transformers": Catch22Transformer(
-                    catch24=True,
-                    replace_nans=True,
-                    features=(
-                        "Mean",
-                        "DN_HistogramMode_5",
-                        "SB_BinaryStats_mean_longstretch1",
-                    ),
-                ),
-            }
+        return {
+            "n_intervals": 2,
+            "estimator": RandomForestClassifier(n_estimators=2),
+            "features": [row_mean, row_numba_min],
+        }
 
 
 class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
-    """Random Interval Classifier.
+    """Random Interval Regressor.
 
-    This classifier simply transforms the input data using the RandomIntervals
-    transformer and builds a provided estimator using the transformed data.
+    Extracts multiple intervals with random length, position and dimension from series
+    and concatenates them into a feature vector. Builds an estimator on the
+    transformed data.
 
     Parameters
     ----------
     n_intervals : int, default=100,
         The number of intervals of random length, position and dimension to be
         extracted.
-    interval_transformers : transformer or list of transformers, default=None,
-        Transformer(s) used to extract features from each interval. If None, defaults to
-        the Catch22 transformer.
-    estimator : sklearn classifier, default=None
-        An sklearn estimator to be built using the transformed data. Defaults to a
-        Rotation Forest with 200 trees.
+    min_interval_length : int, default=3
+        The minimum length of extracted intervals. Minimum value of 3.
+    max_interval_length : int, default=3
+        The maximum length of extracted intervals. Minimum value of min_interval_length.
+    features : TransformerMixin, a function taking a 2d numpy array parameter, or list
+            of said transformers and functions, default=None
+        Transformers and functions used to extract features from selected intervals.
+        If None, defaults to [mean, median, min, max, std, 25% quantile, 75% quantile]
+    dilation : int, list or None, default=None
+        Add dilation to extracted intervals. No dilation is added if None or 1. If a
+        list of ints, a random dilation value is selected from the list for each
+        interval.
+
+        The dilation value is selected after the interval star and end points. If the
+        number of values in the dilated interval is less than the min_interval_length,
+        the amount of dilation applied is reduced.
+    estimator : sklearn regressor, optional, default=None
+        An sklearn estimator to be built using the transformed data.
+        Defaults to sklearn RandomForestRegressor(n_estimators=200)
+    random_state : None, int or instance of RandomState, default=None
+        Seed or RandomState object used for random number generation.
+        If random_state is None, use the RandomState singleton used by np.random.
+        If random_state is an int, use a new RandomState instance seeded with seed.
     n_jobs : int, default=1
-        The number of jobs to run in parallel for both `fit` and `predict`.
-        ``-1`` means using all processors.
-    random_state : int or None, default=None
-        Seed for random, integer.
+        The number of jobs to run in parallel for both `fit` and `transform` functions.
+        `-1` means using all processors.
+    parallel_backend : str, ParallelBackendBase instance or None, default=None
+        Specify the parallelisation backend implementation in joblib, if None a 'prefer'
+        value of "threads" is used by default.
+        Valid options are "loky", "multiprocessing", "threading" or a custom backend.
+        See the joblib Parallel documentation for more details.
 
     Attributes
     ----------
-    n_classes_ : int
-        Number of classes. Extracted from the data.
-    classes_ : ndarray of shape (n_classes)
-        Holds the label for each class.
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels_ : int
+        The number of dimensions per case in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set.
 
     See Also
     --------
-    RandomIntervals
+    RandomIntervalTransformer
+    RandomIntervalClassifier
+
+    Examples
+    --------
+    >>> from tsml.interval_based import RandomIntervalRegressor
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10,
+    ...                              regression_target=True, random_state=0)
+    >>> reg = RandomIntervalRegressor(random_state=0)
+    >>> reg.fit(X, y)
+    RandomIntervalRegressor(...)
+    >>> reg.predict(X)
+    array([0.46836751, 1.32023847, 1.13355919, 0.63979608, 0.58309353,
+           1.18197903, 0.57859747, 1.0772939 ])
     """
 
     def __init__(
         self,
         n_intervals=100,
-        interval_transformers=None,
+        min_interval_length=3,
+        max_interval_length=np.inf,
+        features=None,
+        dilation=None,
         estimator=None,
         n_jobs=1,
         random_state=None,
+        parallel_backend=None,
     ):
         self.n_intervals = n_intervals
-        self.interval_transformers = interval_transformers
+        self.min_interval_length = min_interval_length
+        self.max_interval_length = max_interval_length
+        self.features = features
+        self.dilation = dilation
         self.estimator = estimator
-
-        self.n_jobs = n_jobs
         self.random_state = random_state
+        self.n_jobs = n_jobs
+        self.parallel_backend = parallel_backend
 
         super(RandomIntervalRegressor, self).__init__()
 
-    def fit(self, X, y):
-        """Fit a pipeline on cases (X,y), where y is the target variable.
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The target labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_" and sets is_fitted flag to True.
         """
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, ensure_min_series_length=3
         )
         X = self._convert_X(X)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
 
         self._n_jobs = check_n_jobs(self.n_jobs)
 
-        interval_transformers = (
-            Catch22Transformer(catch24=True, outlier_norm=True, replace_nans=True)
-            if self.interval_transformers is None
-            else self.interval_transformers
-        )
-
         self._transformer = RandomIntervalTransformer(
             n_intervals=self.n_intervals,
-            features=interval_transformers,
+            min_interval_length=self.min_interval_length,
+            max_interval_length=self.max_interval_length,
+            features=self.features,
+            dilation=self.dilation,
             random_state=self.random_state,
             n_jobs=self._n_jobs,
+            parallel_backend=self.parallel_backend,
         )
 
         self._estimator = _clone_estimator(
-            RandomForestRegressor() if self.estimator is None else self.estimator,
+            RandomForestRegressor(n_estimators=200)
+            if self.estimator is None
+            else self.estimator,
             self.random_state,
         )
 
@@ -347,18 +415,18 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
-        """Predict class values of n instances in X.
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predictions for.
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
-            Predicted class labels.
+        y : array-like of shape (n_instances)
+            Predicted target labels.
         """
         check_is_fitted(self)
 
@@ -368,158 +436,187 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         return self._estimator.predict(self._transformer.transform(X))
 
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
-        if parameter_set == "results_comparison":
-            return {
-                "n_intervals": 5,
-                "estimator": RandomForestRegressor(n_estimators=10),
-                "interval_transformers": Catch22Transformer(
-                    catch24=True,
-                    replace_nans=True,
-                    features=(
-                        "Mean",
-                        "DN_HistogramMode_5",
-                        "SB_BinaryStats_mean_longstretch1",
-                    ),
-                ),
-            }
-        else:
-            return {
-                "n_intervals": 3,
-                "estimator": RandomForestRegressor(n_estimators=2),
-                "interval_transformers": Catch22Transformer(
-                    catch24=True,
-                    replace_nans=True,
-                    features=(
-                        "Mean",
-                        "DN_HistogramMode_5",
-                        "SB_BinaryStats_mean_longstretch1",
-                    ),
-                ),
-            }
+        from tsml.utils.numba_functions.stats import row_mean, row_numba_min
+
+        return {
+            "n_intervals": 3,
+            "estimator": RandomForestRegressor(n_estimators=2),
+            "features": [row_mean, row_numba_min],
+        }
 
 
 class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
-    """Random Interval Classifier.
+    """Supervised Interval Classifier.
 
-    This classifier simply transforms the input data using the RandomIntervals
-    transformer and builds a provided estimator using the transformed data.
+    Extracts multiple intervals from series with using a supervised process
+    and concatenates them into a feature vector. Builds an estimator on the
+    transformed data.
 
     Parameters
     ----------
-    n_intervals : int, default=100,
-        The number of intervals of random length, position and dimension to be
-        extracted.
-    interval_transformers : transformer or list of transformers, default=None,
-        Transformer(s) used to extract features from each interval. If None, defaults to
-        the Catch22 transformer.
-    estimator : sklearn classifier, default=None
-        An sklearn estimator to be built using the transformed data. Defaults to a
-        Rotation Forest with 200 trees.
+    n_intervals : int, default=50
+        The number of times the supervised interval selection process is run. This
+        process will extract more then one interval per run.
+        Each supervised extraction will output a varying amount of features based on
+        series length, number of dimensions and the number of features.
+    min_interval_length : int, default=3
+        The minimum length of extracted intervals. Minimum value of 3.
+    features : callable, list of callables, default=None
+        Functions used to extract features from selected intervals. Must take a 2d
+        array of shape (n_instances, interval_length) and return a 1d array of shape
+        (n_instances) containing the features.
+        If None, defaults to the following statistics used in [2]:
+        [mean, median, std, slope, min, max, iqr, count_mean_crossing,
+        count_above_mean].
+    metric : ["fisher"] or callable, default="fisher"
+        The metric used to evaluate the usefulness of a feature extracted on an
+        interval. If "fisher", the Fisher score is used. If a callable, it must take
+        a 1d array of shape (n_instances) and return a 1d array of scores of shape
+        (n_instances).
+    randomised_split_point : bool, default=True
+        If True, the split point for interval extraction is randomised as is done in [2]
+        rather than split in half.
+    normalise_for_search : bool, default=True
+        If True, the data is normalised for the supervised interval search process.
+        Features extracted for the transform output will not use normalised data.
+    estimator : sklearn classifier, optional, default=None
+        An sklearn estimator to be built using the transformed data.
+        Defaults to sklearn RandomForestClassifier(n_estimators=200)
+    random_state : None, int or instance of RandomState, default=None
+        Seed or RandomState object used for random number generation.
+        If random_state is None, use the RandomState singleton used by np.random.
+        If random_state is an int, use a new RandomState instance seeded with seed.
     n_jobs : int, default=1
-        The number of jobs to run in parallel for both `fit` and `predict`.
-        ``-1`` means using all processors.
-    random_state : int or None, default=None
-        Seed for random, integer.
+        The number of jobs to run in parallel for both `fit` and `transform` functions.
+        `-1` means using all processors.
+    parallel_backend : str, ParallelBackendBase instance or None, default=None
+        Specify the parallelisation backend implementation in joblib, if None a 'prefer'
+        value of "threads" is used by default.
+        Valid options are "loky", "multiprocessing", "threading" or a custom backend.
+        See the joblib Parallel documentation for more details.
 
     Attributes
     ----------
+    n_instances_ : int
+        The number of train cases in the training set.
+    n_channels_ : int
+        The number of dimensions per case in the training set.
+    n_timepoints_ : int
+        The length of each series in the training set.
     n_classes_ : int
         Number of classes. Extracted from the data.
-    classes_ : ndarray of shape (n_classes)
+    classes_ : ndarray of shape (n_classes_)
         Holds the label for each class.
+    class_dictionary_ : dict
+        A dictionary mapping class labels to class indices in classes_.
 
     See Also
     --------
-    RandomIntervals
+    SupervisedIntervalTransformer
+    RandomIntervalClassifier
+
+    Examples
+    --------
+    >>> from tsml.interval_based import SupervisedIntervalClassifier
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
+    >>> clf = SupervisedIntervalClassifier(random_state=0)
+    >>> clf.fit(X, y)
+    SupervisedIntervalClassifier(...)
+    >>> clf.predict(X)
+    array([0, 1, 1, 0, 0, 1, 0, 1])
     """
 
     def __init__(
         self,
         n_intervals=50,
-        interval_transformers=None,
+        min_interval_length=3,
+        features=None,
+        metric="fisher",
+        randomised_split_point=True,
+        normalise_for_search=True,
         estimator=None,
-        n_jobs=1,
         random_state=None,
+        n_jobs=1,
+        parallel_backend=None,
     ):
         self.n_intervals = n_intervals
-        self.interval_transformers = interval_transformers
+        self.min_interval_length = min_interval_length
+        self.features = features
+        self.metric = metric
+        self.randomised_split_point = randomised_split_point
+        self.normalise_for_search = normalise_for_search
         self.estimator = estimator
-
-        self.n_jobs = n_jobs
         self.random_state = random_state
+        self.n_jobs = n_jobs
+        self.parallel_backend = parallel_backend
 
         super(SupervisedIntervalClassifier, self).__init__()
 
-    def fit(self, X, y):
-        """Fit a pipeline on cases (X,y), where y is the target variable.
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
             The training data.
-        y : array-like, shape = [n_instances]
-            The class labels.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
 
         Returns
         -------
         self :
             Reference to self.
-
-        Notes
-        -----
-        Changes state by creating a fitted model that updates attributes
-        ending in "_" and sets is_fitted flag to True.
         """
         X, y = self._validate_data(
             X=X, y=y, ensure_min_samples=2, ensure_min_series_length=7
         )
         X = self._convert_X(X)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+        self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
         self.classes_ = np.unique(y)
         self.n_classes_ = self.classes_.shape[0]
         self.class_dictionary_ = {}
         for index, class_val in enumerate(self.classes_):
             self.class_dictionary_[class_val] = index
 
+        if self.n_classes_ == 1:
+            return self
+
         self._n_jobs = check_n_jobs(self.n_jobs)
 
-        interval_transformers = (
-            Catch22Transformer(catch24=True, outlier_norm=True, replace_nans=True)
-            if self.interval_transformers is None
-            else self.interval_transformers
-        )
-
-        self._transformer = RandomIntervalTransformer(
+        self._transformer = SupervisedIntervalTransformer(
             n_intervals=self.n_intervals,
-            features=interval_transformers,
+            min_interval_length=self.min_interval_length,
+            features=self.features,
+            metric=self.metric,
+            randomised_split_point=self.randomised_split_point,
+            normalise_for_search=self.normalise_for_search,
             random_state=self.random_state,
-            n_jobs=self._n_jobs,
+            n_jobs=self.n_jobs,
+            parallel_backend=self.parallel_backend,
         )
 
         self._estimator = _clone_estimator(
-            RotationForestClassifier() if self.estimator is None else self.estimator,
+            RandomForestClassifier(n_estimators=200)
+            if self.estimator is None
+            else self.estimator,
             self.random_state,
         )
 
@@ -532,40 +629,48 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X) -> np.ndarray:
-        """Predict class values of n instances in X.
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predictions for.
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances]
+        y : array-like of shape (n_instances)
             Predicted class labels.
         """
         check_is_fitted(self)
+
+        # treat case of single class seen in fit
+        if self.n_classes_ == 1:
+            return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=7)
         X = self._convert_X(X)
 
         return self._estimator.predict(self._transformer.transform(X))
 
-    def predict_proba(self, X) -> np.ndarray:
-        """Predict class probabilities for n instances in X.
+    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
 
         Parameters
         ----------
-        X : 3D np.array of shape = [n_instances, n_dimensions, series_length]
-            The data to make predict probabilities for.
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
 
         Returns
         -------
-        y : array-like, shape = [n_instances, n_classes_]
+        y : array-like of shape (n_instances, n_classes_)
             Predicted probabilities using the ordering in classes_.
         """
         check_is_fitted(self)
+
+        # treat case of single class seen in fit
+        if self.n_classes_ == 1:
+            return np.repeat([[1]], X.shape[0], axis=0)
 
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=7)
         X = self._convert_X(X)
@@ -581,54 +686,26 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return dists
 
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
-        from sklearn.ensemble import RandomForestClassifier
+        from tsml.utils.numba_functions.stats import row_mean, row_numba_min
 
-        if parameter_set == "results_comparison":
-            return {
-                "n_intervals": 5,
-                "estimator": RandomForestClassifier(n_estimators=10),
-                "interval_transformers": Catch22Transformer(
-                    catch24=True,
-                    replace_nans=True,
-                    features=(
-                        "Mean",
-                        "DN_HistogramMode_5",
-                        "SB_BinaryStats_mean_longstretch1",
-                    ),
-                ),
-            }
-        else:
-            return {
-                "n_intervals": 3,
-                "estimator": RandomForestClassifier(n_estimators=2),
-                "interval_transformers": Catch22Transformer(
-                    catch24=True,
-                    replace_nans=True,
-                    features=(
-                        "Mean",
-                        "DN_HistogramMode_5",
-                        "SB_BinaryStats_mean_longstretch1",
-                    ),
-                ),
-            }
+        return {
+            "n_intervals": 1,
+            "estimator": RandomForestClassifier(n_estimators=2),
+            "features": [row_mean, row_numba_min],
+        }

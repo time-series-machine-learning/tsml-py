@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """Unit tests for tsml interface."""
 import numpy as np
 import pytest
 
 from tsml.base import BaseTimeSeriesEstimator
-from tsml.dummy import DummyClassifier
-from tsml.interval_based import CIFClassifier
-from tsml.transformations import Catch22Transformer
 from tsml.utils.testing import (
     generate_2d_test_data,
     generate_3d_test_data,
@@ -71,7 +67,7 @@ class _3dArrayDummy(BaseTimeSeriesEstimator):
     def __init__(self):
         super(_3dArrayDummy, self).__init__()
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {"X_types": ["3darray"]}
 
 
@@ -79,7 +75,7 @@ class _2dArrayDummy(BaseTimeSeriesEstimator):
     def __init__(self):
         super(_2dArrayDummy, self).__init__()
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {"X_types": ["2darray"]}
 
 
@@ -87,5 +83,5 @@ class _NpListDummy(BaseTimeSeriesEstimator):
     def __init__(self):
         super(_NpListDummy, self).__init__()
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {"X_types": ["np_list"]}

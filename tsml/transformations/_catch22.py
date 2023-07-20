@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Catch22 features.
 
 A transformer for the Catch22 features.
@@ -81,15 +80,20 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
     outlier_norm : bool, optional, default=False
         Normalise each series during the two outlier Catch22 features, which can take a
         while to process for large values.
-    replace_nans : bool, optional, default=True
+    replace_nans : bool, optional, default=False
         Replace NaN or inf values from the Catch22 transform with 0.
-    use_pycatch22 : bool, optional, default=True
+    use_pycatch22 : bool, optional, default=False
         Wraps the C based pycatch22 implementation for tsml.
         (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
         ``pycatch22`` package to be installed if True.
     n_jobs : int, optional, default=1
-        The number of jobs to run in parallel for transform. Requires multiple input
+        The number of jobs to run in parallel for `transform`. Requires multiple input
         cases. ``-1`` means using all processors.
+    parallel_backend : str, ParallelBackendBase instance or None, default=None
+        Specify the parallelisation backend implementation in joblib, if None a 'prefer'
+        value of "threads" is used by default.
+        Valid options are "loky", "multiprocessing", "threading" or a custom backend.
+        See the joblib Parallel documentation for more details.
 
     See Also
     --------
@@ -112,6 +116,22 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
     .. [2] Fulcher, B. D., Little, M. A., & Jones, N. S. (2013). Highly comparative
     time-series analysis: the empirical structure of time series and their methods.
     Journal of the Royal Society Interface, 10(83), 20130048.
+
+    Examples
+    --------
+    >>> from tsml.transformations import Catch22Transformer
+    >>> from tsml.utils.testing import generate_3d_test_data
+    >>> X, _ = generate_3d_test_data(n_samples=4, series_length=10, random_state=0)
+    >>> tnf = Catch22Transformer(replace_nans=True)
+    >>> tnf.fit(X)
+    Catch22Transformer(...)
+    >>> print(tnf.transform(X)[0])
+    [1.15639532e+00 1.31700575e+00 3.00000000e+00 2.00000000e-01
+     0.00000000e+00 1.00000000e+00 2.00000000e+00 1.10933565e-32
+     1.96349541e+00 5.10744398e-01 2.33853577e-01 3.89048349e-01
+     2.00000000e+00 1.00000000e+00 4.00000000e+00 1.88915916e+00
+     1.00000000e+00 1.70859420e-01 0.00000000e+00 0.00000000e+00
+     2.46913580e-02 0.00000000e+00]
     """
 
     def __init__(
@@ -120,8 +140,9 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         catch24=False,
         outlier_norm=False,
         replace_nans=False,
-        use_pycatch22=True,
+        use_pycatch22=False,
         n_jobs=1,
+        parallel_backend=None,
     ):
         self.features = features
         self.catch24 = catch24
@@ -129,6 +150,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         self.replace_nans = replace_nans
         self.use_pycatch22 = use_pycatch22
         self.n_jobs = n_jobs
+        self.parallel_backend = parallel_backend
 
         if use_pycatch22:
             _check_optional_dependency("pycatch22", "pycatch22", self)
@@ -136,22 +158,25 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         super(Catch22Transformer, self).__init__()
 
     def fit(self, X, y=None):
+        """Unused. Validates X."""
         self._validate_data(X=X)
         return self
 
     def transform(self, X, y=None):
-        """Transform data into the Catch22 features.
+        """Transform X into the catch22 features.
 
         Parameters
         ----------
-        X : 3D numpy array of shape [n_instances, n_dimensions, n_features],
-            input time series panel.
-        y : ignored.
+        X : 3D np.array (any number of channels, equal length series)
+                of shape (n_instances, n_channels, n_timepoints)
+            or list of numpy arrays (any number of channels, unequal length series)
+                of shape [n_instances], 2D np.array (n_channels, n_timepoints_i), where
+                n_timepoints_i is length of series i
 
         Returns
         -------
-        c22 : Pandas DataFrame of shape [n_instances, c*n_dimensions] where c is the
-             number of features requested, containing Catch22 features for X.
+        Xt : array-like, shape = [n_instances, num_features*n_channels]
+            The catch22 features for each dimension.
         """
         X = self._validate_data(X=X, reset=False)
         X = self._convert_X(X)
@@ -215,7 +240,9 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
                 Catch22Transformer._PD_PeriodicityWang_th0_01,
             ]
 
-        c22_list = Parallel(n_jobs=threads_to_use)(
+        c22_list = Parallel(
+            n_jobs=threads_to_use, backend=self.parallel_backend, prefer="threads"
+        )(
             delayed(
                 self._transform_case_pycatch22
                 if self.use_pycatch22
@@ -359,6 +386,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
 
     @property
     def get_features_arguments(self):
+        """Return feature names for the estimators features argument."""
         return (
             self.features
             if self.features != "all"
@@ -369,7 +397,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
             )
         )
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict:
         return {
             "X_types": ["np_list", "3darray"],
             "requires_fit": False,

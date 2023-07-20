@@ -1,2 +1,3 @@
-recursive-include tsml *.py *.ts
+recursive-include tsml *.py
+recursive-include tsml/datasets *.ts
 include LICENSE

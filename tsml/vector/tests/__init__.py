@@ -1,2 +1,1 @@
-# -*- coding: utf-8 -*-
-"""sklearn estimator test code."""
+"""sklearn-like estimator test code."""

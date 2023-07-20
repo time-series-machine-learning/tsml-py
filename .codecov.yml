@@ -24,4 +24,3 @@ github_checks:
 ignore:
   - ".github/"
   - "docs/"
-  - "examples/"

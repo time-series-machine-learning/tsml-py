@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Shapelet based estimators."""
+"""Shapelet-based estimators."""
 
 __all__ = [
     "MrSQMClassifier",

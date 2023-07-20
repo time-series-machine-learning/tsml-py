@@ -1,4 +1,9 @@
-# -*- coding: utf-8 -*-
+"""Proximity Forest (PF) Classifier."""
+
+__author__ = ["MatthewMiddlehurst"]
+
+from typing import List, Union
+
 import numpy as np
 from sklearn.base import ClassifierMixin
 from sklearn.utils.multiclass import check_classification_targets
@@ -9,8 +14,9 @@ from tsml.utils.validation import _check_optional_dependency, check_n_jobs
 
 
 class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
-    """
-    Wrapper for https://github.com/wildboar-foundation/wildboar PF implementation.
+    """Proximity Forest (PF) Classifier.
+
+    Wrapper for the wildboar PF implementation.
     """
 
     def __init__(
@@ -27,8 +33,8 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         criterion="entropy",
         bootstrap=True,
         oob_score=False,
-        n_jobs=None,
         random_state=None,
+        n_jobs=None,
     ):
         self.n_estimators = n_estimators
         self.n_pivot = n_pivot
@@ -42,20 +48,34 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.criterion = criterion
         self.bootstrap = bootstrap
         self.oob_score = oob_score
-        self.n_jobs = n_jobs
         self.random_state = random_state
+        self.n_jobs = n_jobs
 
         _check_optional_dependency("wildboar", "wildboar", self)
 
         super(ProximityForestClassifier, self).__init__()
 
-    def fit(self, X, y):
+    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+        """Fit the estimator to training data.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+            The training data.
+        y : 1D np.ndarray of shape (n_instances)
+            The class labels for fitting, indices correspond to instance indices in X
+
+        Returns
+        -------
+        self :
+            Reference to self.
+        """
         X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
         X = self._convert_X(X)
 
         check_classification_targets(y)
 
-        self.n_instances_, self.n_dims_, self.series_length_ = (
+        self.n_instances_, self.n_channels_, self.n_timepoints_ = (
             X.shape if X.ndim == 3 else (X.shape[0], 1, X.shape[1])
         )
         self.classes_ = np.unique(y)
@@ -87,14 +107,26 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             min_impurity_decrease=self.min_impurity_decrease,
             criterion=self.criterion,
             bootstrap=self.bootstrap,
-            n_jobs=self.n_jobs,
             random_state=self.random_state,
+            n_jobs=self.n_jobs,
         )
         self.clf_.fit(X, y)
 
         return self
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances)
+            Predicted class labels.
+        """
         check_is_fitted(self)
 
         # treat case of single class seen in fit
@@ -109,7 +141,19 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict(X)
 
-    def predict_proba(self, X) -> np.ndarray:
+    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+        """Predicts labels probabilities for sequences in X.
+
+        Parameters
+        ----------
+        X : 3D np.array of shape (n_instances, n_channels, n_timepoints)
+            The testing data.
+
+        Returns
+        -------
+        y : array-like of shape (n_instances, n_classes_)
+            Predicted probabilities using the ordering in classes_.
+        """
         check_is_fitted(self)
 
         # treat case of single class seen in fit
@@ -124,29 +168,28 @@ class ProximityForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict_proba(X)
 
+    def _more_tags(self) -> dict:
+        return {
+            "optional_dependency": True,
+        }
+
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
+    def get_test_params(
+        cls, parameter_set: Union[str, None] = None
+    ) -> Union[dict, List[dict]]:
+        """Return unit test parameter settings for the estimator.
 
         Parameters
         ----------
-        parameter_set : str, default="default"
+        parameter_set : None or str, default=None
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
-            For classifiers, a "default" set of parameters should be provided for
-            general testing, and a "results_comparison" set for comparing against
-            previously recorded results if the general set does not produce suitable
-            probabilities to compare against.
 
         Returns
         -------
-        params : dict or list of dict, default={}
+        params : dict or list of dict
             Parameters to create testing instances of the class.
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
-
         return {
             "n_estimators": 2,
         }

@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""sklearn estimators."""
+"""sklearn-like vector estimators."""
 
 __all__ = [
     "RotationForestClassifier",
