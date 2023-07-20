@@ -164,7 +164,7 @@ def _get_check_estimator_ids(obj):
     if hasattr(obj, "get_params"):
         with config_context(print_changed_only=True):
             s = re.sub(r"\s", "", str(obj))
-            return re.sub(r"CPUDispatcher\([^)]*\)", "func", s)
+            return re.sub(r"<function[^)]*>", "func", s)
 
 
 def generate_3d_test_data(
