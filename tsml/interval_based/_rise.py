@@ -163,7 +163,7 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
             replace_nan = 0
 
         interval_features = [
-            PeriodogramTransformer(use_pyfftw=True, pad_with="mean"),
+            PeriodogramTransformer(use_pyfftw=use_pyfftw, pad_with="mean"),
             AutocorrelationFunctionTransformer(
                 n_lags=acf_lag, min_values=acf_min_values
             ),
