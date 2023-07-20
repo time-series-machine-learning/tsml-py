@@ -110,8 +110,8 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     RandomIntervalTransformer(...)
     >>> print(tnf.transform(X)[0])
     [1.04753424 0.14925939 0.8473096  1.20552675 1.08976637 0.96853798
-    1.14764656 1.07628806 0.18170775 0.8473096  1.29178823 1.08976637
-    0.96853798 1.1907773 ]
+     1.14764656 1.07628806 0.18170775 0.8473096  1.29178823 1.08976637
+     0.96853798 1.1907773 ]
     """
 
     def __init__(
