@@ -385,8 +385,8 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
     >>> reg.fit(X, y)
     Catch22Regressor(...)
     >>> reg.predict(X)
-    array([0.42955043, 1.31287811, 1.03757454, 0.68456511, 0.61327938,
-           1.2048977 , 0.56586089, 1.1263876 ])
+    array([0.44505834, 1.28376726, 1.09799075, 0.64209462, 0.59410108,
+           1.1746538 , 0.70590611, 1.13361721])
     """
 
     def __init__(

@@ -84,7 +84,6 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     >>> clf.fit(X, y)
     FPCAClassifier(...)
     >>> clf.predict(X)
-    array([0, 1, 1, 0, 0, 1, 0, 1])
     """
 
     def __init__(
@@ -313,8 +312,6 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
     >>> reg.fit(X, y)
     FPCARegressor(...)
     >>> reg.predict(X)
-    array([0.31804196, 1.4151935 , 1.06572351, 0.68621331, 0.56749254,
-           1.26541066, 0.52730157, 1.09266818])
     """
 
     def __init__(

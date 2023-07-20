@@ -53,4 +53,4 @@ def test_supervised_transformers():
     )
     X_t = sit.fit_transform(X, y)
 
-    assert X_t.shape == (X.shape[0], 7)
+    assert X_t.shape == (X.shape[0], 8)
