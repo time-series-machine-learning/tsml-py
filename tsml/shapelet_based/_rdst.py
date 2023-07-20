@@ -292,6 +292,9 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
                 dists[i, self.class_dictionary_[preds[i]]] = 1
             return dists
 
+    def _more_tags(self) -> dict:
+        return {"non_deterministic": True}
+
     @classmethod
     def get_test_params(
         cls, parameter_set: Union[str, None] = None
@@ -515,6 +518,9 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         X_t = np.nan_to_num(X_t, nan=0.0, posinf=0.0, neginf=0.0)
 
         return self._estimator.predict(X_t)
+
+    def _more_tags(self) -> dict:
+        return {"non_deterministic": True}
 
     @classmethod
     def get_test_params(

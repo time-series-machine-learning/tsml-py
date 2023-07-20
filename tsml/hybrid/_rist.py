@@ -67,6 +67,13 @@ class RISTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         A list or tuple of transformers will extract intervals from
         all transformations concatenate the output. Including None in the list or tuple
         will use the series as is for interval extraction.
+    use_pycatch22 : bool, optional, default=True
+        Wraps the C based pycatch22 implementation for aeon.
+        (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
+        ``pycatch22`` package to be installed if True.
+    use_pyfftw : bool, default=True
+        Whether to use the pyfftw library for FFT calculations. Requires the pyfftw
+        package to be installed.
     estimator : sklearn classifier, default=None
         An sklearn estimator to be built using the transformed data. Defaults to an
         ExtraTreesClassifier with 200 trees.
@@ -117,8 +124,8 @@ class RISTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         n_intervals=None,
         n_shapelets=None,
         series_transformers="default",
-        use_pyfftw=False,
-        use_pycatch22=False,
+        use_pycatch22=True,
+        use_pyfftw=True,
         estimator=None,
         n_jobs=1,
         random_state=None,
@@ -126,8 +133,8 @@ class RISTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.n_intervals = n_intervals
         self.n_shapelets = n_shapelets
         self.series_transformers = series_transformers
-        self.use_pyfftw = use_pyfftw
         self.use_pycatch22 = use_pycatch22
+        self.use_pyfftw = use_pyfftw
         self.estimator = estimator
         self.random_state = random_state
         self.n_jobs = n_jobs
@@ -251,6 +258,7 @@ class RISTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     def _more_tags(self) -> dict:
         return {
             "optional_dependency": self.use_pycatch22 or self.use_pyfftw,
+            "non_deterministic": True,
         }
 
     @classmethod
@@ -315,6 +323,13 @@ class RISTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         A list or tuple of transformers will extract intervals from
         all transformations concatenate the output. Including None in the list or tuple
         will use the series as is for interval extraction.
+    use_pycatch22 : bool, optional, default=True
+        Wraps the C based pycatch22 implementation for aeon.
+        (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
+        ``pycatch22`` package to be installed if True.
+    use_pyfftw : bool, default=True
+        Whether to use the pyfftw library for FFT calculations. Requires the pyfftw
+        package to be installed.
     estimator : sklearn classifier, default=None
         An sklearn estimator to be built using the transformed data. Defaults to an
         ExtraTreesRegressor with 200 trees.
@@ -361,8 +376,8 @@ class RISTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         n_intervals=None,
         n_shapelets=None,
         series_transformers="default",
-        use_pyfftw=False,
-        use_pycatch22=False,
+        use_pycatch22=True,
+        use_pyfftw=True,
         estimator=None,
         n_jobs=1,
         random_state=None,
@@ -370,8 +385,8 @@ class RISTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self.n_intervals = n_intervals
         self.n_shapelets = n_shapelets
         self.series_transformers = series_transformers
-        self.use_pyfftw = use_pyfftw
         self.use_pycatch22 = use_pycatch22
+        self.use_pyfftw = use_pyfftw
         self.estimator = estimator
         self.random_state = random_state
         self.n_jobs = n_jobs
@@ -458,6 +473,7 @@ class RISTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
     def _more_tags(self) -> dict:
         return {
             "optional_dependency": self.use_pycatch22 or self.use_pyfftw,
+            "non_deterministic": True,
         }
 
     @classmethod

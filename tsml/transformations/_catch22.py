@@ -82,7 +82,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         while to process for large values.
     replace_nans : bool, optional, default=False
         Replace NaN or inf values from the Catch22 transform with 0.
-    use_pycatch22 : bool, optional, default=False
+    use_pycatch22 : bool, optional, default=True
         Wraps the C based pycatch22 implementation for tsml.
         (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
         ``pycatch22`` package to be installed if True.
@@ -140,7 +140,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         catch24=False,
         outlier_norm=False,
         replace_nans=False,
-        use_pycatch22=False,
+        use_pycatch22=True,
         n_jobs=1,
         parallel_backend=None,
     ):
