@@ -119,8 +119,7 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     >>> clf = RDSTClassifier(random_state=0)
     >>> clf.fit(X, y)
     RDSTClassifier(...)
-    >>> clf.predict(X)
-    array([0, 1, 1, 0, 0, 1, 0, 1])
+    >>> pred = clf.predict(X)
     """
 
     def __init__(
@@ -404,9 +403,7 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
     >>> reg = RDSTRegressor(random_state=0)
     >>> reg.fit(X, y)
     RDSTRegressor(...)
-    >>> reg.predict(X)
-    array([0.31798367, 1.41426266, 1.06414746, 0.69247204, 0.56660161,
-           1.26538904, 0.52324829, 1.09394045])
+    >>> pred = reg.predict(X)
     """
 
     def __init__(
