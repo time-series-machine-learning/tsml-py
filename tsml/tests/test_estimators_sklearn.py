@@ -1080,6 +1080,10 @@ def check_regressors_int(name, regressor_orig):
     pred1 = regressor_1.predict(X)
     regressor_2.fit(X, y.astype(float))
     pred2 = regressor_2.predict(X)
+
+    if _safe_tags(regressor_orig, key="non_deterministic"):
+        raise SkipTest(name + " is non deterministic")
+
     assert_allclose(pred1, pred2, atol=1e-2, err_msg=name)
 
 
