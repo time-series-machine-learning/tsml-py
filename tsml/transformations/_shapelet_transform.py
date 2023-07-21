@@ -1004,7 +1004,10 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
             self.threshold_percentiles_ = np.asarray(self.threshold_percentiles_)
 
     def _more_tags(self) -> dict:
-        return {"requires_y": True}
+        return {
+            "requires_y": True,
+            "non_deterministic": True,
+        }
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):

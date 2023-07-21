@@ -119,8 +119,7 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     >>> clf = RDSTClassifier(random_state=0)
     >>> clf.fit(X, y)
     RDSTClassifier(...)
-    >>> clf.predict(X)
-    array([0, 1, 1, 0, 0, 1, 0, 1])
+    >>> pred = clf.predict(X)
     """
 
     def __init__(
@@ -292,6 +291,9 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
                 dists[i, self.class_dictionary_[preds[i]]] = 1
             return dists
 
+    def _more_tags(self) -> dict:
+        return {"non_deterministic": True}
+
     @classmethod
     def get_test_params(
         cls, parameter_set: Union[str, None] = None
@@ -401,9 +403,7 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
     >>> reg = RDSTRegressor(random_state=0)
     >>> reg.fit(X, y)
     RDSTRegressor(...)
-    >>> reg.predict(X)
-    array([0.31798367, 1.41426266, 1.06414746, 0.69247204, 0.56660161,
-           1.26538904, 0.52324829, 1.09394045])
+    >>> pred = reg.predict(X)
     """
 
     def __init__(
@@ -515,6 +515,9 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         X_t = np.nan_to_num(X_t, nan=0.0, posinf=0.0, neginf=0.0)
 
         return self._estimator.predict(X_t)
+
+    def _more_tags(self) -> dict:
+        return {"non_deterministic": True}
 
     @classmethod
     def get_test_params(

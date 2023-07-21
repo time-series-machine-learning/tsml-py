@@ -19,7 +19,7 @@ from sklearn import config_context
 from sklearn.base import BaseEstimator
 from sklearn.utils.estimator_checks import _maybe_mark_xfail, _yield_all_checks
 
-import tsml.tests.estimator_checks as ts_checks
+import tsml.tests.test_estimator_checks as ts_checks
 from tsml.base import BaseTimeSeriesEstimator
 from tsml.utils.discovery import all_estimators
 
@@ -164,7 +164,7 @@ def _get_check_estimator_ids(obj):
     if hasattr(obj, "get_params"):
         with config_context(print_changed_only=True):
             s = re.sub(r"\s", "", str(obj))
-            return re.sub(r"CPUDispatcher\([^)]*\)", "func", s)
+            return re.sub(r"<function[^)]*>", "func", s)
 
 
 def generate_3d_test_data(

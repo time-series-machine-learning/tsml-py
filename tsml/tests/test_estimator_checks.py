@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Checks for all estimators in tsml."""
 
 __author__ = ["MatthewMiddlehurst"]
@@ -17,7 +16,7 @@ from sklearn.utils.estimator_checks import (
     check_set_params,
 )
 
-import tsml.tests._sklearn_checks as patched_checks
+import tsml.tests.test_estimators_sklearn as patched_checks
 import tsml.utils.testing as test_utils
 from tsml.base import _clone_estimator
 from tsml.utils._tags import _safe_tags
@@ -32,6 +31,7 @@ def _yield_all_time_series_checks(estimator):
         warnings.warn(
             f"Explicit SKIP via _skip_test tag for estimator {name}.",
             SkipTestWarning,
+            stacklevel=2,
         )
         return
 
@@ -56,7 +56,6 @@ def _yield_all_time_series_checks(estimator):
 
 
 def _yield_checks(estimator):
-    """sklearn"""
     tags = _safe_tags(estimator)
 
     yield check_no_attributes_set_in_init
@@ -198,11 +197,11 @@ def check_estimator_input_types(name, estimator_orig):
     # test a single function with this priority
     def _get_func(est):
         if hasattr(est, "predict_proba"):
-            return getattr(est, "predict_proba")
+            return est.predict_proba
         elif hasattr(est, "predict"):
-            return getattr(est, "predict")
+            return est.predict
         elif hasattr(est, "transform"):
-            return getattr(est, "transform")
+            return est.transform
 
     X, y = test_utils.generate_3d_test_data()
     first_result = None
@@ -251,31 +250,37 @@ def check_estimator_input_types(name, estimator_orig):
 
 @ignore_warnings(category=FutureWarning)
 def check_fit3d_predict2d(name, estimator_orig):
+    """Todo."""
     pass
 
 
 @ignore_warnings(category=FutureWarning)
 def check_estimator_cannot_handle_multivariate_data(name, estimator_orig):
+    """Todo."""
     pass
 
 
 @ignore_warnings(category=FutureWarning)
 def check_estimator_handles_multivariate_data(name, estimator_orig):
+    """Todo."""
     pass
 
 
 @ignore_warnings(category=FutureWarning)
 def check_estimator_cannot_handle_unequal_data(name, estimator_orig):
+    """Todo."""
     pass
 
 
 @ignore_warnings(category=FutureWarning)
 def check_estimator_handles_unequal_data(name, estimator_orig):
+    """Todo."""
     pass
 
 
 @ignore_warnings(category=FutureWarning)
 def check_n_features_unequal(name, estimator_orig):
+    """Todo."""
     pass
 
 

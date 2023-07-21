@@ -52,7 +52,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         while to process for large values.
     replace_nans : bool, optional, default=True
         Replace NaN or inf values from the Catch22 transform with 0.
-    use_pycatch22 : bool, optional, default=False
+    use_pycatch22 : bool, optional, default=True
         Wraps the C based pycatch22 implementation for tsml.
         (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
         ``pycatch22`` package to be installed if True.
@@ -125,7 +125,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         catch24=True,
         outlier_norm=False,
         replace_nans=True,
-        use_pycatch22=False,
+        use_pycatch22=True,
         estimator=None,
         random_state=None,
         n_jobs=1,
@@ -385,8 +385,8 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
     >>> reg.fit(X, y)
     Catch22Regressor(...)
     >>> reg.predict(X)
-    array([0.42955043, 1.31287811, 1.03757454, 0.68456511, 0.61327938,
-           1.2048977 , 0.56586089, 1.1263876 ])
+    array([0.44505834, 1.28376726, 1.09799075, 0.64209462, 0.59410108,
+           1.1746538 , 0.70590611, 1.13361721])
     """
 
     def __init__(

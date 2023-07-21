@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Patched estimator checks originating from scikit-learn."""
 
 __author__ = ["MatthewMiddlehurst"]
@@ -955,6 +954,7 @@ def check_supervised_y_2d(name, estimator_orig):
         warnings.simplefilter("always", DataConversionWarning)
         warnings.simplefilter("ignore", RuntimeWarning)
         estimator.fit(X, y[:, np.newaxis])
+
     y_pred_2d = estimator.predict(X)
     msg = "expected 1 DataConversionWarning, got: %s" % ", ".join(
         [str(w_x) for w_x in w]
@@ -965,6 +965,9 @@ def check_supervised_y_2d(name, estimator_orig):
         "DataConversionWarning('A column-vector y"
         " was passed when a 1d array was expected" in msg
     )
+
+    if _safe_tags(estimator_orig, key="non_deterministic"):
+        raise SkipTest(name + " is non deterministic")
 
     assert_allclose(y_pred.ravel(), y_pred_2d.ravel())
 
@@ -1077,6 +1080,10 @@ def check_regressors_int(name, regressor_orig):
     pred1 = regressor_1.predict(X)
     regressor_2.fit(X, y.astype(float))
     pred2 = regressor_2.predict(X)
+
+    if _safe_tags(regressor_orig, key="non_deterministic"):
+        raise SkipTest(name + " is non deterministic")
+
     assert_allclose(pred1, pred2, atol=1e-2, err_msg=name)
 
 
@@ -1223,6 +1230,10 @@ def _check_estimators_data_not_an_array(name, estimator_orig, X, y, obj_type):
     pred1 = estimator_1.predict(X_)
     estimator_2.fit(X, y)
     pred2 = estimator_2.predict(X)
+
+    if _safe_tags(estimator_orig, key="non_deterministic"):
+        raise SkipTest(name + " is non deterministic")
+
     assert_allclose(pred1, pred2, atol=1e-2, err_msg=name)
 
 

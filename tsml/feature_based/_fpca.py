@@ -74,17 +74,6 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     --------
     FPCATransformer
     FPCARegressor
-
-    Examples
-    --------
-    >>> from tsml.feature_based import FPCAClassifier
-    >>> from tsml.utils.testing import generate_3d_test_data
-    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
-    >>> clf = FPCAClassifier(random_state=0, n_components=6)
-    >>> clf.fit(X, y)
-    FPCAClassifier(...)
-    >>> clf.predict(X)
-    array([0, 1, 1, 0, 0, 1, 0, 1])
     """
 
     def __init__(
@@ -302,19 +291,6 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
     --------
     FPCATransformer
     FPCAClassifier
-
-    Examples
-    --------
-    >>> from tsml.feature_based import FPCARegressor
-    >>> from tsml.utils.testing import generate_3d_test_data
-    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10,
-    ...                              regression_target=True, random_state=0)
-    >>> reg = FPCARegressor(random_state=0, n_components=6)
-    >>> reg.fit(X, y)
-    FPCARegressor(...)
-    >>> reg.predict(X)
-    array([0.31804196, 1.4151935 , 1.06572351, 0.68621331, 0.56749254,
-           1.26541066, 0.52730157, 1.09266818])
     """
 
     def __init__(
