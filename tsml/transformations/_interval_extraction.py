@@ -48,9 +48,10 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
     Parameters
     ----------
-    n_intervals : int, default=100,
+    n_intervals : int or callable, default=100,
         The number of intervals of random length, position and dimension to be
-        extracted.
+        extracted.  Input should be an int or a function that takes a 3D np.ndarray
+        input and returns an int.
     min_interval_length : int, default=3
         The minimum length of extracted intervals. Minimum value of 3.
     max_interval_length : int, default=3
@@ -150,7 +151,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 rng.randint(np.iinfo(np.int32).max),
                 True,
             )
-            for _ in range(self.n_intervals)
+            for _ in range(self._n_intervals)
         )
 
         (
@@ -176,7 +177,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 removed_idx.append(i)
 
         Xt = transformed_intervals[0]
-        for i in range(1, self.n_intervals):
+        for i in range(1, self._n_intervals):
             if i not in removed_idx:
                 Xt = np.hstack((Xt, transformed_intervals[i]))
 
@@ -260,6 +261,11 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         self._transform_features = None
 
         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+
+        if callable(self.n_intervals):
+            self._n_intervals = self.n_intervals(X)
+        else:
+            self._n_intervals = self.n_intervals
 
         self._min_interval_length = self.min_interval_length
         if self.min_interval_length < 3:

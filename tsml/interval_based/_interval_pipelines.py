@@ -35,9 +35,10 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
     Parameters
     ----------
-    n_intervals : int, default=100,
+    n_intervals : int or callable, default=100,
         The number of intervals of random length, position and dimension to be
-        extracted.
+        extracted.  Input should be an int or a function that takes a 3D np.ndarray
+        input and returns an int.
     min_interval_length : int, default=3
         The minimum length of extracted intervals. Minimum value of 3.
     max_interval_length : int, default=3
@@ -74,9 +75,9 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     ----------
     n_instances_ : int
         The number of train cases in the training set.
-    n_channels : int
+    n_channels_ : int
         The number of dimensions per case in the training set.
-    n_timepoints : int
+    n_timepoints_ : int
         The length of each series in the training set.
     n_classes_ : int
         Number of classes. Extracted from the data.
@@ -277,9 +278,10 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
     Parameters
     ----------
-    n_intervals : int, default=100,
+    n_intervals : int or callable, default=100,
         The number of intervals of random length, position and dimension to be
-        extracted.
+        extracted.  Input should be an int or a function that takes a 3D np.ndarray
+        input and returns an int.
     min_interval_length : int, default=3
         The minimum length of extracted intervals. Minimum value of 3.
     max_interval_length : int, default=3
