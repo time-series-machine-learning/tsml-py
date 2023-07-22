@@ -16,7 +16,8 @@ from typing import List, Union
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.utils.validation import check_is_fitted
+from sklearn.ensemble._base import _set_random_states
+from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
 from tsml.transformations._interval_extraction import (
@@ -47,6 +48,13 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             of said transformers and functions, default=None
         Transformers and functions used to extract features from selected intervals.
         If None, defaults to [mean, median, min, max, std, 25% quantile, 75% quantile]
+    series_transformers : TransformerMixin, list, tuple, or None, default=None
+        The transformers to apply to the series before extracting intervals and
+        shapelets. If None, use the series as is.
+
+        A list or tuple of transformers will extract intervals from
+        all transformations concatenate the output. Including None in the list or tuple
+        will use the series as is for interval extraction.
     dilation : int, list or None, default=None
         Add dilation to extracted intervals. No dilation is added if None or 1. If a
         list of ints, a random dilation value is selected from the list for each
@@ -110,6 +118,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         min_interval_length=3,
         max_interval_length=np.inf,
         features=None,
+        series_transformers=None,
         dilation=None,
         estimator=None,
         n_jobs=1,
@@ -120,6 +129,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.min_interval_length = min_interval_length
         self.max_interval_length = max_interval_length
         self.features = features
+        self.series_transformers = series_transformers
         self.dilation = dilation
         self.estimator = estimator
         self.random_state = random_state
@@ -159,17 +169,42 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return self
 
         self._n_jobs = check_n_jobs(self.n_jobs)
+        rng = check_random_state(self.random_state)
 
-        self._transformer = RandomIntervalTransformer(
-            n_intervals=self.n_intervals,
-            min_interval_length=self.min_interval_length,
-            max_interval_length=self.max_interval_length,
-            features=self.features,
-            dilation=self.dilation,
-            random_state=self.random_state,
-            n_jobs=self._n_jobs,
-            parallel_backend=self.parallel_backend,
-        )
+        if isinstance(self.series_transformers, (list, tuple)):
+            self._series_transformers = [
+                None if st is None else _clone_estimator(st, random_state=rng)
+                for st in self.series_transformers
+            ]
+        else:
+            self._series_transformers = [
+                None
+                if self.series_transformers is None
+                else _clone_estimator(self.series_transformers, random_state=rng)
+            ]
+
+        X_t = np.empty((X.shape[0], 0))
+        self._transformers = []
+        for st in self._series_transformers:
+            if st is not None:
+                s = st.fit_transform(X, y)
+            else:
+                s = X
+
+            ct = RandomIntervalTransformer(
+                n_intervals=self.n_intervals,
+                min_interval_length=self.min_interval_length,
+                max_interval_length=self.max_interval_length,
+                features=self.features,
+                dilation=self.dilation,
+                n_jobs=self._n_jobs,
+                parallel_backend=self.parallel_backend,
+            )
+            _set_random_states(ct, rng)
+            self._transformers.append(ct)
+            t = ct.fit_transform(s, y)
+
+            X_t = np.hstack((X_t, t))
 
         self._estimator = _clone_estimator(
             RandomForestClassifier(n_estimators=200)
@@ -182,7 +217,6 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if m is not None:
             self._estimator.n_jobs = self._n_jobs
 
-        X_t = self._transformer.fit_transform(X, y)
         self._estimator.fit(X_t, y)
 
         return self
@@ -209,7 +243,17 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
         X = self._convert_X(X)
 
-        return self._estimator.predict(self._transformer.transform(X))
+        X_t = np.empty((X.shape[0], 0))
+        for i, st in enumerate(self._series_transformers):
+            if st is not None:
+                s = st.transform(X)
+            else:
+                s = X
+
+            t = self._transformers[i].transform(s)
+            X_t = np.hstack((X_t, t))
+
+        return self._estimator.predict(X_t)
 
     def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
         """Predicts labels probabilities for sequences in X.
@@ -233,12 +277,22 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
         X = self._convert_X(X)
 
+        X_t = np.empty((X.shape[0], 0))
+        for i, st in enumerate(self._series_transformers):
+            if st is not None:
+                s = st.transform(X)
+            else:
+                s = X
+
+            t = self._transformers[i].transform(s)
+            X_t = np.hstack((X_t, t))
+
         m = getattr(self._estimator, "predict_proba", None)
         if callable(m):
-            return self._estimator.predict_proba(self._transformer.transform(X))
+            return self._estimator.predict_proba(X_t)
         else:
             dists = np.zeros((X.shape[0], self.n_classes_))
-            preds = self._estimator.predict(self._transformer.transform(X))
+            preds = self._estimator.predict(X_t)
             for i in range(0, X.shape[0]):
                 dists[i, self.class_dictionary_[preds[i]]] = 1
             return dists
@@ -290,6 +344,13 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             of said transformers and functions, default=None
         Transformers and functions used to extract features from selected intervals.
         If None, defaults to [mean, median, min, max, std, 25% quantile, 75% quantile]
+    series_transformers : TransformerMixin, list, tuple, or None, default=None
+        The transformers to apply to the series before extracting intervals and
+        shapelets. If None, use the series as is.
+
+        A list or tuple of transformers will extract intervals from
+        all transformations concatenate the output. Including None in the list or tuple
+        will use the series as is for interval extraction.
     dilation : int, list or None, default=None
         Add dilation to extracted intervals. No dilation is added if None or 1. If a
         list of ints, a random dilation value is selected from the list for each
@@ -338,8 +399,8 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
     >>> reg.fit(X, y)
     RandomIntervalRegressor(...)
     >>> reg.predict(X)
-    array([0.46836751, 1.32023847, 1.13355919, 0.63979608, 0.58309353,
-           1.18197903, 0.57859747, 1.0772939 ])
+    array([0.44924979, 1.31424037, 1.11951504, 0.63780969, 0.58123516,
+           1.17135463, 0.56450198, 1.10128837])
     """
 
     def __init__(
@@ -348,6 +409,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         min_interval_length=3,
         max_interval_length=np.inf,
         features=None,
+        series_transformers=None,
         dilation=None,
         estimator=None,
         n_jobs=1,
@@ -358,6 +420,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self.min_interval_length = min_interval_length
         self.max_interval_length = max_interval_length
         self.features = features
+        self.series_transformers = series_transformers
         self.dilation = dilation
         self.estimator = estimator
         self.random_state = random_state
@@ -389,17 +452,42 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
 
         self._n_jobs = check_n_jobs(self.n_jobs)
+        rng = check_random_state(self.random_state)
 
-        self._transformer = RandomIntervalTransformer(
-            n_intervals=self.n_intervals,
-            min_interval_length=self.min_interval_length,
-            max_interval_length=self.max_interval_length,
-            features=self.features,
-            dilation=self.dilation,
-            random_state=self.random_state,
-            n_jobs=self._n_jobs,
-            parallel_backend=self.parallel_backend,
-        )
+        if isinstance(self.series_transformers, (list, tuple)):
+            self._series_transformers = [
+                None if st is None else _clone_estimator(st, random_state=rng)
+                for st in self.series_transformers
+            ]
+        else:
+            self._series_transformers = [
+                None
+                if self.series_transformers is None
+                else _clone_estimator(self.series_transformers, random_state=rng)
+            ]
+
+        X_t = np.empty((X.shape[0], 0))
+        self._transformers = []
+        for st in self._series_transformers:
+            if st is not None:
+                s = st.fit_transform(X, y)
+            else:
+                s = X
+
+            ct = RandomIntervalTransformer(
+                n_intervals=self.n_intervals,
+                min_interval_length=self.min_interval_length,
+                max_interval_length=self.max_interval_length,
+                features=self.features,
+                dilation=self.dilation,
+                n_jobs=self._n_jobs,
+                parallel_backend=self.parallel_backend,
+            )
+            _set_random_states(ct, rng)
+            self._transformers.append(ct)
+            t = ct.fit_transform(s, y)
+
+            X_t = np.hstack((X_t, t))
 
         self._estimator = _clone_estimator(
             RandomForestRegressor(n_estimators=200)
@@ -412,7 +500,6 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         if m is not None:
             self._estimator.n_jobs = self._n_jobs
 
-        X_t = self._transformer.fit_transform(X, y)
         self._estimator.fit(X_t, y)
 
         return self
@@ -435,7 +522,17 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
         X = self._convert_X(X)
 
-        return self._estimator.predict(self._transformer.transform(X))
+        X_t = np.empty((X.shape[0], 0))
+        for i, st in enumerate(self._series_transformers):
+            if st is not None:
+                s = st.transform(X)
+            else:
+                s = X
+
+            t = self._transformers[i].transform(s)
+            X_t = np.hstack((X_t, t))
+
+        return self._estimator.predict(X_t)
 
     @classmethod
     def get_test_params(
