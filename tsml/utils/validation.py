@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Utilities for input validation"""
+"""Utilities for input validation."""
 
 __author__ = ["MatthewMiddlehurst"]
 __all__ = [
@@ -57,7 +56,12 @@ def check_n_jobs(n_jobs: int) -> int:
     elif not isinstance(n_jobs, (int, np.integer)):
         raise ValueError(f"`n_jobs` must be None or an integer, but found: {n_jobs}")
     elif n_jobs < 0:
-        return max(1, os.cpu_count() + 1 + n_jobs)
+        cpu_count = os.cpu_count()
+        if cpu_count is None:
+            warnings.warn("Could not detect CPU count. Setting `n_jobs` to 1.", stacklevel=2)
+            return 1
+        else:
+            return max(1, cpu_count + 1 + n_jobs)
     else:
         return n_jobs
 
@@ -96,7 +100,7 @@ def is_clusterer(estimator: BaseEstimator) -> bool:
     return getattr(estimator, "_estimator_type", None) == "clusterer"
 
 
-def _num_features(X: Union[np.ndarray, List[np.ndarray]]) -> Tuple[int]:
+def _num_features(X: Union[np.ndarray, List[np.ndarray]]) -> Tuple[int, int, int]:
     """Return the number of features of a 3D numpy array or a list of 2D numpy arrays.
 
     Returns

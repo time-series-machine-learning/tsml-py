@@ -11,6 +11,8 @@ __all__ = [
     "row_count_above_mean",
     "quantile",
     "row_quantile",
+    "quantiles",
+    "row_quantiles",
     "median",
     "row_median",
     "quantile25",
@@ -268,6 +270,74 @@ def row_quantile(X: np.ndarray, q: float) -> np.ndarray:
     >>> q = row_quantile(X, 0.5)
     """
     arr = np.zeros(X.shape[0])
+    for i in range(X.shape[0]):
+        arr[i] = np.quantile(X[i], q)
+    return arr
+
+
+@njit(fastmath=True, cache=True)
+def quantiles(X: np.ndarray, q: np.ndarray) -> np.ndarray:
+    """Numba quantile function for a 1d numpy array.
+
+    Parameters
+    ----------
+    X : 1d numpy array
+        A 1d numpy array of values
+    q : 1d numpy array
+        The quantiles to compute, each value must be between 0 and 1
+
+    Returns
+    -------
+    arr : 1d numpy array
+        The quantile of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import quantiles
+    >>> X = np.array([1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
+    >>> q = quantiles(X, np.array([0.25, 0.5, 0.75]))
+    """
+    s = np.sort(X)
+    arr = np.zeros(q.shape[0])
+
+    for i in range(q.shape[0]):
+        if q[i] < 0 or q[i] > 1:
+            raise ValueError("q must be between 0 and 1")
+
+        idx = int(X.shape[0] * q[i])
+        if X.shape[0] % 2 == 1:
+            arr[i] = s[idx]
+        else:
+            arr[i] = 0.5 * (s[idx - 1] + s[idx])
+
+    return arr
+
+
+@njit(fastmath=True, cache=True)
+def row_quantiles(X: np.ndarray, q: np.ndarray) -> np.ndarray:
+    """Numba quantile function for a 2d numpy array.
+
+    Parameters
+    ----------
+    X : 2d numpy array
+        A 2d numpy array of values
+    q : 1d numpy array
+        The quantiles to compute, each value must be between 0 and 1
+
+    Returns
+    -------
+    arr : 2d numpy array
+        The quantiles for axis 0 of the input array
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from tsml.utils.numba_functions.stats import row_quantiles
+    >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
+    >>> q = row_quantiles(X, np.array([0.25, 0.5, 0.75]))
+    """
+    arr = np.zeros(X.shape[0], q.shape[0])
     for i in range(X.shape[0]):
         arr[i] = np.quantile(X[i], q)
     return arr

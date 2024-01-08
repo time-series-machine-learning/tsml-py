@@ -137,5 +137,5 @@ run_condor.py
 local/
 local.py
 local_code/
-local_code.py
+local/local_code.py
 debug.py

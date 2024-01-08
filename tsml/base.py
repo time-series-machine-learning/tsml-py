@@ -189,6 +189,8 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
                 "instead."
             )
 
+        raise ValueError("Unable to convert X, please check the estimator tags.")
+
     def _check_n_features(self, X: Union[np.ndarray, List[np.ndarray]], reset: bool):
         """Set the `n_features_in_` attribute, or check against it.
 
@@ -196,8 +198,7 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
 
         Parameters
         ----------
-        X : ndarray or list of ndarrays of shape \
-                (n_samples, n_channels, series_length)
+        X : ndarray or list of ndarrays of shape (n_samples, n_channels, series_length)
             The input samples. Should be a 3D numpy array or a list of 2D numpy
             arrays.
         reset : bool
@@ -206,9 +207,9 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
             If False and the attribute exists, then check that it is equal to
             `(n_channels, min_series_length, max_series_length)`.
             If False and the attribute does *not* exist, then the check is skipped.
-            .. note::
-               It is recommended to call reset=True in `fit`. All other methods that
-               validate `X` should set `reset=False`.
+
+            It is recommended to call reset=True in `fit`. All other methods that
+            validate `X` should set `reset=False`.
         """
         try:
             n_features = _num_features(X)
@@ -224,7 +225,7 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
             return
 
         if reset:
-            self.n_features_in_ = n_features
+            self.n_features_in_: tuple = n_features
             return
 
         if not hasattr(self, "n_features_in_"):
