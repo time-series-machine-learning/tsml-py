@@ -336,7 +336,7 @@ def row_quantiles(X: np.ndarray, q: np.ndarray) -> np.ndarray:
     >>> X = np.array([[1, 2, 2, 3, 3, 3, 4, 4, 4, 4], [5, 6, 6, 7, 7, 7, 8, 8, 8, 8]])
     >>> q = row_quantiles(X, np.array([0.25, 0.5, 0.75]))
     """
-    arr = np.zeros(X.shape[0], q.shape[0])
+    arr = np.zeros((X.shape[0], q.shape[0]))
     for i in range(X.shape[0]):
         arr[i] = np.quantile(X[i], q)
     return arr
