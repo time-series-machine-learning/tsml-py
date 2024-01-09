@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import List, Union
 
 import numpy as np
 from sklearn.base import TransformerMixin
@@ -19,13 +19,15 @@ class QuantileTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         super(QuantileTransformer).__init__()
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] =None) -> object:
+    def fit(
+        self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] = None
+    ) -> object:
         """Unused. Validates X."""
         self._validate_data(X=X)
         return self
 
     def transform(
-            self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] =None
+        self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] = None
     ) -> np.ndarray:
         """Transform input cases in X.
 
@@ -48,8 +50,8 @@ class QuantileTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         if num_quantiles == 1:
             return X.quantile(torch.tensor([0.5]), dim=-1).permute(1, 2, 0)
         else:
-            quantiles = X.quantile(
-                torch.linspace(0, 1, num_quantiles), dim=-1
-            ).permute(1, 2, 0)
+            quantiles = X.quantile(torch.linspace(0, 1, num_quantiles), dim=-1).permute(
+                1, 2, 0
+            )
             quantiles[..., 1::2] = quantiles[..., 1::2] - X.mean(-1, keepdims=True)
             return quantiles
