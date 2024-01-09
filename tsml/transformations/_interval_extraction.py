@@ -271,7 +271,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
 
         if self._transform_features is None:
-            transform_features = [None] * self.n_intervals_
+            transform_features = [None] * len(self.intervals_)
         else:
             count = 0
             transform_features = []
@@ -295,11 +295,11 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
                 i,
                 transform_features[i],
             )
-            for i in range(self.n_intervals_)
+            for i in range(len(self.intervals_))
         )
 
         Xt = transform[0]
-        for i in range(1, self.n_intervals_):
+        for i in range(1, len(self.intervals_)):
             Xt = np.hstack((Xt, transform[i]))
 
         return Xt
