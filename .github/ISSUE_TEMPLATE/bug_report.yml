@@ -1,5 +1,5 @@
 name: 🐛 Bug report
-description: Report a bug currently impacting tsml-eval.
+description: Report a bug currently impacting tsml-py.
 title: "[BUG] "
 labels: ["bug"]
 
@@ -8,7 +8,7 @@ body:
   attributes:
     value: >
       #### You can see if he bug has already been addressed by searching
-      through the open and closed [issues](https://github.com/time-series-machine-learning/tsml-eval/issues?q=is%3Aissue).
+      through the open and closed [issues](https://github.com/time-series-machine-learning/tsml-py/issues?q=is%3Aissue).
 - type: textarea
   attributes:
     label: Describe the bug

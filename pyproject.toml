@@ -58,7 +58,7 @@ all_extras = [
 ]
 unstable_extras = [
     "mrsqm>=0.0.1 ; platform_system == 'Darwin'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
-    "pycatch22>=0.4.2",  # Known to fail installation on some setups
+    "pycatch22<=0.4.3",  # Known to fail installation on some setups
 ]
 dev = [
     "pre-commit",

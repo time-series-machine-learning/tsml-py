@@ -94,7 +94,7 @@ elif title_labels_str == "":
 
 pr.create_issue_comment(
     f"""
-## Thank you for contributing to `tsml`!
+## Thank you for contributing to `tsml-py`
 
 {title_labels_str}
 {content_labels_str}
