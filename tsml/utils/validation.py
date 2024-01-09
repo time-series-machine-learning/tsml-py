@@ -58,7 +58,9 @@ def check_n_jobs(n_jobs: int) -> int:
     elif n_jobs < 0:
         cpu_count = os.cpu_count()
         if cpu_count is None:
-            warnings.warn("Could not detect CPU count. Setting `n_jobs` to 1.", stacklevel=2)
+            warnings.warn(
+                "Could not detect CPU count. Setting `n_jobs` to 1.", stacklevel=2
+            )
             return 1
         else:
             return max(1, cpu_count + 1 + n_jobs)
