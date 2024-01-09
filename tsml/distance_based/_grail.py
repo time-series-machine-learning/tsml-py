@@ -29,7 +29,7 @@ class GRAILClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     >>> X, y = load_minimal_chinatown()
     >>> clf = GRAILClassifier()
     >>> clf.fit(X, y)
-    GRAIL(...)
+    GRAILClassifier(...)
     >>> preds = clf.predict(X)
     """
 
