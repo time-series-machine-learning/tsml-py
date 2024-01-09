@@ -4,7 +4,7 @@ __author__ = ["MatthewMiddlehurst"]
 __all__ = [
     "RandomIntervalTransformer",
     "SupervisedIntervalTransformer",
-    "FixedIntervalTransformer",
+    # "FixedIntervalTransformer",
 ]
 
 import inspect
@@ -19,7 +19,6 @@ from sklearn.utils.fixes import delayed
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
-from tsml.transformations._quantile import QuantileTransformer
 from tsml.utils._tags import _safe_tags
 from tsml.utils.numba_functions.general import z_normalise_series_3d
 from tsml.utils.numba_functions.stats import (
@@ -1142,430 +1141,430 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         }
 
 
-class FixedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
-    """Fixed interval feature transformer.
-
-    Extracts features using a fixed set of intervals, contiunually halving the interval
-    length until the given depth is reached.
-    Transforms each interval sub-series using the given transformer(s)/features and
-    concatenates them into a feature vector in transform.
-
-    Parameters
-    ----------
-    n_intervals : int or callable, default=4,
-        The depth to extract intervals from, with the total number of intervals
-        extracted increasing exponentially with depth. i.e. if n_intervals=3, 1 interval
-        will be extracted from the whole series, 2 from both halves and 4 from the
-        four quartiles of the series for 7 total intervals. As the number of intervals
-        extracted doubles per layer, the length of each interval extracted halves.
-    shifted_intervals : bool, default=True
-        Whether to include additional intervals per layer by shifting the layer
-        intervals to the right by 1/2 the interval length for each depth past 1.
-        This effectively doubles the number of intervals extracted per layer (minus 1)
-        by including overlapping intervals.
-    min_interval_length : int, default=2
-        The minimum length of extracted intervals. Minimum value of 2.
-    features : TransformerMixin, a function taking a 2d numpy array parameter, or list
-            of said transformers and functions, default=None
-        Transformers and functions used to extract features from selected intervals.
-        If None, defaults to [QuantileTransformer,
-        QuantileTransformer(subtract_mean=True)].
-    random_state : None, int or instance of RandomState, default=None
-        Seed or RandomState object used for random number generation.
-        If random_state is None, use the RandomState singleton used by np.random.
-        If random_state is an int, use a new RandomState instance seeded with seed.
-    n_jobs : int, default=1
-        The number of jobs to run in parallel for both `fit` and `transform` functions.
-        `-1` means using all processors.
-    parallel_backend : str, ParallelBackendBase instance or None, default=None
-        Specify the parallelisation backend implementation in joblib, if None a 'prefer'
-        value of "threads" is used by default.
-        Valid options are "loky", "multiprocessing", "threading" or a custom backend.
-        See the joblib Parallel documentation for more details.
-
-    Attributes
-    ----------
-    n_instances_ : int
-        The number of train cases.
-    n_dims_ : int
-        The number of dimensions per case.
-    series_length_ : int
-        The length of each series.
-    n_intervals_ : int
-        The number of intervals extracted after pruning identical intervals.
-    intervals_ : list of tuples
-        Contains information for each feature extracted in fit. Each tuple contains the
-        interval start, interval end, interval dimension, the feature(s) extracted and
-        the dilation.
-        Length will be n_intervals*len(features).
-
-    See Also
-    --------
-    RandomIntervalTransformer
-    SupervisedIntervalTransformer
-
-    Examples
-    --------
-    >>> from tsml.transformations import FixedIntervalTransformer
-    >>> from tsml.utils.testing import generate_3d_test_data
-    >>> X, _ = generate_3d_test_data(n_samples=4, series_length=12, random_state=0)
-    >>> tnf = FixedIntervalTransformer(n_intervals=2, random_state=0)
-    >>> tnf.fit(X)
-    FixedIntervalTransformer(...)
-    >>> print(tnf.transform(X)[0])
-    [1.04753424 0.14925939 0.8473096  1.20552675 1.08976637 0.96853798
-     1.14764656 1.07628806 0.18170775 0.8473096  1.29178823 1.08976637
-     0.96853798 1.1907773 ]
-    """
-
-    def __init__(
-        self,
-        n_intervals=4,
-        shifted_intervals=True,
-        min_interval_length=2,
-        features=None,
-        random_state=None,
-        n_jobs=1,
-        parallel_backend=None,
-    ):
-        self.n_intervals = n_intervals
-        self.shifted_intervals = shifted_intervals
-        self.min_interval_length = min_interval_length
-        self.features = features
-        self.random_state = random_state
-        self.n_jobs = n_jobs
-        self.parallel_backend = parallel_backend
-
-        super(FixedIntervalTransformer, self).__init__()
-
-    transformer_feature_skip = ["transform_features_", "_transform_features"]
-
-    def fit_transform(
-        self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray
-    ) -> np.ndarray:
-        """Fit the transformer to training data and return transformed data.
-
-        Parameters
-        ----------
-        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
-            The training data.
-        y : 1D np.ndarray of shape (n_instances)
-            The class labels for fitting, indices correspond to instance indices in X
-
-        Returns
-        -------
-        X_t : 2D np.ndarray of shape (n_instances, n_features)
-            Transformed data.
-        """
-        X = self._fit_setup(X)
-
-        fit = Parallel(
-            n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
-        )(
-            delayed(self._generate_intervals)(
-                X,
-                y,
-                i,
-                True,
-            )
-            for i in range(self._n_intervals)
-        )
-
-        (
-            self.intervals_,
-            Xt,
-        ) = zip(*fit)
-
-        self.n_intervals_ = len(self.intervals_)
-
-        return Xt
-
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
-        """Fit the transformer to training data.
-
-        Parameters
-        ----------
-        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
-            The training data.
-        y : 1D np.ndarray of shape (n_instances)
-            The class labels for fitting, indices correspond to instance indices in X
-
-        Returns
-        -------
-        self :
-            Reference to self.
-        """
-        X = self._fit_setup(X)
-
-        fit = Parallel(
-            n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
-        )(
-            delayed(self._generate_intervals)(
-                X,
-                y,
-                i,
-                False,
-            )
-            for i in range(self.n_intervals)
-        )
-
-        (
-            self.intervals_,
-            _,
-        ) = zip(*fit)
-
-        self.n_intervals_ = len(self.intervals_)
-
-        return self
-
-    def transform(
-        self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray
-    ) -> np.ndarray:
-        """Transform input cases in X.
-
-        Parameters
-        ----------
-        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
-            The training data.
-        y : 1D np.ndarray of shape (n_instances)
-            The class labels for fitting, indices correspond to instance indices in X
-
-        Returns
-        -------
-        X_t : 2D np.ndarray of shape (n_instances, n_features)
-            Transformed data.
-        """
-        check_is_fitted(self)
-
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=2)
-
-        if self._transform_features is None:
-            transform_features = [None] * self.n_intervals_
-        else:
-            count = 0
-            transform_features = []
-            for _ in range(self.n_intervals_):
-                for feature in self._features:
-                    if is_transformer(feature):
-                        nf = feature.n_transformed_features
-                        transform_features.append(
-                            self._transform_features[count : count + nf]
-                        )
-                        count += nf
-                    else:
-                        transform_features.append(self._transform_features[count])
-                        count += 1
-
-        transform = Parallel(
-            n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
-        )(
-            delayed(self._transform_interval)(
-                X,
-                i,
-                transform_features[i],
-            )
-            for i in range(self.n_intervals_)
-        )
-
-        Xt = transform[0]
-        for i in range(1, self.n_intervals_):
-            Xt = np.hstack((Xt, transform[i]))
-
-        return Xt
-
-    def _fit_setup(self, X):
-        X = self._validate_data(X=X, ensure_min_series_length=2)
-        X = self._convert_X(X)
-
-        self.intervals_ = []
-        self._transform_features = None
-
-        self.n_instances_, self.n_dims_, self.series_length_ = X.shape
-
-        if callable(self.n_intervals):
-            self._n_intervals = self.n_intervals(X)
-        else:
-            self._n_intervals = self.n_intervals
-
-        self._min_interval_length = self.min_interval_length
-        if self.min_interval_length < 2:
-            self._min_interval_length = 2
-
-        self._features = self.features
-        if self.features is None:
-            self._features = [
-                QuantileTransformer(),
-                QuantileTransformer(subtract_mean=True),
-            ]
-        elif not isinstance(self.features, list):
-            self._features = [self.features]
-
-        li = []
-        for feature in self._features:
-            if is_transformer(feature):
-                li.append(
-                    _clone_estimator(
-                        feature,
-                        self.random_state,
-                    )
-                )
-            elif callable(feature):
-                li.append(feature)
-            else:
-                raise ValueError(
-                    "Input features must be a list of callables or aeon transformers."
-                )
-        self._features = li
-
-        self._n_jobs = check_n_jobs(self.n_jobs)
-
-        return X
-
-    def _generate_intervals(self, X, y, depth, transform):
-        Xt = np.empty((self.n_instances_, 0)) if transform else None
-        intervals = []
-
-        fixed_points = [];;;
-
-        for dim in range(self.n_dims_):
-            for points in fixed_points:
-                interval_start, interval_end = points
-
-                for feature in self._features:
-                    if is_transformer(feature):
-                        if transform:
-                            feature = _clone_estimator(
-                                feature,
-                                self.random_state
-                            )
-
-                            t = feature.fit_transform(
-                                np.expand_dims(
-                                    X[:, dim, interval_start:interval_end], axis=1
-                                ),
-                                y,
-                            )
-
-                            if t.ndim == 3 and t.shape[1] == 1:
-                                t = t.reshape((t.shape[0], t.shape[2]))
-
-                            Xt = np.hstack((Xt, t))
-                        else:
-                            feature.fit(
-                                np.expand_dims(
-                                    X[:, dim, interval_start:interval_end], axis=1
-                                ),
-                                y,
-                            )
-                    elif transform:
-                        t = [
-                            [f]
-                            for f in feature(X[:, dim, interval_start:interval_end])
-                        ]
-                        Xt = np.hstack((Xt, t))
-
-                    intervals.append((interval_start, interval_end, dim, feature))
-
-            return intervals, Xt
-
-    def _transform_interval(self, X, idx, keep_transform):
-        interval_start, interval_end, dim, feature = self.intervals_[idx]
-
-        if keep_transform is not None:
-            if is_transformer(feature):
-                for n in self.transformer_feature_skip:
-                    if hasattr(feature, n):
-                        setattr(feature, n, keep_transform)
-                        break
-            elif not keep_transform:
-                return [[0] for _ in range(X.shape[0])]
-
-        if is_transformer(feature):
-            Xt = feature.transform(
-                np.expand_dims(X[:, dim, interval_start:interval_end], axis=1)
-            )
-
-            if Xt.ndim == 3:
-                Xt = Xt.reshape((Xt.shape[0], Xt.shape[2]))
-        else:
-            Xt = [[f] for f in feature(X[:, dim, interval_start:interval_end])]
-
-        return Xt
-
-    def set_features_to_transform(self, arr, raise_error=True):
-        """Set transform_features to the given array.
-
-        Each index in the list corresponds to the index of an interval, True intervals
-        are included in the transform, False intervals skipped and are set to 0.
-
-        If any transformers are in features, they must also have a "transform_features"
-        or "_transform_features" attribute as well as a "n_transformed_features"
-        attribute. The input array should contain an item for each of the transformers
-        "n_transformed_features" output features.
-
-        Parameters
-        ----------
-        arr : list of bools
-             A list of intervals to skip.
-        raise_error : bool, default=True
-             Whether to raise and error or return None if input or transformers are
-             invalid.
-
-        Returns
-        -------
-        completed: bool
-            Whether the operation was successful.
-        """
-        length = 0
-        for feature in self._features:
-            if is_transformer(feature):
-                if not any(
-                    hasattr(feature, n) for n in self.transformer_feature_skip
-                ) or not hasattr(feature, "n_transformed_features"):
-                    if raise_error:
-                        raise ValueError(
-                            "Transformer must have one of "
-                            f"{self.transformer_feature_skip} as an attribute and "
-                            "a n_transformed_features attribute."
-                        )
-                    else:
-                        return False
-
-                length += feature.n_transformed_features
-            else:
-                length += 1
-
-        if len(arr) != length * self.n_intervals_ or not all(
-            isinstance(b, bool) for b in arr
-        ):
-            if raise_error:
-                raise ValueError(
-                    "Input must be a list bools, matching the length of the transform "
-                    "output."
-                )
-            else:
-                return False
-
-        self._transform_features = arr
-
-        return True
-
-    @classmethod
-    def get_test_params(cls, parameter_set="default"):
-        """Return testing parameter settings for the estimator.
-
-        Parameters
-        ----------
-        parameter_set : str, default="default"
-            Name of the set of test parameters to return, for use in tests. If no
-            special parameters are defined for a value, will return `"default"` set.
-
-        Returns
-        -------
-        params : dict or list of dict, default = {}
-            Parameters to create testing instances of the class
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`
-        """
-        return {"n_intervals": 2}
+# class FixedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
+#     """Fixed interval feature transformer.
+#
+#     Extracts features using a fixed set of intervals, contiunually halving the interval
+#     length until the given depth is reached.
+#     Transforms each interval sub-series using the given transformer(s)/features and
+#     concatenates them into a feature vector in transform.
+#
+#     Parameters
+#     ----------
+#     n_intervals : int or callable, default=4,
+#         The depth to extract intervals from, with the total number of intervals
+#         extracted increasing exponentially with depth. i.e. if n_intervals=3, 1 interval
+#         will be extracted from the whole series, 2 from both halves and 4 from the
+#         four quartiles of the series for 7 total intervals. As the number of intervals
+#         extracted doubles per layer, the length of each interval extracted halves.
+#     shifted_intervals : bool, default=True
+#         Whether to include additional intervals per layer by shifting the layer
+#         intervals to the right by 1/2 the interval length for each depth past 1.
+#         This effectively doubles the number of intervals extracted per layer (minus 1)
+#         by including overlapping intervals.
+#     min_interval_length : int, default=2
+#         The minimum length of extracted intervals. Minimum value of 2.
+#     features : TransformerMixin, a function taking a 2d numpy array parameter, or list
+#             of said transformers and functions, default=None
+#         Transformers and functions used to extract features from selected intervals.
+#         If None, defaults to [QuantileTransformer,
+#         QuantileTransformer(subtract_mean=True)].
+#     random_state : None, int or instance of RandomState, default=None
+#         Seed or RandomState object used for random number generation.
+#         If random_state is None, use the RandomState singleton used by np.random.
+#         If random_state is an int, use a new RandomState instance seeded with seed.
+#     n_jobs : int, default=1
+#         The number of jobs to run in parallel for both `fit` and `transform` functions.
+#         `-1` means using all processors.
+#     parallel_backend : str, ParallelBackendBase instance or None, default=None
+#         Specify the parallelisation backend implementation in joblib, if None a 'prefer'
+#         value of "threads" is used by default.
+#         Valid options are "loky", "multiprocessing", "threading" or a custom backend.
+#         See the joblib Parallel documentation for more details.
+#
+#     Attributes
+#     ----------
+#     n_instances_ : int
+#         The number of train cases.
+#     n_dims_ : int
+#         The number of dimensions per case.
+#     series_length_ : int
+#         The length of each series.
+#     n_intervals_ : int
+#         The number of intervals extracted after pruning identical intervals.
+#     intervals_ : list of tuples
+#         Contains information for each feature extracted in fit. Each tuple contains the
+#         interval start, interval end, interval dimension, the feature(s) extracted and
+#         the dilation.
+#         Length will be n_intervals*len(features).
+#
+#     See Also
+#     --------
+#     RandomIntervalTransformer
+#     SupervisedIntervalTransformer
+#
+#     Examples
+#     --------
+#     >>> from tsml.transformations import FixedIntervalTransformer
+#     >>> from tsml.utils.testing import generate_3d_test_data
+#     >>> X, _ = generate_3d_test_data(n_samples=4, series_length=12, random_state=0)
+#     >>> tnf = FixedIntervalTransformer(n_intervals=2, random_state=0)
+#     >>> tnf.fit(X)
+#     FixedIntervalTransformer(...)
+#     >>> print(tnf.transform(X)[0])
+#     [1.04753424 0.14925939 0.8473096  1.20552675 1.08976637 0.96853798
+#      1.14764656 1.07628806 0.18170775 0.8473096  1.29178823 1.08976637
+#      0.96853798 1.1907773 ]
+#     """
+#
+#     def __init__(
+#         self,
+#         n_intervals=4,
+#         shifted_intervals=True,
+#         min_interval_length=2,
+#         features=None,
+#         random_state=None,
+#         n_jobs=1,
+#         parallel_backend=None,
+#     ):
+#         self.n_intervals = n_intervals
+#         self.shifted_intervals = shifted_intervals
+#         self.min_interval_length = min_interval_length
+#         self.features = features
+#         self.random_state = random_state
+#         self.n_jobs = n_jobs
+#         self.parallel_backend = parallel_backend
+#
+#         super(FixedIntervalTransformer, self).__init__()
+#
+#     transformer_feature_skip = ["transform_features_", "_transform_features"]
+#
+#     def fit_transform(
+#         self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray
+#     ) -> np.ndarray:
+#         """Fit the transformer to training data and return transformed data.
+#
+#         Parameters
+#         ----------
+#         X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+#             The training data.
+#         y : 1D np.ndarray of shape (n_instances)
+#             The class labels for fitting, indices correspond to instance indices in X
+#
+#         Returns
+#         -------
+#         X_t : 2D np.ndarray of shape (n_instances, n_features)
+#             Transformed data.
+#         """
+#         X = self._fit_setup(X)
+#
+#         fit = Parallel(
+#             n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
+#         )(
+#             delayed(self._generate_intervals)(
+#                 X,
+#                 y,
+#                 i,
+#                 True,
+#             )
+#             for i in range(self._n_intervals)
+#         )
+#
+#         (
+#             self.intervals_,
+#             Xt,
+#         ) = zip(*fit)
+#
+#         self.n_intervals_ = len(self.intervals_)
+#
+#         return Xt
+#
+#     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+#         """Fit the transformer to training data.
+#
+#         Parameters
+#         ----------
+#         X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+#             The training data.
+#         y : 1D np.ndarray of shape (n_instances)
+#             The class labels for fitting, indices correspond to instance indices in X
+#
+#         Returns
+#         -------
+#         self :
+#             Reference to self.
+#         """
+#         X = self._fit_setup(X)
+#
+#         fit = Parallel(
+#             n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
+#         )(
+#             delayed(self._generate_intervals)(
+#                 X,
+#                 y,
+#                 i,
+#                 False,
+#             )
+#             for i in range(self.n_intervals)
+#         )
+#
+#         (
+#             self.intervals_,
+#             _,
+#         ) = zip(*fit)
+#
+#         self.n_intervals_ = len(self.intervals_)
+#
+#         return self
+#
+#     def transform(
+#         self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray
+#     ) -> np.ndarray:
+#         """Transform input cases in X.
+#
+#         Parameters
+#         ----------
+#         X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+#             The training data.
+#         y : 1D np.ndarray of shape (n_instances)
+#             The class labels for fitting, indices correspond to instance indices in X
+#
+#         Returns
+#         -------
+#         X_t : 2D np.ndarray of shape (n_instances, n_features)
+#             Transformed data.
+#         """
+#         check_is_fitted(self)
+#
+#         X = self._validate_data(X=X, reset=False, ensure_min_series_length=2)
+#
+#         if self._transform_features is None:
+#             transform_features = [None] * self.n_intervals_
+#         else:
+#             count = 0
+#             transform_features = []
+#             for _ in range(self.n_intervals_):
+#                 for feature in self._features:
+#                     if is_transformer(feature):
+#                         nf = feature.n_transformed_features
+#                         transform_features.append(
+#                             self._transform_features[count : count + nf]
+#                         )
+#                         count += nf
+#                     else:
+#                         transform_features.append(self._transform_features[count])
+#                         count += 1
+#
+#         transform = Parallel(
+#             n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
+#         )(
+#             delayed(self._transform_interval)(
+#                 X,
+#                 i,
+#                 transform_features[i],
+#             )
+#             for i in range(self.n_intervals_)
+#         )
+#
+#         Xt = transform[0]
+#         for i in range(1, self.n_intervals_):
+#             Xt = np.hstack((Xt, transform[i]))
+#
+#         return Xt
+#
+#     def _fit_setup(self, X):
+#         X = self._validate_data(X=X, ensure_min_series_length=2)
+#         X = self._convert_X(X)
+#
+#         self.intervals_ = []
+#         self._transform_features = None
+#
+#         self.n_instances_, self.n_dims_, self.series_length_ = X.shape
+#
+#         if callable(self.n_intervals):
+#             self._n_intervals = self.n_intervals(X)
+#         else:
+#             self._n_intervals = self.n_intervals
+#
+#         self._min_interval_length = self.min_interval_length
+#         if self.min_interval_length < 2:
+#             self._min_interval_length = 2
+#
+#         self._features = self.features
+#         if self.features is None:
+#             self._features = [
+#                 QuantileTransformer(),
+#                 QuantileTransformer(subtract_mean=True),
+#             ]
+#         elif not isinstance(self.features, list):
+#             self._features = [self.features]
+#
+#         li = []
+#         for feature in self._features:
+#             if is_transformer(feature):
+#                 li.append(
+#                     _clone_estimator(
+#                         feature,
+#                         self.random_state,
+#                     )
+#                 )
+#             elif callable(feature):
+#                 li.append(feature)
+#             else:
+#                 raise ValueError(
+#                     "Input features must be a list of callables or aeon transformers."
+#                 )
+#         self._features = li
+#
+#         self._n_jobs = check_n_jobs(self.n_jobs)
+#
+#         return X
+#
+#     def _generate_intervals(self, X, y, depth, transform):
+#         Xt = np.empty((self.n_instances_, 0)) if transform else None
+#         intervals = []
+#
+#         fixed_points = [];;;;;
+#
+#         for dim in range(self.n_dims_):
+#             for points in fixed_points:
+#                 interval_start, interval_end = points
+#
+#                 for feature in self._features:
+#                     if is_transformer(feature):
+#                         if transform:
+#                             feature = _clone_estimator(
+#                                 feature,
+#                                 self.random_state
+#                             )
+#
+#                             t = feature.fit_transform(
+#                                 np.expand_dims(
+#                                     X[:, dim, interval_start:interval_end], axis=1
+#                                 ),
+#                                 y,
+#                             )
+#
+#                             if t.ndim == 3 and t.shape[1] == 1:
+#                                 t = t.reshape((t.shape[0], t.shape[2]))
+#
+#                             Xt = np.hstack((Xt, t))
+#                         else:
+#                             feature.fit(
+#                                 np.expand_dims(
+#                                     X[:, dim, interval_start:interval_end], axis=1
+#                                 ),
+#                                 y,
+#                             )
+#                     elif transform:
+#                         t = [
+#                             [f]
+#                             for f in feature(X[:, dim, interval_start:interval_end])
+#                         ]
+#                         Xt = np.hstack((Xt, t))
+#
+#                     intervals.append((interval_start, interval_end, dim, feature))
+#
+#             return intervals, Xt
+#
+#     def _transform_interval(self, X, idx, keep_transform):
+#         interval_start, interval_end, dim, feature = self.intervals_[idx]
+#
+#         if keep_transform is not None:
+#             if is_transformer(feature):
+#                 for n in self.transformer_feature_skip:
+#                     if hasattr(feature, n):
+#                         setattr(feature, n, keep_transform)
+#                         break
+#             elif not keep_transform:
+#                 return [[0] for _ in range(X.shape[0])]
+#
+#         if is_transformer(feature):
+#             Xt = feature.transform(
+#                 np.expand_dims(X[:, dim, interval_start:interval_end], axis=1)
+#             )
+#
+#             if Xt.ndim == 3:
+#                 Xt = Xt.reshape((Xt.shape[0], Xt.shape[2]))
+#         else:
+#             Xt = [[f] for f in feature(X[:, dim, interval_start:interval_end])]
+#
+#         return Xt
+#
+#     def set_features_to_transform(self, arr, raise_error=True):
+#         """Set transform_features to the given array.
+#
+#         Each index in the list corresponds to the index of an interval, True intervals
+#         are included in the transform, False intervals skipped and are set to 0.
+#
+#         If any transformers are in features, they must also have a "transform_features"
+#         or "_transform_features" attribute as well as a "n_transformed_features"
+#         attribute. The input array should contain an item for each of the transformers
+#         "n_transformed_features" output features.
+#
+#         Parameters
+#         ----------
+#         arr : list of bools
+#              A list of intervals to skip.
+#         raise_error : bool, default=True
+#              Whether to raise and error or return None if input or transformers are
+#              invalid.
+#
+#         Returns
+#         -------
+#         completed: bool
+#             Whether the operation was successful.
+#         """
+#         length = 0
+#         for feature in self._features:
+#             if is_transformer(feature):
+#                 if not any(
+#                     hasattr(feature, n) for n in self.transformer_feature_skip
+#                 ) or not hasattr(feature, "n_transformed_features"):
+#                     if raise_error:
+#                         raise ValueError(
+#                             "Transformer must have one of "
+#                             f"{self.transformer_feature_skip} as an attribute and "
+#                             "a n_transformed_features attribute."
+#                         )
+#                     else:
+#                         return False
+#
+#                 length += feature.n_transformed_features
+#             else:
+#                 length += 1
+#
+#         if len(arr) != length * self.n_intervals_ or not all(
+#             isinstance(b, bool) for b in arr
+#         ):
+#             if raise_error:
+#                 raise ValueError(
+#                     "Input must be a list bools, matching the length of the transform "
+#                     "output."
+#                 )
+#             else:
+#                 return False
+#
+#         self._transform_features = arr
+#
+#         return True
+#
+#     @classmethod
+#     def get_test_params(cls, parameter_set="default"):
+#         """Return testing parameter settings for the estimator.
+#
+#         Parameters
+#         ----------
+#         parameter_set : str, default="default"
+#             Name of the set of test parameters to return, for use in tests. If no
+#             special parameters are defined for a value, will return `"default"` set.
+#
+#         Returns
+#         -------
+#         params : dict or list of dict, default = {}
+#             Parameters to create testing instances of the class
+#             Each dict are parameters to construct an "interesting" test instance, i.e.,
+#             `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
+#             `create_test_instance` uses the first (or only) dictionary in `params`
+#         """
+#         return {"n_intervals": 2}

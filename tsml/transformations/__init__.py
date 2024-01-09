@@ -8,9 +8,9 @@ __all__ = [
     "FunctionTransformer",
     "RandomIntervalTransformer",
     "SupervisedIntervalTransformer",
-    "FixedIntervalTransformer",
+    # "FixedIntervalTransformer",
     "PeriodogramTransformer",
-    "QuantileTransformer",
+    # "QuantileTransformer",
     # "SFATransformer",
     "RandomShapeletTransformer",
     "RandomDilatedShapeletTransformer",
@@ -24,12 +24,10 @@ from tsml.transformations._catch22 import Catch22Transformer
 from tsml.transformations._fpca import FPCATransformer
 from tsml.transformations._function_transformer import FunctionTransformer
 from tsml.transformations._interval_extraction import (
-    FixedIntervalTransformer,
     RandomIntervalTransformer,
     SupervisedIntervalTransformer,
 )
 from tsml.transformations._periodogram import PeriodogramTransformer
-from tsml.transformations._quantile import QuantileTransformer
 from tsml.transformations._shapelet_transform import (
     RandomDilatedShapeletTransformer,
     RandomShapeletTransformer,
