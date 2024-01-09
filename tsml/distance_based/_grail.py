@@ -25,7 +25,7 @@ class GRAILClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     Examples
     --------
     >>> from tsml.datasets import load_minimal_chinatown
-    >>> from tsml.feature_based import GRAILClassifier
+    >>> from tsml.distance_based import GRAILClassifier
     >>> X, y = load_minimal_chinatown()
     >>> clf = GRAILClassifier()
     >>> clf.fit(X, y)
