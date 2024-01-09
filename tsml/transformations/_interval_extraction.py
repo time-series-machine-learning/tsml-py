@@ -143,7 +143,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     transformer_feature_skip = ["transform_features_", "_transform_features"]
 
     def fit_transform(
-        self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray
+        self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] = None
     ) -> np.ndarray:
         """Fit the transformer to training data and return transformed data.
 
@@ -202,7 +202,9 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         return Xt
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(
+        self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] = None
+    ) -> object:
         """Fit the transformer to training data.
 
         Parameters
@@ -248,7 +250,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return self
 
     def transform(
-        self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray
+        self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] = None
     ) -> np.ndarray:
         """Transform input cases in X.
 
@@ -785,7 +787,7 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return self
 
     def transform(
-        self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray
+        self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] = None
     ) -> np.ndarray:
         """Transform input cases in X.
 
