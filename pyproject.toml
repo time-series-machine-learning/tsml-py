@@ -54,7 +54,7 @@ all_extras = [
     "stumpy>=1.6.0",
     "grailts",
     # temp
-    "fdasrsf<=2.5.2",  # currently above this breaks on some OS
+    "fdasrsf<=2.5.6",  # currently above this breaks on some OS
 ]
 unstable_extras = [
     "mrsqm>=0.0.1 ; platform_system == 'Darwin'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
