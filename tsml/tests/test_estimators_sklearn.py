@@ -583,7 +583,7 @@ def check_estimators_empty_data_messages(name, estimator_orig):
     estimator = clone(estimator_orig)
 
     X_zero_samples = np.empty(0).reshape((0, 1, 8))
-    msg = ["0 sample\(s\)", "n_samples=0", "n_samples = 0"]  # noqa: W605
+    msg = ["0 sample(s)", "n_samples=0", "n_samples = 0"]
     with raises(ValueError, match=msg):
         estimator.fit(X_zero_samples, [])
 
