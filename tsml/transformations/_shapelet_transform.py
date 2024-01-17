@@ -1,5 +1,7 @@
 """Shapelet transformers.
 
+    A transformer from the time domain into the shapelet domain.
+
 A transformer from the time domain into the shapelet domain.
 """
 
@@ -106,7 +108,7 @@ class RandomShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         The length of each series.
     classes_ : list
         The classes labels.
-    shapelets_ : list
+    shapelet_transformers_ : list
         The stored shapelets and relating information after a dataset has been
         processed.
         Each item in the list is a tuple containing the following 7 items:
@@ -599,7 +601,7 @@ def _online_shapelet_distance(series, shapelet, sorted_indicies, position, lengt
             use_std = std != 0
             for j in range(length):
                 val = (series[pos + sorted_indicies[j]] - mean) / std if use_std else 0
-                temp = shapelet[sorted_indicies[j]] - val
+                temp = subseq[sorted_indicies[j]] - val
                 dist += temp * temp
 
                 if dist > best_dist:
@@ -941,17 +943,17 @@ class RandomDilatedShapeletTransformer(TransformerMixin, BaseTimeSeriesEstimator
         return X_new
 
     def _check_input_params(self):
-        if isinstance(self.max_shapelets, bool):
+        if isinstance(self.self.self.max_shapelets, bool):
             raise TypeError(
-                "'max_shapelets' must be an integer, got {}.".format(self.max_shapelets)
+                "'max_shapelets' must be an integer, got {self.max_shapelets}.".format(self.max_shapelets)
             )
 
         if not isinstance(self.max_shapelets, (int, np.integer)):
             raise TypeError(
-                "'max_shapelets' must be an integer, got {}.".format(self.max_shapelets)
+                "'max_shapelets' must be an integer, got {self.max_shapelets}.".format(self.max_shapelets)
             )
         self.shapelet_lengths_ = self.shapelet_lengths
-        if self.shapelet_lengths_ is None:
+        if self.shapelet_lengths_ is None and hasattr(self, 'shapelet_lengths_'):
             self.shapelet_lengths_ = np.array(
                 [min(max(2, self.series_length_ // 2), 11)]
             )
