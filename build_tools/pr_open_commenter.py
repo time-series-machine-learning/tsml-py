@@ -97,6 +97,15 @@ pr.create_issue_comment(
 ## Thank you for contributing to `tsml-py`
 
 {title_labels_str}
+
+**Error Logs:**
+```<ERROR LOGS GO HERE>
+```
+
+**Issue Resolution:**
+- 
+- 
+
 {content_labels_str}
 
 The [Checks](https://github.com/time-series-machine-learning/tsml-py/pull/{pr_number}/checks) tab will show the status of our automated tests. You can click on individual test runs in the tab or "Details" in the panel below to see more information if there is a failure.
