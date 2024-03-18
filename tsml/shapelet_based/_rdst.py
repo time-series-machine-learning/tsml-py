@@ -192,12 +192,14 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         )
 
         self._estimator = _clone_estimator(
-            make_pipeline(
-                StandardScaler(with_mean=False),
-                RidgeClassifierCV(alphas=np.logspace(-4, 4, 20)),
-            )
-            if self.estimator is None
-            else self.estimator,
+            (
+                make_pipeline(
+                    StandardScaler(with_mean=False),
+                    RidgeClassifierCV(alphas=np.logspace(-4, 4, 20)),
+                )
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 
@@ -464,12 +466,14 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         )
 
         self._estimator = _clone_estimator(
-            make_pipeline(
-                StandardScaler(with_mean=False),
-                RidgeCV(alphas=np.logspace(-4, 4, 20)),
-            )
-            if self.estimator is None
-            else self.estimator,
+            (
+                make_pipeline(
+                    StandardScaler(with_mean=False),
+                    RidgeCV(alphas=np.logspace(-4, 4, 20)),
+                )
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 

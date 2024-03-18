@@ -176,9 +176,11 @@ class RISTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self._n_jobs = check_n_jobs(self.n_jobs)
 
         self._estimator = _clone_estimator(
-            ExtraTreesClassifier(n_estimators=200, criterion="entropy")
-            if self.estimator is None
-            else self.estimator,
+            (
+                ExtraTreesClassifier(n_estimators=200, criterion="entropy")
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 
@@ -423,9 +425,11 @@ class RISTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self._n_jobs = check_n_jobs(self.n_jobs)
 
         self._estimator = _clone_estimator(
-            ExtraTreesRegressor(n_estimators=200)
-            if self.estimator is None
-            else self.estimator,
+            (
+                ExtraTreesRegressor(n_estimators=200)
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 
@@ -533,9 +537,11 @@ def _fit_transforms(
         ]
     else:
         series_transformers = [
-            None
-            if series_transformers is None
-            else _clone_estimator(series_transformers, random_state=rng)
+            (
+                None
+                if series_transformers is None
+                else _clone_estimator(series_transformers, random_state=rng)
+            )
         ]
 
     X_t = np.empty((X.shape[0], 0))
