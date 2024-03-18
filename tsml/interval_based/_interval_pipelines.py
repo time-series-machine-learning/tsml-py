@@ -178,9 +178,11 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             ]
         else:
             self._series_transformers = [
-                None
-                if self.series_transformers is None
-                else _clone_estimator(self.series_transformers, random_state=rng)
+                (
+                    None
+                    if self.series_transformers is None
+                    else _clone_estimator(self.series_transformers, random_state=rng)
+                )
             ]
 
         X_t = np.empty((X.shape[0], 0))
@@ -207,9 +209,11 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             X_t = np.hstack((X_t, t))
 
         self._estimator = _clone_estimator(
-            RandomForestClassifier(n_estimators=200)
-            if self.estimator is None
-            else self.estimator,
+            (
+                RandomForestClassifier(n_estimators=200)
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 
@@ -461,9 +465,11 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             ]
         else:
             self._series_transformers = [
-                None
-                if self.series_transformers is None
-                else _clone_estimator(self.series_transformers, random_state=rng)
+                (
+                    None
+                    if self.series_transformers is None
+                    else _clone_estimator(self.series_transformers, random_state=rng)
+                )
             ]
 
         X_t = np.empty((X.shape[0], 0))
@@ -490,9 +496,11 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
             X_t = np.hstack((X_t, t))
 
         self._estimator = _clone_estimator(
-            RandomForestRegressor(n_estimators=200)
-            if self.estimator is None
-            else self.estimator,
+            (
+                RandomForestRegressor(n_estimators=200)
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 
@@ -713,9 +721,11 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         )
 
         self._estimator = _clone_estimator(
-            RandomForestClassifier(n_estimators=200)
-            if self.estimator is None
-            else self.estimator,
+            (
+                RandomForestClassifier(n_estimators=200)
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 

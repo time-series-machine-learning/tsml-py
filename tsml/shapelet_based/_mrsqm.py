@@ -1,4 +1,5 @@
 """MrSQM classifier wrapper."""
+
 from typing import List, Union
 
 import numpy as np

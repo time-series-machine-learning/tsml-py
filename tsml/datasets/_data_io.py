@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Data loading functions."""
 
 import os

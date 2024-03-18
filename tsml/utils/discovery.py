@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utilities for discovering estimators in tsml."""
 
 __author__ = ["MatthewMiddlehurst"]

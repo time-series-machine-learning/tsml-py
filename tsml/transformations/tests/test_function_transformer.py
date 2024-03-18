@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from tsml.transformations import FunctionTransformer
 from tsml.utils.numba_functions.general import first_order_differences_3d
 from tsml.utils.numba_functions.stats import row_mean
