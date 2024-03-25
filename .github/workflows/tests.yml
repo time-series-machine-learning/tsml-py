@@ -58,7 +58,7 @@ jobs:
         run: echo "NUMBA_DISABLE_JIT=1" >> $GITHUB_ENV
 
       - name: Install
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           timeout_minutes: 30
           max_attempts: 3
@@ -67,4 +67,4 @@ jobs:
       - name: Tests
         run: python -m pytest --cov=tsml_eval --cov-report=xml
 
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
