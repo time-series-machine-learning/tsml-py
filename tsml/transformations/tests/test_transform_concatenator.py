@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from tsml.transformations import (
     Catch22Transformer,
     FunctionTransformer,

@@ -1,4 +1,5 @@
 """Tests for the channel ensemble estimators."""
+
 import pytest
 from numpy.testing import assert_array_equal
 

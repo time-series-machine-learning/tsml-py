@@ -1,4 +1,5 @@
 """Random Shapelet Forest (RSF) estimators."""
+
 from typing import List, Union
 
 import numpy as np
