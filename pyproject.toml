@@ -58,7 +58,7 @@ all_extras = [
     "fdasrsf<=2.5.2",  # currently above this breaks on some OS
 ]
 unstable_extras = [
-    "mrsqm>=0.0.1 ; platform_system == 'Darwin'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
+    "mrsqm>=0.0.1 ; platform_system == 'Darwin' and python_version < '3.12'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
     "pycatch22<=0.4.3",  # Known to fail installation on some setups
 ]
 dev = [
@@ -66,7 +66,7 @@ dev = [
     "pytest",
     "pytest-randomly",
     "pytest-timeout",
-    "pytest-xdist",
+    "pytest-xdist[psutil]",
     "pytest-cov",
     "pytest-rerunfailures",
 ]
