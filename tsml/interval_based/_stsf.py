@@ -126,10 +126,10 @@ class STSFClassifier(ClassifierMixin, BaseIntervalForest):
     >>> from tsml.interval_based import STSFClassifier
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, y = generate_3d_test_data(n_samples=10, series_length=12, random_state=0)
-    >>> clf = STSFClassifier(n_estimators=10, random_state=0)
-    >>> clf.fit(X, y)
+    >>> clf = STSFClassifier(n_estimators=10, random_state=0)  # doctest: +SKIP
+    >>> clf.fit(X, y)  # doctest: +SKIP
     STSFClassifier(...)
-    >>> clf.predict(X)
+    >>> clf.predict(X)  # doctest: +SKIP
     array([0, 1, 0, 1, 0, 0, 1, 1, 1, 0])
     """
 
@@ -273,10 +273,10 @@ class RSTSFClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     >>> from tsml.interval_based import RSTSFClassifier
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, y = generate_3d_test_data(n_samples=10, series_length=12, random_state=0)
-    >>> clf = RSTSFClassifier(n_estimators=10, n_intervals=5, random_state=0)
-    >>> clf.fit(X, y)
+    >>> clf = RSTSFClassifier(n_estimators=10, n_intervals=5, random_state=0)  # doctest: +SKIP
+    >>> clf.fit(X, y)  # doctest: +SKIP
     RSTSFClassifier(...)
-    >>> clf.predict(X)
+    >>> clf.predict(X)  # doctest: +SKIP
     array([0, 1, 0, 1, 0, 0, 1, 1, 1, 0])
     """
 

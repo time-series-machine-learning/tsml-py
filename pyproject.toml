@@ -48,18 +48,19 @@ dependencies = [
 
 [project.optional-dependencies]
 all_extras = [
-    "pyfftw>=0.12.0; python_version < '3.12'",
-    "statsmodels>=0.12.1",
-    "wildboar>=1.1.0",
-    "scikit-fda>=0.7.0",
-    "stumpy>=1.6.0",
     "grailts",
+    "scikit-fda>=0.7.0",
+    "statsmodels>=0.12.1",
+    "stumpy>=1.6.0",
+    "wildboar>=1.1.0",
+
     # temp
-    "fdasrsf<=2.5.2",  # currently above this breaks on some OS
+    "fdasrsf<=2.5.2",  # temporary, currently above this breaks on some OS
 ]
 unstable_extras = [
     "mrsqm>=0.0.1 ; platform_system == 'Darwin' and python_version < '3.12'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
     "pycatch22<=0.4.3",  # Known to fail installation on some setups
+    "pyfftw>=0.12.0; python_version < '3.12'", # requires fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
 ]
 dev = [
     "pre-commit",
@@ -123,4 +124,5 @@ addopts = '''
     --numprocesses logical
     --dist worksteal
     --reruns 2
+    --only-rerun "crashed while running"
 '''

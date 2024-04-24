@@ -40,10 +40,10 @@ class PeriodogramTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, _ = generate_3d_test_data(n_samples=4, n_channels=2, series_length=20,
     ...                              random_state=0)
-    >>> tnf = PeriodogramTransformer()
-    >>> tnf.fit(X)
+    >>> tnf = PeriodogramTransformer()  # doctest: +SKIP
+    >>> tnf.fit(X)  # doctest: +SKIP
     PeriodogramTransformer(...)
-    >>> print(tnf.transform(X)[0])
+    >>> print(tnf.transform(X)[0])  # doctest: +SKIP
     [[22.16456597 11.08122685  3.69018936  2.17665255  5.27387039  3.10598557
        6.311107    1.70468284  1.8269671   0.88838033  1.56747869  3.42037058
        1.67988661  1.71142437  3.49821716  1.25120108]
@@ -69,7 +69,7 @@ class PeriodogramTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         if use_pyfftw:
             _check_optional_dependency("pyfftw", "pyfftw", self)
 
-        super(PeriodogramTransformer, self).__init__()
+        super().__init__()
 
     def fit(self, X, y=None):
         self._validate_data(X=X)

@@ -127,10 +127,10 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
     >>> from tsml.interval_based import RISEClassifier
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, y = generate_3d_test_data(n_samples=10, series_length=12, random_state=0)
-    >>> clf = RISEClassifier(n_estimators=10, random_state=0)
-    >>> clf.fit(X, y)
+    >>> clf = RISEClassifier(n_estimators=10, random_state=0)  # doctest: +SKIP
+    >>> clf.fit(X, y)  # doctest: +SKIP
     RISEClassifier(...)
-    >>> clf.predict(X)
+    >>> clf.predict(X)  # doctest: +SKIP
     array([0, 1, 0, 1, 0, 0, 1, 1, 1, 0])
     """
 
@@ -329,10 +329,10 @@ class RISERegressor(RegressorMixin, BaseIntervalForest):
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, y = generate_3d_test_data(n_samples=10, series_length=12,
     ...                              regression_target=True, random_state=0)
-    >>> reg = RISERegressor(n_estimators=10, random_state=0)
-    >>> reg.fit(X, y)
+    >>> reg = RISERegressor(n_estimators=10, random_state=0)  # doctest: +SKIP
+    >>> reg.fit(X, y)  # doctest: +SKIP
     RISERegressor(...)
-    >>> reg.predict(X)
+    >>> reg.predict(X)  # doctest: +SKIP
     array([0.7252543 , 1.50132442, 0.95608366, 1.64399016, 0.42385504,
            0.60639322, 1.01919317, 1.30157483, 1.66017354, 0.2900776 ])
     """

@@ -545,6 +545,7 @@ def _check_optional_dependency(
     package_name: str,
     package_import_name: str,
     source_name: Union[str, BaseEstimator],
+    raise_error: bool = True,
 ):
     """Check if an optional dependency is installed and raise error if not.
 
@@ -562,11 +563,22 @@ def _check_optional_dependency(
     source_name : str or BaseEstimator
         Source of the check i.e. an estimator or function. If a BaseEstimator is passed
         the class name of the estimator is used.
+    raise_error : bool, default=True
+        Whether to raise an error if the dependency is not installed. If False, returns
+        True if the dependency is installed and matches the specified version and
+        False otherwise.
+
+    Returns
+    -------
+    is_installed : bool
+        True if the dependency is installed and matches the specified version and
+        False otherwise. Only if raise_error is False.
 
     Raises
     ------
     ModuleNotFoundError
-        Error with informative message, asking to install required the dependency.
+        Error with informative message, asking to install required the dependency
+        if raise_error.
 
     Examples
     --------
@@ -596,11 +608,14 @@ def _check_optional_dependency(
         pkg_ref = import_module(package_import_name)
     except ModuleNotFoundError as e:
         # package cannot be imported
-        raise ModuleNotFoundError(
-            f'{source_name} has an optional dependency and requires "{package_name}" '
-            f'to be installed. Run: "pip install {package_name}" or "pip install '
-            f'tsml[extras]" to install all optional dependencies.'
-        ) from e
+        if raise_error:
+            raise ModuleNotFoundError(
+                f'{source_name} has an optional dependency and requires "{package_name}" '
+                f'to be installed. Run: "pip install {package_name}" or "pip install '
+                f'tsml[extras]" to install all optional dependencies.'
+            ) from e
+        else:
+            return False
 
     # check installed version is compatible
     if package_version_req != SpecifierSet(""):
@@ -612,3 +627,6 @@ def _check_optional_dependency(
                 f"{pkg_env_version}.",
                 stacklevel=2,
             )
+            return False
+
+    return True
