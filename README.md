@@ -13,6 +13,11 @@
 
 A toolkit for time series machine learning algorithms.
 
+Please see [`tsml_eval`](https://github.com/time-series-machine-learning/tsml-eval) and
+[`aeon`](https://github.com/aeon-toolkit/aeon) for more developed packages. This package
+is more of a sandbox for testing out new ideas and algorithms. It may contain some
+algorithms and implementations that are not available in the other toolkits.
+
 The current release of `tsml` is v0.4.0.
 
 ## Installation
