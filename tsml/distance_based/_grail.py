@@ -6,6 +6,7 @@ https://github.com/TheDatumOrg/grail-python
 
 import os
 import sys
+import warnings
 
 import numpy as np
 from sklearn.base import ClassifierMixin
@@ -38,7 +39,7 @@ class GRAILClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         _check_optional_dependency("grailts", "GRAIL", self)
 
-        super(GRAILClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X, y):
         """Fit the estimator to training data.
@@ -85,11 +86,19 @@ class GRAILClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         ) = self._modified_GRAIL_rep_fit(X, self._d)
 
         if self.classifier == "svm":
-            self._clf = GridSearchCV(
-                SVC(kernel="linear", probability=True),
-                param_grid={"C": [i**2 for i in np.arange(-10, 20, 0.11)]},
-                cv=min(min(class_count), 5),
-            )
+            cv = min(min(class_count), 5)
+            if cv == 1:
+                warnings.warn(
+                    "Only one class was found in y, so no cross-validation.",
+                    stacklevel=2,
+                )
+                self._clf = SVC(kernel="linear", probability=True, C=1)
+            else:
+                self._clf = GridSearchCV(
+                    SVC(kernel="linear", probability=True),
+                    param_grid={"C": [i**2 for i in np.arange(-10, 20, 0.11)]},
+                    cv=min(min(class_count), 5),
+                )
             self._clf.fit(Xt, y)
         elif self.classifier == "knn":
             self._train_Xt = Xt

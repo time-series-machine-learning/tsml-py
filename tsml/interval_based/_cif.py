@@ -106,7 +106,7 @@ class CIFClassifier(ClassifierMixin, BaseIntervalForest):
         (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
         ``pycatch22`` package to be installed if True.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -207,7 +207,7 @@ class CIFClassifier(ClassifierMixin, BaseIntervalForest):
             row_slope,
         ]
 
-        super(CIFClassifier, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
@@ -345,7 +345,7 @@ class CIFRegressor(RegressorMixin, BaseIntervalForest):
         (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
         ``pycatch22`` package to be installed if True.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -431,7 +431,7 @@ class CIFRegressor(RegressorMixin, BaseIntervalForest):
             row_slope,
         ]
 
-        super(CIFRegressor, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
@@ -565,7 +565,7 @@ class DrCIFClassifier(ClassifierMixin, BaseIntervalForest):
         Whether to use the pyfftw library for FFT calculations. Requires the pyfftw
         package to be installed.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -681,7 +681,7 @@ class DrCIFClassifier(ClassifierMixin, BaseIntervalForest):
             row_numba_max,
         ]
 
-        super(DrCIFClassifier, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
@@ -824,7 +824,7 @@ class DrCIFRegressor(RegressorMixin, BaseIntervalForest):
         Whether to use the pyfftw library for FFT calculations. Requires the pyfftw
         package to be installed.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -931,7 +931,7 @@ class DrCIFRegressor(RegressorMixin, BaseIntervalForest):
             row_numba_max,
         ]
 
-        super(DrCIFRegressor, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",

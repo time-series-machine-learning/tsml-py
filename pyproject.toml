@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tsml"
-version = "0.3.0"
+version = "0.4.0"
 description = "A toolkit for time series machine learning algorithms."
 authors = [
     {name = "Matthew Middlehurst", email = "m.b.middlehurst@soton.ac.uk"},
@@ -13,7 +13,7 @@ maintainers = [
     {name = "Matthew Middlehurst", email = "m.b.middlehurst@soton.ac.uk"},
 ]
 readme = "README.md"
-requires-python = ">=3.8,<3.12"
+requires-python = ">=3.8,<3.13"
 keywords = [
     "data-science",
     "machine-learning",
@@ -36,6 +36,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
     "numba>=0.55.0",
@@ -74,7 +75,7 @@ binder = [
     "jupyterlab",
 ]
 docs = [
-    "sphinx<8.0.0",
+    "sphinx<7.3.0",
     "sphinx-design",
     "sphinx-version-warning",
     "sphinx_issues",
@@ -106,13 +107,20 @@ ignore = [
     "local/**",
 ]
 
+[tool.ruff.lint]
+select = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
 [tool.pytest.ini_options]
 testpaths = "tsml"
 addopts = '''
+    --doctest-modules
     --durations 20
     --timeout 600
     --showlocals
-    --doctest-modules
-    --numprocesses auto
+    --numprocesses logical
+    --dist worksteal
     --reruns 2
 '''

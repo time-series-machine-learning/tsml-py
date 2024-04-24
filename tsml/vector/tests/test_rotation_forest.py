@@ -17,7 +17,6 @@ def test_contracted_rotf():
     rotf = RotationForestClassifier(
         contract_max_n_estimators=5,
         time_limit_in_minutes=0.25,
-        save_transformed_data=True,
         random_state=0,
     )
     rotf.fit(X, y)
@@ -25,7 +24,6 @@ def test_contracted_rotf():
     assert len(rotf.estimators_) > 1
 
     # test train estimate
-    train_proba = rotf._get_train_probs(X, y)
-    assert isinstance(train_proba, np.ndarray)
-    assert train_proba.shape == (len(X), 2)
-    np.testing.assert_almost_equal(train_proba.sum(axis=1), 1, decimal=4)
+    proba = rotf.predict_proba(X)
+    assert isinstance(proba, np.ndarray)
+    assert proba.shape == (len(X), 2)

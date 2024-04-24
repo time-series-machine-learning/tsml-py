@@ -70,7 +70,7 @@ class STSFClassifier(ClassifierMixin, BaseIntervalForest):
         Whether to use the pyfftw library for FFT calculations. Requires the pyfftw
         package to be installed.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -166,7 +166,7 @@ class STSFClassifier(ClassifierMixin, BaseIntervalForest):
             row_numba_max,
         ]
 
-        super(STSFClassifier, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="supervised",
@@ -300,7 +300,7 @@ class RSTSFClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             _check_optional_dependency("pyfftw", "pyfftw", self)
         _check_optional_dependency("statsmodels", "statsmodels", self)
 
-        super(RSTSFClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.

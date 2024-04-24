@@ -66,7 +66,7 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
         Whether to use the pyfftw library for FFT calculations. Requires the pyfftw
         package to be installed.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -169,7 +169,7 @@ class RISEClassifier(ClassifierMixin, BaseIntervalForest):
             ),
         ]
 
-        super(RISEClassifier, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
@@ -279,7 +279,7 @@ class RISERegressor(RegressorMixin, BaseIntervalForest):
         Whether to use the pyfftw library for FFT calculations. Requires the pyfftw
         package to be installed.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -367,7 +367,7 @@ class RISERegressor(RegressorMixin, BaseIntervalForest):
             ),
         ]
 
-        super(RISERegressor, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
