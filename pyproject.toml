@@ -48,14 +48,12 @@ dependencies = [
 
 [project.optional-dependencies]
 all_extras = [
-    "pyfftw>=0.12.0",
+    "pyfftw>=0.12.0; python_version < '3.12'",
     "statsmodels>=0.12.1",
     "wildboar>=1.1.0",
     "scikit-fda>=0.7.0",
     "stumpy>=1.6.0",
     "grailts",
-    # temp
-    "fdasrsf<=2.5.2",  # currently above this breaks on some OS
 ]
 unstable_extras = [
     "mrsqm>=0.0.1 ; platform_system == 'Darwin'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
