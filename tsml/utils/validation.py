@@ -564,15 +564,13 @@ def _check_optional_dependency(
         Source of the check i.e. an estimator or function. If a BaseEstimator is passed
         the class name of the estimator is used.
     raise_error : bool, default=True
-        Whether to raise an error if the dependency is not installed. If False, returns
-        True if the dependency is installed and matches the specified version and
-        False otherwise.
+        Whether to raise an error if the dependency is not installed.
 
     Returns
     -------
     is_installed : bool
         True if the dependency is installed and matches the specified version and
-        False otherwise. Only if raise_error is False.
+        False otherwise.
 
     Raises
     ------
@@ -588,6 +586,7 @@ def _check_optional_dependency(
     ...     "sklearn",
     ...     "_check_optional_dependency",
     ... )
+    True
     """
     if isinstance(source_name, BaseEstimator):
         source_name = source_name.__class__.__name__

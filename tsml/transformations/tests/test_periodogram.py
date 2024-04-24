@@ -7,7 +7,7 @@ from tsml.utils.validation import _check_optional_dependency
 
 
 @pytest.mark.skipif(
-    _check_optional_dependency("pyfftw", "pyfftw", "PeriodogramTransformer", False),
+    not _check_optional_dependency("pyfftw", "pyfftw", "PeriodogramTransformer", False),
     reason="Only run on overnights because of intermittent fail for read/write.",
 )
 def test_periodogram_same_output():
