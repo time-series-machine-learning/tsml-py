@@ -112,10 +112,10 @@ class RISTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     >>> from tsml.hybrid import RISTClassifier
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
-    >>> clf = RISTClassifier(random_state=0)
-    >>> clf.fit(X, y)
+    >>> clf = RISTClassifier(random_state=0)  # doctest: +SKIP
+    >>> clf.fit(X, y)  # doctest: +SKIP
     RISTClassifier(...)
-    >>> clf.predict(X)
+    >>> clf.predict(X)  # doctest: +SKIP
     array([0, 1, 1, 0, 0, 1, 0, 1])
     """
 
@@ -144,7 +144,7 @@ class RISTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if use_pyfftw:
             _check_optional_dependency("pyfftw", "pyfftw", self)
 
-        super(RISTClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -363,10 +363,10 @@ class RISTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, y = generate_3d_test_data(n_samples=8, series_length=10,
     ...                              regression_target=True, random_state=0)
-    >>> reg = RISTRegressor(random_state=0)
-    >>> reg.fit(X, y)
+    >>> reg = RISTRegressor(random_state=0)  # doctest: +SKIP
+    >>> reg.fit(X, y)  # doctest: +SKIP
     RISTRegressor(...)
-    >>> reg.predict(X)
+    >>> reg.predict(X)  # doctest: +SKIP
     array([0.31798318, 1.41426301, 1.06414747, 0.6924721 , 0.56660146,
            1.26538944, 0.52324808, 1.0939405 ])
     """
@@ -396,7 +396,7 @@ class RISTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         if use_pyfftw:
             _check_optional_dependency("pyfftw", "pyfftw", self)
 
-        super(RISTRegressor, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.

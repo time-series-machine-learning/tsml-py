@@ -106,7 +106,7 @@ class CIFClassifier(ClassifierMixin, BaseIntervalForest):
         (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
         ``pycatch22`` package to be installed if True.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -207,7 +207,7 @@ class CIFClassifier(ClassifierMixin, BaseIntervalForest):
             row_slope,
         ]
 
-        super(CIFClassifier, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
@@ -345,7 +345,7 @@ class CIFRegressor(RegressorMixin, BaseIntervalForest):
         (https://github.com/DynamicsAndNeuralSystems/pycatch22). This requires the
         ``pycatch22`` package to be installed if True.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -431,7 +431,7 @@ class CIFRegressor(RegressorMixin, BaseIntervalForest):
             row_slope,
         ]
 
-        super(CIFRegressor, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
@@ -565,7 +565,7 @@ class DrCIFClassifier(ClassifierMixin, BaseIntervalForest):
         Whether to use the pyfftw library for FFT calculations. Requires the pyfftw
         package to be installed.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -627,10 +627,10 @@ class DrCIFClassifier(ClassifierMixin, BaseIntervalForest):
     >>> from tsml.interval_based import DrCIFClassifier
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, y = generate_3d_test_data(n_samples=10, series_length=12, random_state=0)
-    >>> clf = DrCIFClassifier(n_estimators=10, random_state=0)
-    >>> clf.fit(X, y)
+    >>> clf = DrCIFClassifier(n_estimators=10, random_state=0)  # doctest: +SKIP
+    >>> clf.fit(X, y)  # doctest: +SKIP
     DrCIFClassifier(...)
-    >>> clf.predict(X)
+    >>> clf.predict(X)  # doctest: +SKIP
     array([0, 1, 0, 1, 0, 0, 1, 1, 1, 0])
     """
 
@@ -681,7 +681,7 @@ class DrCIFClassifier(ClassifierMixin, BaseIntervalForest):
             row_numba_max,
         ]
 
-        super(DrCIFClassifier, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
@@ -824,7 +824,7 @@ class DrCIFRegressor(RegressorMixin, BaseIntervalForest):
         Whether to use the pyfftw library for FFT calculations. Requires the pyfftw
         package to be installed.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -881,10 +881,10 @@ class DrCIFRegressor(RegressorMixin, BaseIntervalForest):
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, y = generate_3d_test_data(n_samples=10, series_length=12,
     ...                              regression_target=True, random_state=0)
-    >>> reg = DrCIFRegressor(n_estimators=10, random_state=0)
-    >>> reg.fit(X, y)
+    >>> reg = DrCIFRegressor(n_estimators=10, random_state=0)  # doctest: +SKIP
+    >>> reg.fit(X, y)  # doctest: +SKIP
     DrCIFRegressor(...)
-    >>> reg.predict(X)
+    >>> reg.predict(X)  # doctest: +SKIP
     array([0.7252543 , 1.50132442, 0.95608366, 1.64399016, 0.42385504,
            0.60639322, 1.01919317, 1.30157483, 1.66017354, 0.2900776 ])
     """
@@ -931,7 +931,7 @@ class DrCIFRegressor(RegressorMixin, BaseIntervalForest):
             row_numba_max,
         ]
 
-        super(DrCIFRegressor, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",

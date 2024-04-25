@@ -84,7 +84,7 @@ class TSFClassifier(ClassifierMixin, BaseIntervalForest):
     contract_max_n_estimators : int, default=500
         Max number of estimators when time_limit_in_minutes is set.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -166,7 +166,7 @@ class TSFClassifier(ClassifierMixin, BaseIntervalForest):
         else:
             replace_nan = 0
 
-        super(TSFClassifier, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",
@@ -285,7 +285,7 @@ class TSFRegressor(RegressorMixin, BaseIntervalForest):
     contract_max_n_estimators : int, default=500
         Max number of estimators when time_limit_in_minutes is set.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit for use in _get_train_probs.
+        Save the data transformed in fit.
     random_state : int, RandomState instance or None, default=None
         If `int`, random_state is the seed used by the random number generator;
         If `RandomState` instance, random_state is the random number generator;
@@ -352,7 +352,7 @@ class TSFRegressor(RegressorMixin, BaseIntervalForest):
         n_jobs=1,
         parallel_backend=None,
     ):
-        super(TSFRegressor, self).__init__(
+        super().__init__(
             base_estimator=base_estimator,
             n_estimators=n_estimators,
             interval_selection_method="random",

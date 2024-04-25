@@ -55,8 +55,7 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
     contract_max_n_estimators : int, default=500
         Max number of estimators to build when ``time_limit_in_minutes`` is set.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit in ``transformed_data_`` for use in
-        ``_get_train_probs``.
+        Save the data transformed in fit in ``transformed_data_``.
     n_jobs : int, default=1
         The number of jobs to run in parallel for both ``fit`` and ``predict``.
         `-1` means using all processors.
@@ -135,7 +134,7 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
         self.n_jobs = n_jobs
         self.random_state = random_state
 
-        super(RotationForestClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, pd.DataFrame], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -303,53 +302,6 @@ class RotationForestClassifier(ClassifierMixin, BaseEstimator):
             np.ones(self.n_classes_) * self._n_estimators
         )
         return output
-
-    def _get_train_probs(self, X, y):
-        check_is_fitted(self)
-
-        # treat case of single class seen in fit
-        if self.n_classes_ == 1:
-            np.repeat([[1]], len(X), axis=0)
-
-        if isinstance(X, np.ndarray) and len(X.shape) == 3 and X.shape[1] == 1:
-            X = np.reshape(X, (X.shape[0], -1))
-
-        X = self._validate_data(X=X, reset=False)
-
-        n_instances, n_atts = X.shape
-
-        if n_instances != self.n_instances_ or n_atts != self.n_atts_:
-            raise ValueError(
-                "n_instances, n_atts mismatch. X should be the same as the training "
-                "data used in fit for generating train probabilities."
-            )
-
-        if not self.save_transformed_data:
-            raise ValueError("Currently only works with saved transform data from fit.")
-
-        p = Parallel(n_jobs=self._n_jobs)(
-            delayed(self._train_probas_for_estimator)(
-                y,
-                i,
-            )
-            for i in range(self._n_estimators)
-        )
-        y_probas, oobs = zip(*p)
-
-        results = np.sum(y_probas, axis=0)
-        divisors = np.zeros(n_instances)
-        for oob in oobs:
-            for inst in oob:
-                divisors[inst] += 1
-
-        for i in range(n_instances):
-            results[i] = (
-                np.ones(self.n_classes_) * (1 / self.n_classes_)
-                if divisors[i] == 0
-                else results[i] / (np.ones(self.n_classes_) * divisors[i])
-            )
-
-        return results
 
     def _fit_estimator(self, X, X_cls_split, y, idx):
         rs = 255 if self.random_state == 0 else self.random_state
@@ -520,8 +472,7 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
     contract_max_n_estimators : int, default=500
         Max number of estimators to build when ``time_limit_in_minutes`` is set.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit in ``transformed_data_`` for use in
-        ``_get_train_probs``.
+        Save the data transformed in fit in ``transformed_data_``.
     n_jobs : int, default=1
         The number of jobs to run in parallel for both ``fit`` and ``predict``.
         `-1` means using all processors.
@@ -590,7 +541,7 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
         self.n_jobs = n_jobs
         self.random_state = random_state
 
-        super(RotationForestRegressor, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, pd.DataFrame], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -809,7 +760,7 @@ class RotationForestRegressor(RegressorMixin, BaseEstimator):
 
 
 def _generate_groups(rng, n_atts, min_group, max_group):
-    permutation = rng.permutation((np.arange(0, n_atts)))
+    permutation = rng.permutation(np.arange(0, n_atts))
 
     # select the size of each group.
     group_size_count = np.zeros(max_group - min_group + 1)

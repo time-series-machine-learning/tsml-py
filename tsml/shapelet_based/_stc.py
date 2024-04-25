@@ -60,8 +60,7 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         Max number of shapelets to extract when contracting the transform with
         ``transform_limit_in_minutes`` or ``time_limit_in_minutes``.
     save_transformed_data : bool, default=False
-        Save the data transformed in fit in ``transformed_data_`` for use in
-        ``_get_train_probs``.
+        Save the data transformed in fit in ``transformed_data_``.
     n_jobs : int, default=1
         The number of jobs to run in parallel for both ``fit`` and ``predict``.
         `-1` means using all processors.
@@ -151,7 +150,7 @@ class ShapeletTransformClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.batch_size = batch_size
         self.n_jobs = n_jobs
 
-        super(ShapeletTransformClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
