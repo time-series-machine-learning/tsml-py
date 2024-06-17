@@ -57,7 +57,7 @@ class ARCoefficientTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         _check_optional_dependency("statsmodels", "statsmodels", self)
 
-        super(ARCoefficientTransformer, self).__init__()
+        super().__init__()
 
     def fit(self, X, y=None):
         self._validate_data(X=X)

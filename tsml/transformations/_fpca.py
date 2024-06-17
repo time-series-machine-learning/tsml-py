@@ -51,7 +51,7 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         _check_optional_dependency("scikit-fda", "skfda", self)
 
-        super(FPCATransformer, self).__init__()
+        super().__init__()
 
     def fit_transform(self, X, y=None):
         """

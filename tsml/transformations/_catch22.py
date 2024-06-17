@@ -155,7 +155,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         if use_pycatch22:
             _check_optional_dependency("pycatch22", "pycatch22", self)
 
-        super(Catch22Transformer, self).__init__()
+        super().__init__()
 
     def fit(self, X, y=None):
         """Unused. Validates X."""

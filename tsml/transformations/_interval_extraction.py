@@ -138,7 +138,7 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         self.n_jobs = n_jobs
         self.parallel_backend = parallel_backend
 
-        super(RandomIntervalTransformer, self).__init__()
+        super().__init__()
 
     transformer_feature_skip = ["transform_features_", "_transform_features"]
 
@@ -679,7 +679,7 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         self.n_jobs = n_jobs
         self.parallel_backend = parallel_backend
 
-        super(SupervisedIntervalTransformer, self).__init__()
+        super().__init__()
 
     # if features contains a transformer, it must contain a parameter name from
     # transformer_feature_selection and an attribute name (or property) from

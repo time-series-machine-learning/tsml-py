@@ -146,7 +146,7 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.n_jobs = n_jobs
         self.random_state = random_state
 
-        super(RDSTClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -192,12 +192,14 @@ class RDSTClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         )
 
         self._estimator = _clone_estimator(
-            make_pipeline(
-                StandardScaler(with_mean=False),
-                RidgeClassifierCV(alphas=np.logspace(-4, 4, 20)),
-            )
-            if self.estimator is None
-            else self.estimator,
+            (
+                make_pipeline(
+                    StandardScaler(with_mean=False),
+                    RidgeClassifierCV(alphas=np.logspace(-4, 4, 20)),
+                )
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 
@@ -428,7 +430,7 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self.n_jobs = n_jobs
         self.random_state = random_state
 
-        super(RDSTRegressor, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -464,12 +466,14 @@ class RDSTRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         )
 
         self._estimator = _clone_estimator(
-            make_pipeline(
-                StandardScaler(with_mean=False),
-                RidgeCV(alphas=np.logspace(-4, 4, 20)),
-            )
-            if self.estimator is None
-            else self.estimator,
+            (
+                make_pipeline(
+                    StandardScaler(with_mean=False),
+                    RidgeCV(alphas=np.logspace(-4, 4, 20)),
+                )
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 

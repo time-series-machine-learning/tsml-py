@@ -98,7 +98,7 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         _check_optional_dependency("scikit-fda", "skfda", self)
 
-        super(FPCAClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -315,7 +315,7 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         _check_optional_dependency("scikit-fda", "skfda", self)
 
-        super(FPCARegressor, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.

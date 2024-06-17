@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Datasets and data loaders."""
 
 __all__ = [

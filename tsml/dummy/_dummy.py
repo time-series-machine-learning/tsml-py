@@ -102,7 +102,7 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.validate = validate
         self.random_state = random_state
 
-        super(DummyClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -273,7 +273,7 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self.quantile = quantile
         self.validate = validate
 
-        super(DummyRegressor, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -390,7 +390,7 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
         self.validate = validate
         self.random_state = random_state
 
-        super(DummyClusterer, self).__init__()
+        super().__init__()
 
     def fit(
         self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] = None

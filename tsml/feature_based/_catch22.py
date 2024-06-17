@@ -144,7 +144,7 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if use_pycatch22:
             _check_optional_dependency("pycatch22", "pycatch22", self)
 
-        super(Catch22Classifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -192,9 +192,11 @@ class Catch22Classifier(ClassifierMixin, BaseTimeSeriesEstimator):
         )
 
         self._estimator = _clone_estimator(
-            RandomForestClassifier(n_estimators=200)
-            if self.estimator is None
-            else self.estimator,
+            (
+                RandomForestClassifier(n_estimators=200)
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 
@@ -411,7 +413,7 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
         self.n_jobs = n_jobs
         self.parallel_backend = parallel_backend
 
-        super(Catch22Regressor, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -448,9 +450,11 @@ class Catch22Regressor(RegressorMixin, BaseTimeSeriesEstimator):
         )
 
         self._estimator = _clone_estimator(
-            RandomForestRegressor(n_estimators=200)
-            if self.estimator is None
-            else self.estimator,
+            (
+                RandomForestRegressor(n_estimators=200)
+                if self.estimator is None
+                else self.estimator
+            ),
             self.random_state,
         )
 

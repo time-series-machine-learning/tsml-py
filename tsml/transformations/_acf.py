@@ -55,7 +55,7 @@ class AutocorrelationFunctionTransformer(TransformerMixin, BaseTimeSeriesEstimat
         self.n_lags = n_lags
         self.min_values = min_values
 
-        super(AutocorrelationFunctionTransformer, self).__init__()
+        super().__init__()
 
     def fit(self, X, y=None):
         self._validate_data(X=X)
