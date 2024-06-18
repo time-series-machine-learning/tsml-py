@@ -24,7 +24,7 @@ class _BaseChannelEnsemble(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         self.remainder = remainder
         self.random_state = random_state
 
-        super(_BaseChannelEnsemble, self).__init__()
+        super().__init__()
 
     _required_parameters = ["estimators"]
 
@@ -218,9 +218,7 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
     """
 
     def __init__(self, estimators, remainder="drop", random_state=None):
-        super(ChannelEnsembleClassifier, self).__init__(
-            estimators, remainder, random_state
-        )
+        super().__init__(estimators, remainder, random_state)
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -429,9 +427,7 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
     """
 
     def __init__(self, estimators, remainder="drop", random_state=None):
-        super(ChannelEnsembleRegressor, self).__init__(
-            estimators, remainder, random_state
-        )
+        super().__init__(estimators, remainder, random_state)
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.

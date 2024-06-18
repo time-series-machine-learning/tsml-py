@@ -1,4 +1,5 @@
 """Random Shapelet Forest (RSF) estimators."""
+
 from typing import List, Union
 
 import numpy as np
@@ -58,7 +59,7 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         _check_optional_dependency("wildboar", "wildboar", self)
 
-        super(RandomShapeletForestClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
@@ -250,7 +251,7 @@ class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         _check_optional_dependency("wildboar", "wildboar", self)
 
-        super(RandomShapeletForestRegressor, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.
