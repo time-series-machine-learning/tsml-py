@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Configuration file for the Sphinx documentation builder."""
 
 # tsml documentation master file, created by
@@ -131,7 +130,7 @@ def linkcode_resolve(domain, info):
     except Exception:
         filename = info["module"].replace(".", "/") + ".py"
 
-    return "https://github.com/time-series-machine-learning/tsml-py/blob/%s/%s" % (
+    return "https://github.com/time-series-machine-learning/tsml-py/blob/{}/{}".format(
         version,
         filename,
     )

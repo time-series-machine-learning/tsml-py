@@ -1,4 +1,5 @@
 """Unit tests for tsml interface."""
+
 import numpy as np
 import pytest
 
@@ -65,7 +66,7 @@ def test_convert_X_to_numpy_list(input_type):
 
 class _3dArrayDummy(BaseTimeSeriesEstimator):
     def __init__(self):
-        super(_3dArrayDummy, self).__init__()
+        super().__init__()
 
     def _more_tags(self) -> dict:
         return {"X_types": ["3darray"]}
@@ -73,7 +74,7 @@ class _3dArrayDummy(BaseTimeSeriesEstimator):
 
 class _2dArrayDummy(BaseTimeSeriesEstimator):
     def __init__(self):
-        super(_2dArrayDummy, self).__init__()
+        super().__init__()
 
     def _more_tags(self) -> dict:
         return {"X_types": ["2darray"]}
@@ -81,7 +82,7 @@ class _2dArrayDummy(BaseTimeSeriesEstimator):
 
 class _NpListDummy(BaseTimeSeriesEstimator):
     def __init__(self):
-        super(_NpListDummy, self).__init__()
+        super().__init__()
 
     def _more_tags(self) -> dict:
         return {"X_types": ["np_list"]}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Symbolic Fourier Approximation (SFA) Transformer.
 Configurable SFA transform for discretising time series into words.
 """
@@ -35,6 +34,7 @@ class SFATransformer(TransformerMixin, BaseTimeSeriesEstimator):
             form a word from these discrete values
     by default SFA produces a single word per series (window_size=0)
     if a window is used, it forms a histogram of counts of words.
+
     Parameters
     ----------
         word_length:         int, default = 8
@@ -90,11 +90,13 @@ class SFATransformer(TransformerMixin, BaseTimeSeriesEstimator):
             set to true to return Pandas Series as a result of transform.
             setting to true reduces speed significantly but is required for
             automatic test.
+
     Attributes
     ----------
     breakpoints: = []
     num_insts = 0
     num_atts = 0
+
     References
     ----------
     .. [1] Schäfer, Patrick, and Mikael Högqvist. "SFA: a symbolic fourier approximation
@@ -175,7 +177,7 @@ class SFATransformer(TransformerMixin, BaseTimeSeriesEstimator):
         self.return_pandas_data_series = return_pandas_data_series
 
         self.random_state = random_state
-        super(SFATransformer, self).__init__()
+        super().__init__()
 
         if not return_pandas_data_series:
             self._output_convert = "off"
@@ -287,10 +289,12 @@ class SFATransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
     def fit(self, X, y=None):
         """Calculate word breakpoints using MCB or IGB.
+
         Parameters
         ----------
         X : pandas DataFrame or 3d numpy array, input time series.
         y : array_like, target values (optional, ignored).
+
         Returns
         -------
         self: object
@@ -301,10 +305,12 @@ class SFATransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
     def transform(self, X, y=None):
         """Transform data into SFA words.
+
         Parameters
         ----------
         X : pandas DataFrame or 3d numpy array, input time series.
         y : array_like, target values (optional, ignored).
+
         Returns
         -------
         List of dictionaries containing SFA words
@@ -606,11 +612,13 @@ class SFATransformer(TransformerMixin, BaseTimeSeriesEstimator):
     @classmethod
     def get_test_params(cls, parameter_set="default"):
         """Return testing parameter settings for the estimator.
+
         Parameters
         ----------
         parameter_set : str, default="default"
             Name of the set of test parameters to return, for use in tests. If no
             special parameters are defined for a value, will return `"default"` set.
+
         Returns
         -------
         params : dict or list of dict, default = {}
@@ -694,6 +702,7 @@ def _fast_fourier_transform(X, norm, dft_length, inverse_sqrt_win_size):
     -------
     X : The training input samples.  array-like or sparse matrix of
     shape = [n_samps, num_atts]
+
     Returns
     -------
     1D array of fourier term, real_0,imag_0, real_1, imag_1 etc, length

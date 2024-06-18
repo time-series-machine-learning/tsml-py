@@ -66,7 +66,7 @@ class MPDistClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.window = window
         self.n_jobs = n_jobs
 
-        super(MPDistClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
         """Fit the estimator to training data.

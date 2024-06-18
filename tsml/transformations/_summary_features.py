@@ -53,7 +53,7 @@ class SevenNumberSummaryTransformer(TransformerMixin, BaseTimeSeriesEstimator):
     ):
         self.summary_stats = summary_stats
 
-        super(SevenNumberSummaryTransformer, self).__init__()
+        super().__init__()
 
     def fit(self, X, y=None):
         self._validate_data(X=X)

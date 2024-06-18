@@ -90,7 +90,7 @@ class CITClassifier(ClassifierMixin, BaseEstimator):
         self.thresholds = thresholds
         self.random_state = random_state
 
-        super(CITClassifier, self).__init__()
+        super().__init__()
 
     def fit(self, X: Union[np.ndarray, pd.DataFrame], y: np.ndarray) -> object:
         """Fit the estimator to training data.

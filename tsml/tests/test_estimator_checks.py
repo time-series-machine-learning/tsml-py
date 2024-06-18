@@ -35,24 +35,19 @@ def _yield_all_time_series_checks(estimator):
         )
         return
 
-    for check in _yield_checks(estimator):
-        yield check
+    yield from _yield_checks(estimator)
 
     if is_classifier(estimator):
-        for check in _yield_classifier_checks(estimator):
-            yield check
+        yield from _yield_classifier_checks(estimator)
 
     if is_regressor(estimator):
-        for check in _yield_regressor_checks(estimator):
-            yield check
+        yield from _yield_regressor_checks(estimator)
 
     if is_transformer(estimator):
-        for check in _yield_transformer_checks(estimator):
-            yield check
+        yield from _yield_transformer_checks(estimator)
 
     if is_clusterer(estimator):
-        for check in _yield_clustering_checks(estimator):
-            yield check
+        yield from _yield_clustering_checks(estimator)
 
 
 def _yield_checks(estimator):
