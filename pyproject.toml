@@ -54,8 +54,8 @@ all_extras = [
     "stumpy>=1.6.0",
     "wildboar>=1.1.0",
 
-    # temp
-    "fdasrsf<=2.5.2",  # temporary, currently above this breaks on some OS
+    # temporary for stumpy
+    "setuptools",
 ]
 unstable_extras = [
     "mrsqm>=0.0.1 ; platform_system == 'Darwin' and python_version < '3.12'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
