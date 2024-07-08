@@ -55,7 +55,7 @@ all_extras = [
     "wildboar>=1.1.0",
 
     # temp
-    "fdasrsf<=2.5.2",  # temporary, currently above this breaks on some OS
+    "fdasrsf<=2.6.1",  # temporary, currently above this breaks on some OS
     "setuptools", # temporary for stumpy
 ]
 unstable_extras = [
