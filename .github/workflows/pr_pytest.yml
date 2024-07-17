@@ -39,13 +39,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Restore numba cache
-        uses: ./.github/actions/numba_cache
-        with:
-          cache_name: "pytest"
-          runner_os: ${{ runner.os }}
-          python_version: ${{ matrix.python-version }}
-
       - name: Install
         uses: nick-fields/retry@v3
         with:

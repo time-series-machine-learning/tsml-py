@@ -55,14 +55,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Use numba cache to set env variables but not restore cache
-        uses: ./.github/actions/numba_cache
-        with:
-          cache_name: "pytest"
-          runner_os: ${{ runner.os }}
-          python_version: ${{ matrix.python-version }}
-          restore_cache: "false"
-
       - name: Install
         uses: nick-fields/retry@v3
         with:
@@ -75,12 +67,6 @@ jobs:
 
       - name: Tests
         run: python -m pytest -n logical
-
-      - name: Save new cache
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ github.workspace }}/.numba_cache
-          key: numba-pytest-${{ runner.os }}-${{ matrix.python-version}}-${{ env.CURRENT_DATE }}
 
   codecov:
     runs-on: ubuntu-20.04
