@@ -51,10 +51,6 @@ all_extras = [
     "scikit-fda>=0.7.0",
     "statsmodels>=0.12.1",
     "stumpy>=1.6.0",
-
-    # temp
-    "fdasrsf<=2.5.2",  # temporary, currently above this breaks on some OS
-    "setuptools", # temporary for stumpy
 ]
 unstable_extras = [
     "mrsqm>=0.0.7; platform_system != 'Windows' and python_version < '3.12'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
