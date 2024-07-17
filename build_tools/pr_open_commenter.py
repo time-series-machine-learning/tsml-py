@@ -12,16 +12,18 @@ from github import Github
 context_dict = json.loads(os.getenv("CONTEXT_GITHUB"))
 
 repo = context_dict["repository"]
-g = Github(sys.argv[1])
+g = Github(os.getenv("GITHUB_TOKEN"))
 repo = g.get_repo(repo)
 pr_number = context_dict["event"]["number"]
 pr = repo.get_pull(number=pr_number)
 
-print(sys.argv[2:])  # noqa
-title_labels = sys.argv[2][1:-1].split(",")
-title_labels_new = sys.argv[3][1:-1].split(",")
-content_labels = sys.argv[4][1:-1].split(",")
-content_labels_status = sys.argv[5]
+if "[bot]" in pr.user.login:
+    sys.exit(0)
+
+title_labels = os.getenv("TITLE_LABELS")[1:-1].replace("'", "").split(",")
+title_labels_new = os.getenv("TITLE_LABELS_NEW")[1:-1].replace("'", "").split(",")
+content_labels = os.getenv("CONTENT_LABELS")[1:-1].replace("'", "").split(",")
+content_labels_status = os.getenv("CONTENT_LABELS_STATUS")
 
 replacement_labels = []
 for i, label in enumerate(content_labels):
@@ -31,17 +33,17 @@ for i, label in enumerate(content_labels):
 
 labels = [(label.name, label.color) for label in repo.get_labels()]
 title_labels = [
-    "$\\color{{#{}}}{{\\textsf{{{}}}}}$".format(color, label)
+    f"$\\color{{#{color}}}{{\\textsf{{{label}}}}}$"
     for label, color in labels
     if label in title_labels
 ]
 title_labels_new = [
-    "$\\color{{#{}}}{{\\textsf{{{}}}}}$".format(color, label)
+    f"$\\color{{#{color}}}{{\\textsf{{{label}}}}}$"
     for label, color in labels
     if label in title_labels_new
 ]
 content_labels = [
-    "$\\color{{#{}}}{{\\textsf{{{}}}}}$".format(color, label)
+    f"$\\color{{#{color}}}{{\\textsf{{{label}}}}}$"
     for label, color in labels
     if label in content_labels
 ]

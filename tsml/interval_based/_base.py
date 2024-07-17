@@ -14,8 +14,8 @@ from joblib import Parallel
 from sklearn.base import BaseEstimator, is_classifier, is_regressor
 from sklearn.tree import BaseDecisionTree, DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.utils import check_random_state
-from sklearn.utils.fixes import delayed
 from sklearn.utils.multiclass import check_classification_targets
+from sklearn.utils.parallel import delayed
 from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator

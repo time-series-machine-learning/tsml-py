@@ -13,7 +13,7 @@ maintainers = [
     {name = "Matthew Middlehurst", email = "m.b.middlehurst@soton.ac.uk"},
 ]
 readme = "README.md"
-requires-python = ">=3.8,<3.13"
+requires-python = ">=3.9,<3.13"
 keywords = [
     "data-science",
     "machine-learning",
@@ -32,7 +32,6 @@ classifiers = [
     "Operating System :: Unix",
     "Operating System :: MacOS",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -41,6 +40,7 @@ classifiers = [
 dependencies = [
     "numba>=0.55.0",
     "numpy>=1.21.0",
+    "scipy>=1.9.0,<1.13.0",
     "pandas>=1.5.3",
     "scikit-learn>=1.0.0",
     "packaging>=20.0",
@@ -53,15 +53,11 @@ all_extras = [
     "statsmodels>=0.12.1",
     "stumpy>=1.6.0",
     "wildboar>=1.1.0",
-
-    # temp
-    "fdasrsf<=2.5.2",  # temporary, currently above this breaks on some OS
-    "setuptools", # temporary for stumpy
 ]
 unstable_extras = [
-    "mrsqm>=0.0.1 ; platform_system == 'Darwin' and python_version < '3.12'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
-    "pycatch22<=0.4.3",  # Known to fail installation on some setups
-    "pyfftw>=0.12.0; python_version < '3.12'", # requires fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
+    "mrsqm>=0.0.7; platform_system != 'Windows' and python_version < '3.12'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
+    "pycatch22",  # known to fail installation on some setups
+    "pyfftw>=0.12.0; python_version < '3.12'",  # requires fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
 ]
 dev = [
     "pre-commit",
@@ -122,7 +118,6 @@ addopts = '''
     --durations 20
     --timeout 600
     --showlocals
-    --numprocesses logical
     --dist worksteal
     --reruns 2
     --only-rerun "crashed while running"
