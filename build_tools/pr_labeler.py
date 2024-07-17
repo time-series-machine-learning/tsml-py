@@ -15,25 +15,28 @@ from github import Github
 context_dict = json.loads(os.getenv("CONTEXT_GITHUB"))
 
 repo = context_dict["repository"]
-g = Github(sys.argv[1])
+g = Github(os.getenv("GITHUB_TOKEN"))
 repo = g.get_repo(repo)
 pr_number = context_dict["event"]["number"]
 pr = repo.get_pull(number=pr_number)
 labels = [label.name for label in pr.get_labels()]
 
+if "[bot]" in pr.user.login:
+    sys.exit(0)
+
 # title labels
 title = pr.title
 
 title_regex_to_labels = [
-    (r"\bENH\b", "enhancement"),
-    (r"\bMNT\b", "maintenance"),
-    (r"\bBUG\b", "bug"),
-    (r"\bDOC\b", "documentation"),
-    (r"\bREF\b", "refactor"),
+    (r"\benh\b", "enhancement"),
+    (r"\bmnt\b", "maintenance"),
+    (r"\bbug\b", "bug"),
+    (r"\bdoc\b", "documentation"),
+    (r"\bref\b", "refactor"),
 ]
 
 title_labels = [
-    label for regex, label in title_regex_to_labels if re.search(regex, title)
+    label for regex, label in title_regex_to_labels if re.search(regex, title.lower())
 ]
 title_labels_to_add = list(set(title_labels) - set(labels))
 
@@ -41,7 +44,6 @@ title_labels_to_add = list(set(title_labels) - set(labels))
 paths = [file.filename for file in pr.get_files()]
 
 content_paths_to_labels = [
-    ("examples/", "examples"),
     ("tsml/tests/", "testing"),
 ]
 
