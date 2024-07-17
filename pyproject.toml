@@ -40,6 +40,7 @@ classifiers = [
 dependencies = [
     "numba>=0.55.0",
     "numpy>=1.21.0",
+    "scipy>=1.9.0,<1.13.0",
     "pandas>=1.5.3",
     "scikit-learn>=1.0.0",
     "packaging>=20.0",
@@ -51,6 +52,7 @@ all_extras = [
     "scikit-fda>=0.7.0",
     "statsmodels>=0.12.1",
     "stumpy>=1.6.0",
+    "wildboar>=1.1.0",
 ]
 unstable_extras = [
     "mrsqm>=0.0.7; platform_system != 'Windows' and python_version < '3.12'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
@@ -116,7 +118,6 @@ addopts = '''
     --durations 20
     --timeout 600
     --showlocals
-    --numprocesses logical
     --dist worksteal
     --reruns 2
     --only-rerun "crashed while running"
