@@ -12,7 +12,7 @@ import numpy as np
 from joblib import Parallel
 from numba import njit
 from sklearn.base import TransformerMixin
-from sklearn.utils.fixes import delayed
+from sklearn.utils.parallel import delayed
 
 from tsml.base import BaseTimeSeriesEstimator
 from tsml.utils.numba_functions.general import (
