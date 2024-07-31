@@ -1,5 +1,5 @@
 [![github-actions-release](https://img.shields.io/github/actions/workflow/status/time-series-machine-learning/tsml-py/release.yml?logo=github&label=build%20%28release%29)](https://github.com/time-series-machine-learning/tsml-py/actions/workflows/release.yml)
-[![github-actions-main](https://img.shields.io/github/actions/workflow/status/time-series-machine-learning/tsml-py/tests.yml?logo=github&branch=main&label=build%20%28main%29)](https://github.com/time-series-machine-learning/tsml-py/actions/workflows/tests.yml)
+[![github-actions-main](https://img.shields.io/github/actions/workflow/status/time-series-machine-learning/tsml-py/periodic_tests.yml?logo=github&branch=main&label=build%20%28main%29)](https://github.com/time-series-machine-learning/tsml-py/actions/workflows/periodic_tests.yml)
 [![codecov](https://img.shields.io/codecov/c/github/time-series-machine-learning/tsml-py?label=codecov&logo=codecov)](https://codecov.io/gh/time-series-machine-learning/tsml-py)
 [![pypi](https://img.shields.io/pypi/v/tsml?logo=pypi&color=blue)](https://pypi.org/project/tsml/)
 [![!conda](https://img.shields.io/conda/vn/conda-forge/tsml?logo=anaconda&color=blue)](https://anaconda.org/conda-forge/tsml)

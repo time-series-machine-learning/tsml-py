@@ -46,7 +46,7 @@ jobs:
         with:
           timeout_minutes: 30
           max_attempts: 3
-          command: python -m pip install .[all_extras,dev,unstable_extras]
+          command: python -m pip install .[all_extras,dev]
 
       - name: Show dependencies
         run: python -m pip list

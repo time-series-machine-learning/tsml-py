@@ -49,15 +49,14 @@ dependencies = [
 [project.optional-dependencies]
 all_extras = [
     "grailts",
+    "pycatch22",
+    "pyfftw>=0.12.0; python_version < '3.12'",  # requires fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
     "scikit-fda>=0.7.0",
     "statsmodels>=0.12.1",
     "stumpy>=1.6.0",
-    "wildboar>=1.1.0",
 ]
 unstable_extras = [
-    "mrsqm>=0.0.7; platform_system != 'Windows' and python_version < '3.12'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
-    "pycatch22",  # known to fail installation on some setups
-    "pyfftw>=0.12.0; python_version < '3.12'",  # requires fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
+    "mrsqm>=0.0.7; python_version < '3.12'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
 ]
 dev = [
     "pre-commit",
