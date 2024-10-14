@@ -40,7 +40,7 @@ classifiers = [
 dependencies = [
     "numba>=0.55.0",
     "numpy>=1.21.0",
-    "scipy>=1.9.0,<1.13.0",
+    "scipy>=1.9.0,<1.15.0",
     "pandas>=1.5.3",
     "scikit-learn>=1.0.0",
     "packaging>=20.0",
@@ -72,7 +72,7 @@ binder = [
     "jupyterlab",
 ]
 docs = [
-    "sphinx<7.4.0",
+    "sphinx<8.2.0",
     "sphinx-design",
     "sphinx-version-warning",
     "sphinx_issues",
