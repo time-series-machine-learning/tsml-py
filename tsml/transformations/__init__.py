@@ -3,6 +3,7 @@
 __all__ = [
     "AutocorrelationFunctionTransformer",
     "ARCoefficientTransformer",
+    "Catch22Transformer",
     "FPCATransformer",
     "FunctionTransformer",
     "RandomIntervalTransformer",
@@ -16,6 +17,7 @@ __all__ = [
 
 from tsml.transformations._acf import AutocorrelationFunctionTransformer
 from tsml.transformations._ar_coefficient import ARCoefficientTransformer
+from tsml.transformations._catch22 import Catch22Transformer
 from tsml.transformations._fpca import FPCATransformer
 from tsml.transformations._function_transformer import FunctionTransformer
 from tsml.transformations._interval_extraction import (

@@ -100,10 +100,10 @@ def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
     Examples
     --------
     >>> from tsml.utils.testing import parametrize_with_checks
-    >>> from tsml.interval_based import TSFRegressor
+    >>> from tsml.interval_based import IntervalForestRegressor
     >>> from tsml.vector import RotationForestClassifier
     >>> @parametrize_with_checks(
-    ...     [TSFRegressor(), RotationForestClassifier()]
+    ...     [IntervalForestRegressor(), RotationForestClassifier()]
     ... )
     ... def test_tsml_compatible_estimator(estimator, check):
     ...     check(estimator)
