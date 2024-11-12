@@ -128,15 +128,11 @@ class TransformerConcatenator(TransformerMixin, BaseTimeSeriesEstimator):
             `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
             `create_test_instance` uses the first (or only) dictionary in `params`
         """
-        from tsml.transformations import (
-            FunctionTransformer,
-            SevenNumberSummaryTransformer,
-        )
-        from tsml.utils.numba_functions.general import first_order_differences_3d
+        from tsml.transformations import SevenNumberSummaryTransformer
 
         return {
             "transformers": [
                 SevenNumberSummaryTransformer(),
-                FunctionTransformer(func=first_order_differences_3d),
+                SevenNumberSummaryTransformer(),
             ],
         }
