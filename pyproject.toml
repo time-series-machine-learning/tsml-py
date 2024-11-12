@@ -55,6 +55,7 @@ all_extras = [
     "wildboar",
 ]
 unstable_extras = [
+    "pycatch22",
     "pyfftw>=0.12.0; python_version < '3.12'",  # requires fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
     "mrsqm>=0.0.7; python_version < '3.12'",  # requires gcc and fftw to be installed for Windows and some other OS (see http://www.fftw.org/index.html)
 ]

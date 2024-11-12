@@ -609,9 +609,10 @@ def _check_optional_dependency(
         # package cannot be imported
         if raise_error:
             raise ModuleNotFoundError(
-                f'{source_name} has an optional dependency and requires "{package_name}" '
-                f'to be installed. Run: "pip install {package_name}" or "pip install '
-                f'tsml[extras]" to install all optional dependencies.'
+                f"{source_name} has an optional dependency and requires "
+                f'"{package_name}" to be installed. Run: "pip install {package_name}" '
+                f'or "pip install tsml[all_extras]" to install all optional '
+                f"dependencies."
             ) from e
         else:
             return False
