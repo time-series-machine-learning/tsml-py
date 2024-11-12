@@ -1,5 +1,7 @@
 """Interval extraction test code."""
 
+import pytest
+
 from tsml.transformations import (
     Catch22Transformer,
     RandomIntervalTransformer,
@@ -8,9 +10,11 @@ from tsml.transformations import (
 )
 from tsml.utils.numba_functions.stats import row_mean, row_median
 from tsml.utils.testing import generate_3d_test_data
+from tsml.utils.validation import _check_optional_dependency
 
 
 def test_interval_prune():
+    """Test RandomIntervalTransformer duplicate pruning."""
     X, y = generate_3d_test_data(random_state=0, n_channels=2, series_length=10)
 
     rit = RandomIntervalTransformer(
@@ -25,6 +29,7 @@ def test_interval_prune():
 
 
 def test_random_interval_transformer():
+    """Test RandomIntervalTransformer."""
     X, y = generate_3d_test_data(random_state=0, n_channels=2, series_length=10)
 
     rit = RandomIntervalTransformer(
@@ -38,7 +43,12 @@ def test_random_interval_transformer():
     assert rit.transform(X).shape == (10, 35)
 
 
+@pytest.mark.skipif(
+    not _check_optional_dependency("pycatch22", "pycatch22", None, raise_error=False),
+    reason="pycatch22 not installed",
+)
 def test_supervised_transformers():
+    """Test SupervisedIntervalTransformer."""
     X, y = generate_3d_test_data(random_state=0)
 
     sit = SupervisedIntervalTransformer(

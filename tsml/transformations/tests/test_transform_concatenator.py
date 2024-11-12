@@ -1,5 +1,6 @@
+"""Tests for the TransformerConcatenator class."""
+
 from tsml.transformations import (
-    Catch22Transformer,
     FunctionTransformer,
     SevenNumberSummaryTransformer,
     TransformerConcatenator,
@@ -9,19 +10,21 @@ from tsml.utils.testing import generate_3d_test_data
 
 
 def test_concatenate_features():
+    """Test TransformerConcatenator on features."""
     X, y = generate_3d_test_data()
 
     concat = TransformerConcatenator(
         transformers=[
-            Catch22Transformer(features=["DN_HistogramMode_5", "DN_HistogramMode_10"]),
+            SevenNumberSummaryTransformer(),
             SevenNumberSummaryTransformer(),
         ]
     )
 
-    assert concat.fit_transform(X).shape == (X.shape[0], 9)
+    assert concat.fit_transform(X).shape == (X.shape[0], 14)
 
 
 def test_concatenate_series():
+    """Test TransformerConcatenator on series."""
     X, y = generate_3d_test_data()
 
     concat = TransformerConcatenator(

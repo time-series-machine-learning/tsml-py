@@ -1,4 +1,4 @@
-""""""
+"""TransformerConcatenator."""
 
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["TransformerConcatenator"]
@@ -12,7 +12,7 @@ from tsml.utils._tags import _safe_tags
 
 
 class TransformerConcatenator(TransformerMixin, BaseTimeSeriesEstimator):
-    """ """
+    """TransformerConcatenator."""
 
     def __init__(
         self,
@@ -128,13 +128,15 @@ class TransformerConcatenator(TransformerMixin, BaseTimeSeriesEstimator):
             `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
             `create_test_instance` uses the first (or only) dictionary in `params`
         """
-        from tsml.transformations import Catch22Transformer
+        from tsml.transformations import (
+            FunctionTransformer,
+            SevenNumberSummaryTransformer,
+        )
+        from tsml.utils.numba_functions.general import first_order_differences_3d
 
         return {
             "transformers": [
-                Catch22Transformer(
-                    features=["DN_HistogramMode_5", "DN_HistogramMode_10"]
-                ),
-                Catch22Transformer(features="CO_f1ecac"),
+                SevenNumberSummaryTransformer(),
+                FunctionTransformer(func=first_order_differences_3d),
             ],
         }

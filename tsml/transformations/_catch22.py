@@ -272,6 +272,7 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
         return {
             "X_types": ["np_list", "3darray"],
             "requires_fit": False,
+            "optional_dependency": True,
         }
 
     @classmethod
