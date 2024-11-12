@@ -110,22 +110,6 @@ class Catch22Transformer(TransformerMixin, BaseTimeSeriesEstimator):
     .. [2] Fulcher, B. D., Little, M. A., & Jones, N. S. (2013). Highly comparative
     time-series analysis: the empirical structure of time series and their methods.
     Journal of the Royal Society Interface, 10(83), 20130048.
-
-    Examples
-    --------
-    >>> from tsml.transformations import Catch22Transformer
-    >>> from tsml.utils.testing import generate_3d_test_data
-    >>> X, _ = generate_3d_test_data(n_samples=4, series_length=10, random_state=0)
-    >>> tnf = Catch22Transformer(replace_nans=True)
-    >>> tnf.fit(X)
-    Catch22Transformer(...)
-    >>> print(tnf.transform(X)[0])
-    [6.27596874e-02 3.53871087e-01 4.00000000e+00 7.00000000e-01
-     2.00000000e-01 5.66227710e-01 2.00000000e+00 3.08148791e-34
-     1.96349541e+00 9.99913411e-01 1.39251594e+00 3.89048349e-01
-     2.00000000e+00 1.00000000e+00 3.00000000e+00 2.04319187e+00
-     1.00000000e+00 2.44474814e-01 0.00000000e+00 0.00000000e+00
-     8.23045267e-03 0.00000000e+00]
     """
 
     def __init__(

@@ -118,6 +118,8 @@ if _check_optional_dependency("pycatch22", "pycatch22", None, raise_error=False)
             "SB_BinaryStats_diff_longstretch0",
         ]
     )
+else:
+    att_subsample_c22 = None
 
 
 @pytest.mark.skipif(
