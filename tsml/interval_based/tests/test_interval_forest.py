@@ -119,7 +119,7 @@ if _check_optional_dependency("pycatch22", "pycatch22", None, raise_error=False)
         ]
     )
 else:
-    att_subsample_c22 = None
+    att_subsample_c22 = SevenNumberSummaryTransformer()
 
 
 @pytest.mark.skipif(
