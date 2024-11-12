@@ -135,9 +135,7 @@ else:
         (
             [
                 row_mean,
-                Catch22Transformer(
-                    features=["DN_HistogramMode_5", "DN_HistogramMode_10"]
-                ),
+                _clone_estimator(att_subsample_c22),
                 row_numba_min,
             ],
             4,
