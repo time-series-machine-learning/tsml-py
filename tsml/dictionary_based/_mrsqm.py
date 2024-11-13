@@ -59,17 +59,6 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     .. [2] Nguyen, Thach Le, and Georgiana Ifrim. "MrSQM: Fast time series
         classification with symbolic representations." arXiv preprint arXiv:2109.01036
         (2021).
-
-    Examples
-    --------
-    >>> from tsml.shapelet_based import MrSQMClassifier
-    >>> from tsml.utils.testing import generate_3d_test_data
-    >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
-    >>> clf = MrSQMClassifier(random_state=0)  # doctest: +SKIP
-    >>> clf.fit(X, y)  # doctest: +SKIP
-    MrSQMClassifier(...)
-    >>> clf.predict(X)  # doctest: +SKIP
-    array([0, 1, 1, 0, 0, 1, 0, 1])
     """
 
     def __init__(
