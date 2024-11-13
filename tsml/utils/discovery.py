@@ -109,9 +109,7 @@ def all_estimators(type_filter: Union[str, List[str]] = None):
             "classifier": ClassifierMixin,
             "regressor": RegressorMixin,
             "transformer": TransformerMixin,
-            # accept both clusterer inputs
             "clusterer": ClusterMixin,
-            "cluster": ClusterMixin,
         }
         for name, mixin in filters.items():
             if name in type_filter:
@@ -123,7 +121,7 @@ def all_estimators(type_filter: Union[str, List[str]] = None):
         if type_filter:
             raise ValueError(
                 "Parameter type_filter must be 'classifier', "
-                "'regressor', 'transformer', 'cluster' or "
+                "'regressor', 'transformer', 'clusterer' or "
                 f"None, got {repr(type_filter)}."
             )
 

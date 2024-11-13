@@ -27,7 +27,7 @@ class PeriodogramTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         options. By default, the series will be padded with zeros.
     constant_value : int, default=0
         The value to use when padding with a constant value.
-    use_pyfftw : bool, default=True
+    use_pyfftw : bool, default=False
         Whether to use the pyfftw library for FFT calculations. Requires the pyfftw
         package to be installed.
     n_jobs : int, default=1
@@ -57,7 +57,7 @@ class PeriodogramTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         pad_series=True,
         pad_with="constant",
         constant_value=0,
-        use_pyfftw=True,
+        use_pyfftw=False,
         n_jobs=1,
     ):
         self.use_pyfftw = use_pyfftw

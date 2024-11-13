@@ -163,6 +163,9 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         return X_t
 
+    def _more_tags(self) -> dict:
+        return {"optional_dependency": True}
+
     @classmethod
     def get_test_params(cls, parameter_set="default"):
         """Return testing parameter settings for the estimator.

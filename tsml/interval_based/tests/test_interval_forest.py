@@ -15,6 +15,7 @@ from tsml.transformations import (
 )
 from tsml.utils.numba_functions.stats import row_mean, row_numba_min
 from tsml.utils.testing import generate_3d_test_data
+from tsml.utils.validation import _check_optional_dependency
 from tsml.vector import CITClassifier
 
 
@@ -109,15 +110,22 @@ def test_interval_forest_n_intervals(n_intervals, n_intervals_len):
     assert data[0].shape[1] == n_intervals_len
 
 
-att_subsample_c22 = Catch22Transformer(
-    features=[
-        "DN_HistogramMode_5",
-        "DN_HistogramMode_10",
-        "SB_BinaryStats_diff_longstretch0",
-    ]
+if _check_optional_dependency("pycatch22", "pycatch22", None, raise_error=False):
+    att_subsample_c22 = Catch22Transformer(
+        features=[
+            "DN_HistogramMode_5",
+            "DN_HistogramMode_10",
+            "SB_BinaryStats_diff_longstretch0",
+        ]
+    )
+else:
+    att_subsample_c22 = SevenNumberSummaryTransformer()
+
+
+@pytest.mark.skipif(
+    not _check_optional_dependency("pycatch22", "pycatch22", None, raise_error=False),
+    reason="pycatch22 not installed",
 )
-
-
 @pytest.mark.parametrize(
     "features,output_len",
     [
@@ -127,9 +135,7 @@ att_subsample_c22 = Catch22Transformer(
         (
             [
                 row_mean,
-                Catch22Transformer(
-                    features=["DN_HistogramMode_5", "DN_HistogramMode_10"]
-                ),
+                _clone_estimator(att_subsample_c22),
                 row_numba_min,
             ],
             4,
