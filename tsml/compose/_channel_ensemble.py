@@ -204,17 +204,17 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
     Examples
     --------
     >>> from tsml.compose import ChannelEnsembleClassifier
-    >>> from tsml.interval_based import IntervalForestClassifier
+    >>> from tsml.dummy import DummyClassifier
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, y = generate_3d_test_data(n_samples=8, series_length=10, random_state=0)
     >>> reg = ChannelEnsembleClassifier(
-    ...     estimators=("tsf", IntervalForestClassifier(n_estimators=2), "all-split"),
+    ...     estimators=("d", DummyClassifier(), "all-split"),
     ...     random_state=0,
     ... )
     >>> reg.fit(X, y)
     ChannelEnsembleClassifier(...)
     >>> reg.predict(X)
-    array([0, 1, 1, 0, 0, 1, 0, 1])
+    array([0, 0, 0, 0, 0, 0, 0, 0])
     """
 
     def __init__(self, estimators, remainder="drop", random_state=None):
@@ -349,12 +349,12 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
         params : dict or list of dict
             Parameters to create testing instances of the class.
         """
-        from tsml.interval_based import IntervalForestClassifier
+        from tsml.dummy import DummyClassifier
 
         return {
             "estimators": [
-                ("tsf1", IntervalForestClassifier(n_estimators=2), 0),
-                ("tsf2", IntervalForestClassifier(n_estimators=2), 0),
+                ("d1", DummyClassifier(), 0),
+                ("d2", DummyClassifier(), 0),
             ]
         }
 
@@ -411,19 +411,19 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
     Examples
     --------
     >>> from tsml.compose import ChannelEnsembleRegressor
-    >>> from tsml.interval_based import IntervalForestRegressor
+    >>> from tsml.dummy import DummyRegressor
     >>> from tsml.utils.testing import generate_3d_test_data
     >>> X, y = generate_3d_test_data(n_samples=8, series_length=10,
     ...                              regression_target=True, random_state=0)
     >>> reg = ChannelEnsembleRegressor(
-    ...     estimators=("tsf", IntervalForestRegressor(n_estimators=2), "all-split"),
+    ...     estimators=("d", DummyRegressor(), "all-split"),
     ...     random_state=0,
     ... )
     >>> reg.fit(X, y)
     ChannelEnsembleRegressor(...)
     >>> reg.predict(X)
-    array([0.31798318, 1.41426301, 1.06414747, 0.6924721 , 0.56660146,
-           1.26538944, 0.52324808, 1.0939405 ])
+    array([0.8672557, 0.8672557, 0.8672557, 0.8672557, 0.8672557, 0.8672557,
+           0.8672557, 0.8672557], dtype=float32)
     """
 
     def __init__(self, estimators, remainder="drop", random_state=None):
@@ -518,12 +518,12 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
         params : dict or list of dict
             Parameters to create testing instances of the class.
         """
-        from tsml.interval_based import IntervalForestRegressor
+        from tsml.dummy import DummyRegressor
 
         return {
             "estimators": [
-                ("tsf1", IntervalForestRegressor(n_estimators=2), 0),
-                ("tsf2", IntervalForestRegressor(n_estimators=2), 0),
+                ("d1", DummyRegressor(), 0),
+                ("d2", DummyRegressor(), 0),
             ]
         }
 

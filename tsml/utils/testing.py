@@ -96,17 +96,6 @@ def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
     See Also
     --------
     check_estimator : Check if estimator adheres to tsml or scikit-learn conventions.
-
-    Examples
-    --------
-    >>> from tsml.utils.testing import parametrize_with_checks
-    >>> from tsml.interval_based import IntervalForestRegressor
-    >>> from tsml.vector import RotationForestClassifier
-    >>> @parametrize_with_checks(
-    ...     [IntervalForestRegressor(), RotationForestClassifier()]
-    ... )
-    ... def test_tsml_compatible_estimator(estimator, check):
-    ...     check(estimator)
     """
     import pytest
 
