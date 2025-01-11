@@ -16,7 +16,7 @@ Please see [`tsml_eval`](https://github.com/time-series-machine-learning/tsml-ev
 is more of a sandbox for testing out new ideas and algorithms. It may contain some
 algorithms and implementations that are not available in the other toolkits.
 
-The current release of `tsml` is v0.5.0.
+The current release of `tsml` is v0.6.0.
 
 ## Installation
 

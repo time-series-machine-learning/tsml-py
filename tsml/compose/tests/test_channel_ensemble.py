@@ -9,7 +9,7 @@ from tsml.compose._channel_ensemble import (
     _check_key_type,
     _get_channel,
 )
-from tsml.interval_based import IntervalForestClassifier, IntervalForestRegressor
+from tsml.dummy import DummyClassifier, DummyRegressor
 from tsml.utils.testing import generate_3d_test_data, generate_unequal_test_data
 
 
@@ -17,17 +17,13 @@ def test_single_estimator():
     """Test that a single estimator is correctly applied to all channels."""
     X, y = generate_3d_test_data(n_channels=3)
 
-    ens = ChannelEnsembleClassifier(
-        estimators=[("tsf", IntervalForestClassifier(n_estimators=2), "all")]
-    )
+    ens = ChannelEnsembleClassifier(estimators=[("d", DummyClassifier(), "all")])
     ens.fit(X, y)
 
     assert len(ens.estimators_[0][2]) == 3
     assert ens.predict(X).shape == (X.shape[0],)
 
-    ens = ChannelEnsembleRegressor(
-        estimators=[("tsf", IntervalForestRegressor(n_estimators=2), "all")]
-    )
+    ens = ChannelEnsembleRegressor(estimators=[("d", DummyRegressor(), "all")])
     ens.fit(X, y)
 
     assert len(ens.estimators_[0][2]) == 3
@@ -38,18 +34,14 @@ def test_single_estimator_split():
     """Test that a single split estimator correctly creates an estimator per channel."""
     X, y = generate_3d_test_data(n_channels=3)
 
-    ens = ChannelEnsembleClassifier(
-        estimators=("tsf", IntervalForestClassifier(n_estimators=2), "all-split")
-    )
+    ens = ChannelEnsembleClassifier(estimators=("d", DummyClassifier(), "all-split"))
     ens.fit(X, y)
 
     assert len(ens.estimators_) == 3
     assert isinstance(ens.estimators_[0][2], int)
     assert ens.predict(X).shape == (X.shape[0],)
 
-    ens = ChannelEnsembleRegressor(
-        estimators=("tsf", IntervalForestRegressor(n_estimators=2), "all-split")
-    )
+    ens = ChannelEnsembleRegressor(estimators=("d", DummyRegressor(), "all-split"))
     ens.fit(X, y)
 
     assert len(ens.estimators_) == 3
@@ -62,8 +54,8 @@ def test_remainder():
     X, y = generate_3d_test_data(n_channels=3)
 
     ens = ChannelEnsembleClassifier(
-        estimators=[("tsf", IntervalForestClassifier(n_estimators=2), 0)],
-        remainder=IntervalForestClassifier(n_estimators=2),
+        estimators=[("d", DummyClassifier(), 0)],
+        remainder=DummyClassifier(),
     )
     ens.fit(X, y)
 
@@ -71,8 +63,8 @@ def test_remainder():
     assert ens.predict(X).shape == (X.shape[0],)
 
     ens = ChannelEnsembleRegressor(
-        estimators=[("tsf", IntervalForestRegressor(n_estimators=2), 0)],
-        remainder=IntervalForestRegressor(n_estimators=2),
+        estimators=[("d", DummyRegressor(), 0)],
+        remainder=DummyRegressor(),
     )
     ens.fit(X, y)
 
