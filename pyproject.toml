@@ -50,6 +50,7 @@ dependencies = [
 all_extras = [
     "grailts",
     # "scikit-fda>=0.7.0",
+    "statsmodels>=0.12.1",
     "wildboar",
 ]
 unstable_extras = [
