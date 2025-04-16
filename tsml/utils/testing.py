@@ -11,13 +11,18 @@ __all__ = [
 
 import re
 import warnings
-from functools import partial
-from typing import Callable, List, Tuple, Union
+from functools import partial, wraps
+from typing import Callable, List, Literal, Tuple, Union
 
 import numpy as np
 from sklearn import config_context
 from sklearn.base import BaseEstimator
-from sklearn.utils.estimator_checks import _maybe_mark, _yield_all_checks
+from sklearn.utils._testing import SkipTest
+from sklearn.utils.estimator_checks import (
+    _check_name,
+    _should_be_skipped_or_marked,
+    _yield_all_checks,
+)
 
 import tsml.tests.test_estimator_checks as ts_checks
 from tsml.base import BaseTimeSeriesEstimator
@@ -357,3 +362,50 @@ def generate_unequal_test_data(
         y += rng.uniform(size=y.shape)
 
     return X, y
+
+
+def _maybe_mark(
+    estimator,
+    check,
+    expected_failed_checks: dict[str, str] | None = None,
+    mark: Literal["xfail", "skip", None] = None,
+    pytest=None,
+):
+    """Mark the test as xfail or skip if needed.
+
+    Copy of the `_maybe_mark` function from sklearn 1.6.1 for backwards compatibility.
+
+    Parameters
+    ----------
+    estimator : estimator object
+        Estimator instance for which to generate checks.
+    check : partial or callable
+        Check to be marked.
+    expected_failed_checks : dict[str, str], default=None
+        Dictionary of the form {check_name: reason} for checks that are expected to
+        fail.
+    mark : "xfail" or "skip" or None
+        Whether to mark the check as xfail or skip.
+    pytest : pytest module, default=None
+        Pytest module to use to mark the check. This is only needed if ``mark`` is
+        `"xfail"`. Note that one can run `check_estimator` without having `pytest`
+        installed. This is used in combination with `parametrize_with_checks` only.
+    """
+    should_be_marked, reason = _should_be_skipped_or_marked(
+        estimator, check, expected_failed_checks
+    )
+    if not should_be_marked or mark is None:
+        return estimator, check
+
+    estimator_name = estimator.__class__.__name__
+    if mark == "xfail":
+        return pytest.param(estimator, check, marks=pytest.mark.xfail(reason=reason))
+    else:
+
+        @wraps(check)
+        def wrapped(*args, **kwargs):
+            raise SkipTest(
+                f"Skipping {_check_name(check)} for {estimator_name}: {reason}"
+            )
+
+        return estimator, wrapped
