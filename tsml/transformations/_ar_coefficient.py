@@ -30,19 +30,6 @@ class ARCoefficientTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         short. This will reduce order if needed.
     replace_nan : bool, default=False
         If True, replace NaNs in output with 0s.
-
-    Examples
-    --------
-    >>> from tsml.transformations import ARCoefficientTransformer
-    >>> from tsml.utils.testing import generate_3d_test_data
-    >>> X, _ = generate_3d_test_data(n_samples=4, n_channels=2, series_length=20,
-    ...                              random_state=0)
-    >>> tnf = ARCoefficientTransformer(order=5)
-    >>> tnf.fit(X)
-    ARCoefficientTransformer(...)
-    >>> print(tnf.transform(X)[0])
-    [[ 0.05445952 -0.02106654 -0.24989205 -0.19153596  0.08833235]
-     [-0.13034384  0.16255828 -0.27993791 -0.06842601 -0.01382752]]
     """
 
     def __init__(

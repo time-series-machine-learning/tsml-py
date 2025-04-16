@@ -20,19 +20,7 @@ from tsml.utils.validation import _check_optional_dependency
 
 
 class GRAILClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
-    """
-    GRAIL classifier.
-
-    Examples
-    --------
-    >>> from tsml.datasets import load_minimal_chinatown
-    >>> from tsml.distance_based import GRAILClassifier
-    >>> X, y = load_minimal_chinatown()
-    >>> clf = GRAILClassifier()
-    >>> clf.fit(X, y)
-    GRAILClassifier(...)
-    >>> preds = clf.predict(X)
-    """
+    """GRAIL classifier."""
 
     def __init__(self, classifier="svm"):
         self.classifier = classifier

@@ -51,7 +51,7 @@ dependencies = [
 [project.optional-dependencies]
 all_extras = [
     "grailts",
-    "scikit-fda>=0.7.0; python_version > '3.9'",
+    "scikit-fda>=0.7.0; python_version > '3.9' and python_version < '3.13'",
     "statsmodels>=0.12.1",
     "wildboar",
 ]
