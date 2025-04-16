@@ -16,6 +16,7 @@ from sklearn.exceptions import DataConversionWarning, NotFittedError
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import scale
+from sklearn.utils._tags import _safe_tags as _safe_tags_sklearn
 from sklearn.utils._testing import (
     SkipTest,
     assert_allclose,
@@ -28,7 +29,7 @@ from sklearn.utils.estimator_checks import _is_public_parameter, _NotAnArray
 from sklearn.utils.validation import _num_samples, check_is_fitted
 
 import tsml.utils.testing as test_utils
-from tsml.utils._tags import _DEFAULT_TAGS, _safe_tags
+from tsml.utils._tags import _safe_tags
 
 
 @ignore_warnings(category=FutureWarning)
@@ -1409,8 +1410,8 @@ def check_estimator_get_tags_default_keys(name, estimator_orig):
     if not hasattr(estimator, "_get_tags"):
         return
 
+    default_tags_keys = set(_safe_tags_sklearn(estimator).keys())
     tags_keys = set(estimator._get_tags().keys())
-    default_tags_keys = set(_DEFAULT_TAGS.keys())
     assert tags_keys.intersection(default_tags_keys) == default_tags_keys, (
         f"{name}._get_tags() is missing entries for the following default tags: "
         f"{default_tags_keys - tags_keys.intersection(default_tags_keys)}"
