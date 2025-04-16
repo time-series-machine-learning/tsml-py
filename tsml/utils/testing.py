@@ -12,7 +12,7 @@ __all__ = [
 import re
 import warnings
 from functools import partial, wraps
-from typing import Callable, List, Literal, Tuple, Union
+from typing import Callable, List, Tuple, Union
 
 import numpy as np
 from aeon.base import BaseAeonEstimator
@@ -368,8 +368,8 @@ def generate_unequal_test_data(
 def _maybe_mark(
     estimator,
     check,
-    expected_failed_checks: dict[str, str] | None = None,
-    mark: Literal["xfail", "skip", None] = None,
+    expected_failed_checks=None,
+    mark=None,
     pytest=None,
 ):
     """Mark the test as xfail or skip if needed.
