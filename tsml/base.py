@@ -247,9 +247,6 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
                 f"is expecting {self.n_features_in_[1]} series length as input."
             )
 
-    def _get_tags(self) -> dict:
-        return _safe_tags(self)
-
     def _more_tags(self) -> dict:
         return _DEFAULT_TAGS
 
