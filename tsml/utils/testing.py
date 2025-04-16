@@ -17,10 +17,11 @@ from typing import Callable, List, Tuple, Union
 import numpy as np
 from sklearn import config_context
 from sklearn.base import BaseEstimator
-from sklearn.utils.estimator_checks import _maybe_mark_xfail, _yield_all_checks
+from sklearn.utils.estimator_checks import _maybe_mark, _yield_all_checks
 
 import tsml.tests.test_estimator_checks as ts_checks
 from tsml.base import BaseTimeSeriesEstimator
+from tsml.utils._tags import _safe_tags
 from tsml.utils.discovery import all_estimators
 
 
@@ -101,6 +102,7 @@ def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
 
     def checks_generator():
         for estimator in estimators:
+            tags = _safe_tags(estimator)
             checks = (
                 ts_checks._yield_all_time_series_checks
                 if isinstance(estimator, BaseTimeSeriesEstimator)
@@ -109,7 +111,13 @@ def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
             name = type(estimator).__name__
             for check in checks(estimator):
                 check = partial(check, name)
-                yield _maybe_mark_xfail(estimator, check, pytest)
+                yield _maybe_mark(
+                    estimator,
+                    check,
+                    expected_failed_checks=tags["_xfail_checks"],
+                    mark="xfail",
+                    pytest=pytest,
+                )
 
     return pytest.mark.parametrize(
         "estimator, check",

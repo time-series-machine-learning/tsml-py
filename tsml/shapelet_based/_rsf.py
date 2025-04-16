@@ -183,6 +183,9 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     def _more_tags(self) -> dict:
         return {
             "optional_dependency": True,
+            "_xfail_checks": {
+                "check_estimator_handles_multivariate_data": "sklearn 1.6.0"
+            },
         }
 
     @classmethod
@@ -331,6 +334,9 @@ class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
     def _more_tags(self) -> dict:
         return {
             "optional_dependency": True,
+            "_xfail_checks": {
+                "check_estimator_handles_multivariate_data": "sklearn 1.6.0"
+            },
         }
 
     @classmethod

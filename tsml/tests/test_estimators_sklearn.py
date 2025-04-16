@@ -1415,6 +1415,3 @@ def check_estimator_get_tags_default_keys(name, estimator_orig):
         f"{name}._get_tags() is missing entries for the following default tags: "
         f"{default_tags_keys - tags_keys.intersection(default_tags_keys)}"
     )
-
-
-# todo add pandas tests again?
