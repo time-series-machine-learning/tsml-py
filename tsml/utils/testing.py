@@ -15,13 +15,17 @@ from functools import partial, wraps
 from typing import Callable, List, Literal, Tuple, Union
 
 import numpy as np
+from aeon.base import BaseAeonEstimator
+from aeon.testing.estimator_checking._yield_estimator_checks import (
+    _yield_all_aeon_checks,
+)
 from sklearn import config_context
 from sklearn.base import BaseEstimator
 from sklearn.utils._testing import SkipTest
 from sklearn.utils.estimator_checks import _yield_all_checks
 
-import tsml.tests.test_estimator_checks as ts_checks
 from tsml.base import BaseTimeSeriesEstimator
+from tsml.tests.test_estimator_checks import _yield_all_time_series_checks
 from tsml.utils._tags import _safe_tags
 from tsml.utils.discovery import all_estimators
 
@@ -104,11 +108,12 @@ def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
     def checks_generator():
         for estimator in estimators:
             tags = _safe_tags(estimator)
-            checks = (
-                ts_checks._yield_all_time_series_checks
-                if isinstance(estimator, BaseTimeSeriesEstimator)
-                else _yield_all_checks
-            )
+            if isinstance(estimator, BaseTimeSeriesEstimator):
+                checks = _yield_all_time_series_checks
+            elif isinstance(estimator, BaseAeonEstimator):
+                checks = _yield_all_aeon_checks
+            else:
+                checks = _yield_all_checks
             name = type(estimator).__name__
             for check in checks(estimator):
                 check = partial(check, name)
