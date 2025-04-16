@@ -388,10 +388,7 @@ def _maybe_mark(
         installed. This is used in combination with `parametrize_with_checks` only.
     """
 
-    def _should_be_skipped_or_marked(
-        check, expected_failed_checks: dict[str, str] | None = None
-    ) -> tuple[bool, str]:
-
+    def _should_be_skipped_or_marked(check, expected_failed_checks):
         expected_failed_checks = expected_failed_checks or {}
 
         check_name = _check_name(check)
