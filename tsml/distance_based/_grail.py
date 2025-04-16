@@ -20,19 +20,7 @@ from tsml.utils.validation import _check_optional_dependency
 
 
 class GRAILClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
-    """
-    GRAIL classifier.
-
-    Examples
-    --------
-    >>> from tsml.datasets import load_minimal_chinatown
-    >>> from tsml.distance_based import GRAILClassifier
-    >>> X, y = load_minimal_chinatown()
-    >>> clf = GRAILClassifier()
-    >>> clf.fit(X, y)
-    GRAILClassifier(...)
-    >>> preds = clf.predict(X)
-    """
+    """GRAIL classifier."""
 
     def __init__(self, classifier="svm"):
         self.classifier = classifier
@@ -56,7 +44,13 @@ class GRAILClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self :
             Reference to self.
         """
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X, y = self._validate_data(
+            X=X,
+            y=y,
+            ensure_min_samples=2,
+            ensure_univariate=True,
+            ensure_equal_length=True,
+        )
         X = self._convert_X(X)
 
         check_classification_targets(y)
@@ -144,7 +138,9 @@ class GRAILClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat([[1]], X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(
+            X=X, reset=False, ensure_univariate=True, ensure_equal_length=True
+        )
         X = self._convert_X(X)
 
         Xt = self._modified_GRAIL_rep_predict(

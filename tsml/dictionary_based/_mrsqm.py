@@ -100,7 +100,9 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self :
             Reference to self.
         """
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X, y = self._validate_data(
+            X=X, y=y, ensure_min_samples=2, ensure_equal_length=True
+        )
         X = self._convert_X(X)
 
         check_classification_targets(y)
@@ -152,7 +154,7 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
         return self.clf_.predict(_convert_data(X))
@@ -176,7 +178,7 @@ class MrSQMClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat([[1]], X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
         return self.clf_.predict_proba(_convert_data(X))

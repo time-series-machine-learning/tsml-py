@@ -141,6 +141,7 @@ def check_X_y(
     ensure_min_samples: int = 1,
     ensure_min_channels: int = 1,
     ensure_min_series_length: int = 2,
+    ensure_univariate: bool = False,
     ensure_equal_length: bool = False,
     estimator: Union[str, BaseEstimator, None] = None,
     y_numeric: bool = False,
@@ -196,6 +197,8 @@ def check_X_y(
         its third axis (second axis of all items for list of 2D numpy array). Setting
         to 0 disables this check.
         The default value of 2 rejects empty datasets and non-series.
+    ensure_univariate: bool, default=False
+        Make sure that all series are univariate. Setting to False disables this.
     ensure_equal_length:  bool, default=False
         Make sure that all series have the same length. Setting to False disables this.
     y_numeric : bool, default=False
@@ -237,6 +240,8 @@ def check_X_y(
         ensure_min_samples=ensure_min_samples,
         ensure_min_channels=ensure_min_channels,
         ensure_min_series_length=ensure_min_series_length,
+        ensure_univariate=ensure_univariate,
+        ensure_equal_length=ensure_equal_length,
         estimator=estimator,
     )
 
@@ -256,6 +261,7 @@ def check_X(
     ensure_min_samples: int = 1,
     ensure_min_channels: int = 1,
     ensure_min_series_length: int = 2,
+    ensure_univariate: bool = False,
     ensure_equal_length: bool = False,
     estimator: Union[str, BaseEstimator, None] = None,
 ) -> Union[np.ndarray, list]:
@@ -308,6 +314,10 @@ def check_X(
         its third axis (second axis of all items for list of 2D numpy array). Setting
         to 0 disables this check.
         The default value of 2 rejects empty datasets and non-series.
+    ensure_univariate: bool, default=False
+        Make sure that all series are univariate. Setting to False disables this.
+    ensure_equal_length:  bool, default=False
+        Make sure that all series have the same length. Setting to False disables this.
     estimator : str, estimator instance or None, default=None
         If passed, include the name of the estimator in warning messages.
 
@@ -364,6 +374,19 @@ def check_X(
                     "the same number of channels. "
                     f"Found {x.shape[0]} channels at index {i} and "
                     f"{X[0].shape[0]} at index 0."
+                )
+            if ensure_equal_length and x.shape[1] != X[0].shape[1]:
+                raise ValueError(
+                    "X is a list of np.ndarray objects, but not all arrays have "
+                    "the same series length. "
+                    f"Found {x.shape[1]} series length at index {i} and "
+                    f"{X[0].shape[1]} at index 0."
+                )
+            if ensure_univariate and x.shape[0] != 1:
+                raise ValueError(
+                    "X is a list of np.ndarray objects, but not all arrays are "
+                    "univariate. "
+                    f"Found {x.shape[0]} channels at index {i}."
                 )
 
         dtype_orig = [getattr(x, "dtype", None) for x in X]
@@ -430,6 +453,8 @@ def check_X(
                 f"using X.reshape((X.shape[0], 1, -1)) to convert it into a univariate "
                 f"format usable by tsml."
             )
+        elif ensure_univariate and X.shape[1] != 1:
+            raise ValueError("X is a 3d np.ndarray, but it is not univariate.")
 
         dtype_orig = getattr(X, "dtype", None)
         is_np = True

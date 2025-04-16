@@ -330,6 +330,7 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
     def _more_tags(self) -> dict:
         return {
             "X_types": ["np_list", "3darray"],
+            "equal_length_only": False,
         }
 
     @classmethod
@@ -497,9 +498,7 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
         return np.average(preds, axis=0)
 
     def _more_tags(self) -> dict:
-        return {
-            "X_types": ["np_list", "3darray"],
-        }
+        return {"X_types": ["np_list", "3darray"], "equal_length_only": False}
 
     @classmethod
     def get_test_params(

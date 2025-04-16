@@ -115,7 +115,7 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
         pad_unequal: bool = False,
         concatenate_channels: bool = False,
     ) -> Union[np.ndarray, List[np.ndarray]]:
-        dtypes = self._get_tags()["X_types"]
+        dtypes = _safe_tags(self)["X_types"]
 
         if isinstance(X, np.ndarray) and X.ndim == 3:
             if "3darray" in dtypes:
@@ -246,6 +246,9 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
                 f"X has {n_features[1]} series length, but {self.__class__.__name__} "
                 f"is expecting {self.n_features_in_[1]} series length as input."
             )
+
+    def _get_tags(self) -> dict:
+        return _safe_tags(self)
 
     def _more_tags(self) -> dict:
         return _DEFAULT_TAGS

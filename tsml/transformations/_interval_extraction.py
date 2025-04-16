@@ -267,7 +267,9 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         """
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=3)
+        X = self._validate_data(
+            X=X, reset=False, ensure_min_series_length=3, ensure_equal_length=True
+        )
 
         if self._transform_features is None:
             transform_features = [None] * len(self.intervals_)
@@ -304,7 +306,9 @@ class RandomIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return Xt
 
     def _fit_setup(self, X):
-        X = self._validate_data(X=X, ensure_min_series_length=3)
+        X = self._validate_data(
+            X=X, ensure_min_series_length=3, ensure_equal_length=True
+        )
         X = self._convert_X(X)
 
         self.intervals_ = []
@@ -804,7 +808,9 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         """
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False, ensure_min_series_length=7)
+        X = self._validate_data(
+            X=X, reset=False, ensure_min_series_length=7, ensure_equal_length=True
+        )
 
         transform = Parallel(
             n_jobs=self._n_jobs, backend=self.parallel_backend, prefer="threads"
@@ -824,7 +830,11 @@ class SupervisedIntervalTransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
     def _fit_setup(self, X, y):
         X, y = self._validate_data(
-            X=X, y=y, ensure_min_samples=2, ensure_min_series_length=5
+            X=X,
+            y=y,
+            ensure_min_samples=2,
+            ensure_min_series_length=5,
+            ensure_equal_length=True,
         )
         X = self._convert_X(X)
 

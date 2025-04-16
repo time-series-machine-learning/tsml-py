@@ -115,7 +115,7 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return self
 
     def _fit_setup(self, X):
-        X = self._validate_data(X=X, ensure_min_samples=2)
+        X = self._validate_data(X=X, ensure_min_samples=2, ensure_equal_length=True)
         X = self._convert_X(X)
 
         if self.bspline:
@@ -144,7 +144,7 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
 
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
         X_t = np.zeros((X.shape[0], self.n_dims_, self._n_components))

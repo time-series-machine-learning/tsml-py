@@ -72,11 +72,11 @@ class PeriodogramTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         super().__init__()
 
     def fit(self, X, y=None):
-        self._validate_data(X=X)
+        self._validate_data(X=X, ensure_equal_length=True)
         return self
 
     def transform(self, X, y=None):
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
         threads_to_use = check_n_jobs(self.n_jobs)

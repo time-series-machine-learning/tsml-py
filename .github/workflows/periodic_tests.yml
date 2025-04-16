@@ -12,18 +12,41 @@ concurrency:
 
 jobs:
   check-manifest:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
 
       - uses: pre-commit/action@v3.0.1
         with:
           extra_args: check-manifest --hook-stage manual
+
+  test-no-soft-deps:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          command: python -m pip install .[dev]
+
+      - name: Show dependencies
+        run: python -m pip list
+
+      - name: Run tests
+        run: python -m pytest -n logical
 
   pytest:
     runs-on: ${{ matrix.os }}
@@ -31,8 +54,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, macos-14, windows-2022 ]
-        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
+        os: [ ubuntu-24.04, macos-14, windows-2022 ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
 
     steps:
       - uses: actions/checkout@v4
@@ -55,14 +78,14 @@ jobs:
         run: python -m pytest -n logical
 
   codecov:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
 
       - name: Disable Numba JIT
         run: echo "NUMBA_DISABLE_JIT=1" >> $GITHUB_ENV

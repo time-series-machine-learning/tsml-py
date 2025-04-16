@@ -1,4 +1,4 @@
-""""""
+"""FunctionTransformer for time series data."""
 
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["FunctionTransformer"]
@@ -103,4 +103,5 @@ class FunctionTransformer(TransformerMixin, BaseTimeSeriesEstimator):
             "no_validation": not self.validate,
             "requires_fit": False,
             "X_types": ["3darray", "2darray", "np_list"],
+            "equal_length_only": False,
         }

@@ -115,7 +115,9 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self :
             Reference to self.
         """
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X, y = self._validate_data(
+            X=X, y=y, ensure_min_samples=2, ensure_equal_length=True
+        )
         X = self._convert_X(X)
 
         check_classification_targets(y)
@@ -199,7 +201,7 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat([[1]], X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
         m = getattr(self._estimator, "predict_proba", None)
@@ -332,7 +334,9 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self :
             Reference to self.
         """
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X, y = self._validate_data(
+            X=X, y=y, ensure_min_samples=2, ensure_equal_length=True, y_numeric=True
+        )
         X = self._convert_X(X)
 
         self.n_instances_, self.n_channels_, self.n_timepoints_ = X.shape
@@ -376,7 +380,7 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
         """
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
         return self._estimator.predict(

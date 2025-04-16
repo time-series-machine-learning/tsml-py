@@ -11,16 +11,22 @@ __all__ = [
 
 import re
 import warnings
-from functools import partial
+from functools import partial, wraps
 from typing import Callable, List, Tuple, Union
 
 import numpy as np
+from aeon.base import BaseAeonEstimator
+from aeon.testing.estimator_checking._yield_estimator_checks import (
+    _yield_all_aeon_checks,
+)
 from sklearn import config_context
 from sklearn.base import BaseEstimator
-from sklearn.utils.estimator_checks import _maybe_mark_xfail, _yield_all_checks
+from sklearn.utils._testing import SkipTest
+from sklearn.utils.estimator_checks import _yield_all_checks
 
-import tsml.tests.test_estimator_checks as ts_checks
 from tsml.base import BaseTimeSeriesEstimator
+from tsml.tests.test_estimator_checks import _yield_all_time_series_checks
+from tsml.utils._tags import _safe_tags
 from tsml.utils.discovery import all_estimators
 
 
@@ -101,15 +107,23 @@ def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
 
     def checks_generator():
         for estimator in estimators:
-            checks = (
-                ts_checks._yield_all_time_series_checks
-                if isinstance(estimator, BaseTimeSeriesEstimator)
-                else _yield_all_checks
-            )
+            tags = _safe_tags(estimator)
+            if isinstance(estimator, BaseTimeSeriesEstimator):
+                checks = _yield_all_time_series_checks
+            elif isinstance(estimator, BaseAeonEstimator):
+                checks = _yield_all_aeon_checks
+            else:
+                checks = _yield_all_checks
             name = type(estimator).__name__
             for check in checks(estimator):
                 check = partial(check, name)
-                yield _maybe_mark_xfail(estimator, check, pytest)
+                yield _maybe_mark(
+                    estimator,
+                    check,
+                    expected_failed_checks=tags["_xfail_checks"],
+                    mark="xfail",
+                    pytest=pytest,
+                )
 
     return pytest.mark.parametrize(
         "estimator, check",
@@ -327,7 +341,13 @@ def generate_unequal_test_data(
     y = np.zeros(n_samples, dtype=np.int32)
 
     for i in range(n_samples):
-        series_length = rng.randint(min_series_length, max_series_length + 1)
+        if i == 1:
+            series_length = min_series_length
+        elif i == 2:
+            series_length = max_series_length
+        else:
+            series_length = rng.randint(min_series_length, max_series_length + 1)
+
         x = n_labels * rng.uniform(size=(n_channels, series_length))
         label = x[0, 0].astype(int)
         if i < n_labels and n_samples > i:
@@ -343,3 +363,65 @@ def generate_unequal_test_data(
         y += rng.uniform(size=y.shape)
 
     return X, y
+
+
+def _maybe_mark(
+    estimator,
+    check,
+    expected_failed_checks=None,
+    mark=None,
+    pytest=None,
+):
+    """Mark the test as xfail or skip if needed.
+
+    Copy of the `_maybe_mark` function from sklearn 1.6.1 for backwards compatibility.
+
+    Parameters
+    ----------
+    estimator : estimator object
+        Estimator instance for which to generate checks.
+    check : partial or callable
+        Check to be marked.
+    expected_failed_checks : dict[str, str], default=None
+        Dictionary of the form {check_name: reason} for checks that are expected to
+        fail.
+    mark : "xfail" or "skip" or None
+        Whether to mark the check as xfail or skip.
+    pytest : pytest module, default=None
+        Pytest module to use to mark the check. This is only needed if ``mark`` is
+        `"xfail"`. Note that one can run `check_estimator` without having `pytest`
+        installed. This is used in combination with `parametrize_with_checks` only.
+    """
+
+    def _should_be_skipped_or_marked(check, expected_failed_checks):
+        expected_failed_checks = expected_failed_checks or {}
+
+        check_name = _check_name(check)
+        if check_name in expected_failed_checks:
+            return True, expected_failed_checks[check_name]
+
+        return False, "Check is not expected to fail"
+
+    def _check_name(check):
+        if hasattr(check, "__wrapped__"):
+            return _check_name(check.__wrapped__)
+        return check.func.__name__ if isinstance(check, partial) else check.__name__
+
+    should_be_marked, reason = _should_be_skipped_or_marked(
+        check, expected_failed_checks
+    )
+    if not should_be_marked or mark is None:
+        return estimator, check
+
+    estimator_name = estimator.__class__.__name__
+    if mark == "xfail":
+        return pytest.param(estimator, check, marks=pytest.mark.xfail(reason=reason))
+    else:
+
+        @wraps(check)
+        def wrapped(*args, **kwargs):
+            raise SkipTest(
+                f"Skipping {_check_name(check)} for {estimator_name}: {reason}"
+            )
+
+        return estimator, wrapped

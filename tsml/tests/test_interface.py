@@ -27,6 +27,7 @@ def _generate_conversion_test_X(data_type):
 
 @pytest.mark.parametrize("input_type", ("3darray", "2darray", "np_list"))
 def test_convert_X_to_3d_array(input_type):
+    """Test conversion of input data to 3D array."""
     est = _3dArrayDummy()
     X, old_shape = _generate_conversion_test_X(input_type)
     X = est._convert_X(X, pad_unequal=True)
@@ -40,6 +41,7 @@ def test_convert_X_to_3d_array(input_type):
 
 @pytest.mark.parametrize("input_type", ("3darray", "2darray", "np_list"))
 def test_convert_X_to_2d_array(input_type):
+    """Test conversion of input data to 2D array."""
     est = _2dArrayDummy()
     X, old_shape = _generate_conversion_test_X(input_type)
     X = est._convert_X(X, concatenate_channels=True, pad_unequal=True)
@@ -53,6 +55,7 @@ def test_convert_X_to_2d_array(input_type):
 
 @pytest.mark.parametrize("input_type", ("3darray", "2darray", "np_list"))
 def test_convert_X_to_numpy_list(input_type):
+    """Test conversion of input data to list of numpy arrays."""
     est = _NpListDummy()
     X, old_shape = _generate_conversion_test_X(input_type)
     X = est._convert_X(X)
@@ -61,7 +64,7 @@ def test_convert_X_to_numpy_list(input_type):
     assert X[0].ndim == 2
     assert (len(X), X[0].shape[0], max([x.shape[1] for x in X])) == old_shape
 
-    est._validate_data(X)
+    est._validate_data(X, ensure_equal_length=False)
 
 
 class _3dArrayDummy(BaseTimeSeriesEstimator):
