@@ -76,7 +76,9 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self :
             Reference to self.
         """
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2)
+        X, y = self._validate_data(
+            X=X, y=y, ensure_min_samples=2, ensure_equal_length=True
+        )
         X = self._convert_X(X)
 
         check_classification_targets(y)
@@ -143,7 +145,7 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat(list(self.class_dictionary_.keys()), X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
         if X.ndim == 3 and X.shape[1] == 1:
@@ -170,7 +172,7 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         if self.n_classes_ == 1:
             return np.repeat([[1]], X.shape[0], axis=0)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
         if X.ndim == 3 and X.shape[1] == 1:
@@ -268,7 +270,9 @@ class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self :
             Reference to self.
         """
-        X, y = self._validate_data(X=X, y=y, ensure_min_samples=2, y_numeric=True)
+        X, y = self._validate_data(
+            X=X, y=y, ensure_min_samples=2, ensure_equal_length=True, y_numeric=True
+        )
         X = self._convert_X(X)
 
         self._n_jobs = check_n_jobs(self.n_jobs)
@@ -316,7 +320,7 @@ class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         """
         check_is_fitted(self)
 
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
         if X.ndim == 3 and X.shape[1] == 1:

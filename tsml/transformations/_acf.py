@@ -58,11 +58,11 @@ class AutocorrelationFunctionTransformer(TransformerMixin, BaseTimeSeriesEstimat
         super().__init__()
 
     def fit(self, X, y=None):
-        self._validate_data(X=X)
+        self._validate_data(X=X, ensure_equal_length=True)
         return self
 
     def transform(self, X, y=None):
-        X = self._validate_data(X=X, reset=False)
+        X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
         n_instances, n_channels, n_timepoints = X.shape

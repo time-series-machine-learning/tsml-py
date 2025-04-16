@@ -327,7 +327,13 @@ def generate_unequal_test_data(
     y = np.zeros(n_samples, dtype=np.int32)
 
     for i in range(n_samples):
-        series_length = rng.randint(min_series_length, max_series_length + 1)
+        if i == 1:
+            series_length = min_series_length
+        elif i == 2:
+            series_length = max_series_length
+        else:
+            series_length = rng.randint(min_series_length, max_series_length + 1)
+
         x = n_labels * rng.uniform(size=(n_channels, series_length))
         label = x[0, 0].astype(int)
         if i < n_labels and n_samples > i:

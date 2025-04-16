@@ -6,6 +6,7 @@ import inspect
 import warnings
 from functools import partial
 
+import numpy as np
 from sklearn.base import is_classifier, is_regressor
 from sklearn.exceptions import SkipTestWarning
 from sklearn.utils._testing import SkipTest, assert_allclose, ignore_warnings
@@ -71,6 +72,7 @@ def _yield_checks(estimator):
     yield patched_checks.check_dict_unchanged
     yield patched_checks.check_dont_overwrite_parameters
     yield patched_checks.check_fit_check_is_fitted
+    yield check_fit3d_predict2d
 
     if not tags["no_validation"]:
         yield check_estimator_input_types
@@ -82,6 +84,8 @@ def _yield_checks(estimator):
         yield patched_checks.check_fit3d_predict1d
         if tags["requires_y"]:
             yield patched_checks.check_requires_y_none
+        if not tags["equal_length_only"]:
+            yield check_n_features_unequal
 
     if not tags["allow_nan"] and not tags["no_validation"]:
         yield patched_checks.check_estimators_nan_inf
@@ -94,13 +98,11 @@ def _yield_checks(estimator):
 
     if not tags["univariate_only"]:
         yield check_estimator_handles_multivariate_data
-        yield check_fit3d_predict2d
     else:
         yield check_estimator_cannot_handle_multivariate_data
 
     if not tags["equal_length_only"]:
         yield check_estimator_handles_unequal_data
-        yield check_n_features_unequal
     else:
         yield check_estimator_cannot_handle_unequal_data
 
@@ -245,38 +247,145 @@ def check_estimator_input_types(name, estimator_orig):
 
 @ignore_warnings(category=FutureWarning)
 def check_fit3d_predict2d(name, estimator_orig):
-    """Todo."""
-    pass
+    """Check that fitting on 3D and predicting on 2D produces correct output size."""
+    X, y = test_utils.generate_3d_test_data()
+    X_2d = X.reshape((X.shape[0], -1))  # Convert 3D to 2D
+
+    estimator = _clone_estimator(estimator_orig)
+    estimator.fit(X, y)
+    if hasattr(estimator, "predict"):
+        predictions = estimator.predict(X_2d)
+
+        assert predictions.shape[0] == X_2d.shape[0], (
+            f"Predict output size {predictions.shape[0]} does not match "
+            f"input size {X_2d.shape[0]} for estimator {name}."
+        )
+    if hasattr(estimator, "transform"):
+        tform = estimator.transform(X)
+
+        assert len(tform) == len(X), (
+            f"Transform output size {len(tform)} does not match "
+            f"input size {len(X)} for estimator {name}."
+        )
 
 
 @ignore_warnings(category=FutureWarning)
 def check_estimator_cannot_handle_multivariate_data(name, estimator_orig):
-    """Todo."""
-    pass
+    """Check univariate_only estimators raise an error for multivariate data."""
+    X, y = test_utils.generate_3d_test_data(n_channels=2)
+    estimator = _clone_estimator(estimator_orig)
+
+    try:
+        estimator.fit(X, y)
+    except ValueError as e:
+        if (
+            "not all arrays are univariate" not in str(e).lower()
+            and "but it is not univariate" not in str(e).lower()
+        ):
+            raise AssertionError(
+                f"Estimator {name} raised an error, but it does not mention "
+                f"'not all arrays are univariate' or 'but it is not univariate'."
+            )
+    else:
+        raise AssertionError(
+            f"Estimator {name} did not raise an error for multivariate data."
+        )
 
 
 @ignore_warnings(category=FutureWarning)
 def check_estimator_handles_multivariate_data(name, estimator_orig):
-    """Todo."""
-    pass
+    """Check equal_length_only estimators raise an error for unequal data."""
+    X, y = test_utils.generate_3d_test_data(n_channels=2)
+    estimator = _clone_estimator(estimator_orig)
+
+    estimator.fit(X, y)
+    if hasattr(estimator, "predict"):
+        estimator.predict(X)
+    if hasattr(estimator, "predict_proba"):
+        estimator.predict_proba(X)
+    if hasattr(estimator, "transform"):
+        estimator.transform(X)
+
+    tags = _safe_tags(estimator_orig)
+    if not tags["no_validation"]:
+        X2, _ = test_utils.generate_3d_test_data(n_channels=4)
+
+        if hasattr(estimator, "predict"):
+            try:
+                estimator.predict(X2)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError(
+                    f"Estimator {name} did not raise an error for different channels."
+                )
+        if hasattr(estimator, "predict_proba"):
+            try:
+                estimator.predict_proba(X2)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError(
+                    f"Estimator {name} did not raise an error for different channels."
+                )
+        if hasattr(estimator, "transform"):
+            try:
+                estimator.transform(X2)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError(
+                    f"Estimator {name} did not raise an error for different channels."
+                )
 
 
 @ignore_warnings(category=FutureWarning)
 def check_estimator_cannot_handle_unequal_data(name, estimator_orig):
-    """Todo."""
-    pass
+    """Check equal_length_only estimators raise an error for unequal data."""
+    X, y = test_utils.generate_unequal_test_data()
+    estimator = _clone_estimator(estimator_orig)
+
+    try:
+        estimator.fit(X, y)
+    except ValueError as e:
+        if "not all arrays have the same series length" not in str(e).lower():
+            raise AssertionError(
+                f"Estimator {name} raised an error, but it does not mention "
+                f"'not all arrays have the same series length'."
+            )
+    else:
+        raise AssertionError(
+            f"Estimator {name} did not raise an error for unequal length data."
+        )
 
 
 @ignore_warnings(category=FutureWarning)
 def check_estimator_handles_unequal_data(name, estimator_orig):
-    """Todo."""
-    pass
+    """Check estimators can handle unequal length data."""
+    X, y = test_utils.generate_unequal_test_data()
+    estimator = _clone_estimator(estimator_orig)
+
+    estimator.fit(X, y)
+    if hasattr(estimator, "predict"):
+        estimator.predict(X)
+    if hasattr(estimator, "predict_proba"):
+        estimator.predict_proba(X)
+    if hasattr(estimator, "transform"):
+        estimator.transform(X)
 
 
 @ignore_warnings(category=FutureWarning)
 def check_n_features_unequal(name, estimator_orig):
-    """Todo."""
-    pass
+    """Check that estimators handling unequal length data do not have n_features_in_."""
+    X, y = test_utils.generate_unequal_test_data()
+    estimator = _clone_estimator(estimator_orig)
+
+    estimator.fit(X, y)
+
+    lengths = [x.shape[1] for x in X]
+    assert estimator.n_features_in_[0] == X[0].shape[0]
+    assert estimator.n_features_in_[1] == np.min(lengths)
+    assert estimator.n_features_in_[2] == np.max(lengths)
 
 
 @ignore_warnings(category=FutureWarning)

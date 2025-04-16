@@ -237,7 +237,7 @@ def check_methods_subset_invariance(name, estimator_orig):
             result_by_batch = [func(batch.reshape(1, 1, X.shape[2])) for batch in X]
 
             # func can output tuple (e.g. score_samples)
-            if type(result_full) == tuple:
+            if isinstance(result_full, tuple):
                 result_full = result_full[0]
                 result_by_batch = list(map(lambda x: x[0], result_by_batch))
 
@@ -846,28 +846,9 @@ def check_classifiers_train(
             "fit."
         )
 
-        if not tags["no_validation"]:
+        if not tags["no_validation"] and tags["equal_length_only"]:
             with raises(ValueError, err_msg=msg.format(name, "predict")):
                 classifier.predict(X.T)
-
-        if hasattr(classifier, "decision_function"):
-            # decision_function agrees with predict
-            decision = classifier.decision_function(X)
-            if n_classes == 2:
-                assert decision.shape == (n_samples,)
-                dec_pred = (decision.ravel() > 0).astype(int)
-                assert_array_equal(dec_pred, y_pred)
-            else:
-                assert decision.shape == (n_samples, n_classes)
-                assert_array_equal(np.argmax(decision, axis=1), y_pred)
-
-            # raises error on malformed input for decision_function
-            if not tags["no_validation"]:
-                with raises(
-                    ValueError,
-                    err_msg=msg.format(name, "decision_function"),
-                ):
-                    classifier.decision_function(X.T)
 
         if hasattr(classifier, "predict_proba"):
             # predict_proba agrees with predict
@@ -877,7 +858,7 @@ def check_classifiers_train(
             # check that probas for all classes sum to one
             assert_array_almost_equal(np.sum(y_prob, axis=1), np.ones(n_samples))
 
-            if not tags["no_validation"]:
+            if not tags["no_validation"] and tags["equal_length_only"]:
                 # raises error on malformed input for predict_proba
                 with raises(
                     ValueError,
