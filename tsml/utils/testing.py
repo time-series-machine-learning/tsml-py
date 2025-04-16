@@ -19,7 +19,6 @@ from sklearn import config_context
 from sklearn.base import BaseEstimator
 from sklearn.utils._testing import SkipTest
 from sklearn.utils.estimator_checks import (
-    _check_name,
     _should_be_skipped_or_marked,
     _yield_all_checks,
 )
@@ -391,6 +390,12 @@ def _maybe_mark(
         `"xfail"`. Note that one can run `check_estimator` without having `pytest`
         installed. This is used in combination with `parametrize_with_checks` only.
     """
+
+    def _check_name(check):
+        if hasattr(check, "__wrapped__"):
+            return _check_name(check.__wrapped__)
+        return check.func.__name__ if isinstance(check, partial) else check.__name__
+
     should_be_marked, reason = _should_be_skipped_or_marked(
         estimator, check, expected_failed_checks
     )
