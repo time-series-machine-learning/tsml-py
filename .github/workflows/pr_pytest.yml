@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, windows-2022 ]
+        os: [ ubuntu-24.04, windows-2022 ]
         python-version: [ "3.9", "3.10", "3.11", "3.12" ]
         # skip python versions unless the PR has the 'full pytest actions' label
         pr-testing:
@@ -53,7 +53,7 @@ jobs:
         run: python -m pytest -n logical
 
   codecov:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
