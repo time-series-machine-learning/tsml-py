@@ -18,10 +18,7 @@ import numpy as np
 from sklearn import config_context
 from sklearn.base import BaseEstimator
 from sklearn.utils._testing import SkipTest
-from sklearn.utils.estimator_checks import (
-    _should_be_skipped_or_marked,
-    _yield_all_checks,
-)
+from sklearn.utils.estimator_checks import _yield_all_checks
 
 import tsml.tests.test_estimator_checks as ts_checks
 from tsml.base import BaseTimeSeriesEstimator
@@ -391,13 +388,25 @@ def _maybe_mark(
         installed. This is used in combination with `parametrize_with_checks` only.
     """
 
+    def _should_be_skipped_or_marked(
+        check, expected_failed_checks: dict[str, str] | None = None
+    ) -> tuple[bool, str]:
+
+        expected_failed_checks = expected_failed_checks or {}
+
+        check_name = _check_name(check)
+        if check_name in expected_failed_checks:
+            return True, expected_failed_checks[check_name]
+
+        return False, "Check is not expected to fail"
+
     def _check_name(check):
         if hasattr(check, "__wrapped__"):
             return _check_name(check.__wrapped__)
         return check.func.__name__ if isinstance(check, partial) else check.__name__
 
     should_be_marked, reason = _should_be_skipped_or_marked(
-        estimator, check, expected_failed_checks
+        check, expected_failed_checks
     )
     if not should_be_marked or mark is None:
         return estimator, check
