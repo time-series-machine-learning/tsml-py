@@ -73,7 +73,7 @@ jobs:
           command: python -m pip install .[all_extras,dev,unstable_extras]
 
       - name: Tests
-        run: python -m pytest -n logical --cov=tsml_eval --cov-report=xml --timeout 1800
+        run: python -m pytest -n logical --cov=tsml --cov-report=xml --timeout 1800
 
       - uses: codecov/codecov-action@v5
         env:
