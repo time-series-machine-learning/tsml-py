@@ -3,7 +3,6 @@
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["ARCoefficientTransformer"]
 
-from typing import List, Union
 
 import numpy as np
 from sklearn.base import TransformerMixin
@@ -85,9 +84,7 @@ class ARCoefficientTransformer(TransformerMixin, BaseTimeSeriesEstimator):
         return {"requires_fit": False, "optional_dependency": True}
 
     @classmethod
-    def get_test_params(
-        cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, List[dict]]:
+    def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
 
         Parameters

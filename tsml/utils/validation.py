@@ -12,7 +12,6 @@ __all__ = [
 import os
 import warnings
 from importlib import import_module
-from typing import List, Tuple, Union
 
 import numpy as np
 from packaging.requirements import InvalidRequirement, Requirement
@@ -102,7 +101,7 @@ def is_clusterer(estimator: BaseEstimator) -> bool:
     return getattr(estimator, "_estimator_type", None) == "clusterer"
 
 
-def _num_features(X: Union[np.ndarray, List[np.ndarray]]) -> Tuple[int, int, int]:
+def _num_features(X: np.ndarray | list[np.ndarray]) -> tuple[int, int, int]:
     """Return the number of features of a 3D numpy array or a list of 2D numpy arrays.
 
     Returns
@@ -134,7 +133,7 @@ def _check_estimator_name(estimator):
 def check_X_y(
     X: object,
     y: object,
-    dtype: Union[str, type, None] = "numeric",
+    dtype: str | type | None = "numeric",
     copy: bool = False,
     force_all_finite: bool = True,
     convert_2d: bool = True,
@@ -143,9 +142,9 @@ def check_X_y(
     ensure_min_series_length: int = 2,
     ensure_univariate: bool = False,
     ensure_equal_length: bool = False,
-    estimator: Union[str, BaseEstimator, None] = None,
+    estimator: str | BaseEstimator | None = None,
     y_numeric: bool = False,
-) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[List[np.ndarray], np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray] | tuple[list[np.ndarray], np.ndarray]:
     """Input validation for standard estimators.
 
     Checks X and y for consistent length, enforces X to be 3D and y 1D. By default,
@@ -254,7 +253,7 @@ def check_X_y(
 
 def check_X(
     X: object,
-    dtype: Union[str, type, None] = "numeric",
+    dtype: str | type | None = "numeric",
     copy: bool = False,
     force_all_finite: bool = True,
     convert_2d: bool = False,
@@ -263,8 +262,8 @@ def check_X(
     ensure_min_series_length: int = 2,
     ensure_univariate: bool = False,
     ensure_equal_length: bool = False,
-    estimator: Union[str, BaseEstimator, None] = None,
-) -> Union[np.ndarray, list]:
+    estimator: str | BaseEstimator | None = None,
+) -> np.ndarray | list:
     """Input validation on a numpy array or list dataset.
 
     By default, the input is checked to be a non-empty 2D numpy array, 3D numpy array or
@@ -569,7 +568,7 @@ def check_X(
 def _check_optional_dependency(
     package_name: str,
     package_import_name: str,
-    source_name: Union[str, BaseEstimator],
+    source_name: str | BaseEstimator,
     raise_error: bool = True,
 ):
     """Check if an optional dependency is installed and raise error if not.

@@ -3,7 +3,6 @@
 __author__ = ["MatthewMiddlehurst"]
 __all__ = ["DummyClassifier", "DummyRegressor", "DummyClusterer"]
 
-from typing import List, Union
 
 import numpy as np
 from sklearn.base import ClassifierMixin, ClusterMixin, RegressorMixin
@@ -104,7 +103,7 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         super().__init__()
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
         """Fit the estimator to training data.
 
         Parameters
@@ -147,7 +146,7 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
@@ -176,7 +175,7 @@ class DummyClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict(np.zeros((_num_samples(X), 2)))
 
-    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict_proba(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels probabilities for sequences in X.
 
         Parameters
@@ -275,7 +274,7 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         super().__init__()
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
         """Fit the estimator to training data.
 
         Parameters
@@ -305,7 +304,7 @@ class DummyRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
@@ -393,7 +392,7 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
         super().__init__()
 
     def fit(
-        self, X: Union[np.ndarray, List[np.ndarray]], y: Union[np.ndarray, None] = None
+        self, X: np.ndarray | list[np.ndarray], y: np.ndarray | None = None
     ) -> object:
         """Fit the estimator to training data.
 
@@ -427,7 +426,7 @@ class DummyClusterer(ClusterMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Assign clusters labels for sequences in X.
 
         Parameters

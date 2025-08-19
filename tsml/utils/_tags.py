@@ -2,7 +2,6 @@
 
 __author__ = ["MatthewMiddlehurst"]
 
-from typing import Union
 
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -25,9 +24,7 @@ _DEFAULT_TAGS = {
 }
 
 
-def _safe_tags(
-    estimator: BaseEstimator, key: Union[str, None] = None
-) -> Union[dict, str]:
+def _safe_tags(estimator: BaseEstimator, key: str | None = None) -> dict | str:
     """Safely get estimator tags.
 
     :class:`~sklearn.BaseEstimator` provides the estimator tags machinery.
