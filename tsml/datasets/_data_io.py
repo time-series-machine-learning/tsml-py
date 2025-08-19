@@ -425,7 +425,7 @@ def load_from_ts_file(
 
 
 def load_minimal_chinatown(
-    split: Union[None, str] = None
+    split: Union[None, str] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Load MinimalChinatown time series classification problem.
 
@@ -459,7 +459,7 @@ def load_minimal_chinatown(
 
 
 def load_unequal_minimal_chinatown(
-    split: Union[None, str] = None
+    split: Union[None, str] = None,
 ) -> Tuple[list, np.ndarray]:
     """Load UnequalMinimalChinatown time series classification problem.
 
@@ -495,7 +495,7 @@ def load_unequal_minimal_chinatown(
 
 
 def load_equal_minimal_japanese_vowels(
-    split: Union[None, str] = None
+    split: Union[None, str] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Load the EqualMinimalJapaneseVowels time series classification problem.
 
@@ -530,7 +530,7 @@ def load_equal_minimal_japanese_vowels(
 
 
 def load_minimal_japanese_vowels(
-    split: Union[None, str] = None
+    split: Union[None, str] = None,
 ) -> Tuple[list, np.ndarray]:
     """Load the MinimalJapaneseVowels time series classification problem.
 
@@ -565,7 +565,7 @@ def load_minimal_japanese_vowels(
 
 
 def load_minimal_gas_prices(
-    split: Union[None, str] = None
+    split: Union[None, str] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Load the MinimalGasPrices time series extrinsic regression problem.
 
@@ -596,7 +596,7 @@ def load_minimal_gas_prices(
 
 
 def load_unequal_minimal_gas_prices(
-    split: Union[None, str] = None
+    split: Union[None, str] = None,
 ) -> Tuple[list, np.ndarray]:
     """Load the UnequalMinimalGasPrices time series extrinsic regression problem.
 
