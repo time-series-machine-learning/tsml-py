@@ -7,7 +7,6 @@ __all__ = [
 ]
 
 from abc import ABCMeta
-from typing import List, Tuple, Union
 
 import numpy as np
 from numpy.random import RandomState
@@ -28,12 +27,12 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
         y: object = "no_validation",
         reset: bool = True,
         **check_params,
-    ) -> Union[
-        Tuple[np.ndarray, object],
-        Tuple[List[np.ndarray], object],
-        np.ndarray,
-        List[np.ndarray],
-    ]:
+    ) -> (
+        tuple[np.ndarray, object]
+        | tuple[list[np.ndarray], object]
+        | np.ndarray
+        | list[np.ndarray]
+    ):
         """Validate input data and set or check the `n_features_in_` attribute.
 
         Uses the `scikit-learn` 1.2.1 `_validate_data` function as a base.
@@ -111,10 +110,10 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
 
     def _convert_X(
         self,
-        X: Union[np.ndarray, List[np.ndarray]],
+        X: np.ndarray | list[np.ndarray],
         pad_unequal: bool = False,
         concatenate_channels: bool = False,
-    ) -> Union[np.ndarray, List[np.ndarray]]:
+    ) -> np.ndarray | list[np.ndarray]:
         dtypes = _safe_tags(self)["X_types"]
 
         if isinstance(X, np.ndarray) and X.ndim == 3:
@@ -191,7 +190,7 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
 
         raise ValueError("Unable to convert X, please check the estimator tags.")
 
-    def _check_n_features(self, X: Union[np.ndarray, List[np.ndarray]], reset: bool):
+    def _check_n_features(self, X: np.ndarray | list[np.ndarray], reset: bool):
         """Set the `n_features_in_` attribute, or check against it.
 
         Uses the `scikit-learn` 1.2.1 `_check_n_features` function as a base.
@@ -251,9 +250,7 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
         return _DEFAULT_TAGS
 
     @classmethod
-    def get_test_params(
-        cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, List[dict]]:
+    def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
 
         Parameters
@@ -272,7 +269,7 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
 
 
 def _clone_estimator(
-    base_estimator: BaseEstimator, random_state: Union[None, int, RandomState] = None
+    base_estimator: BaseEstimator, random_state: None | int | RandomState = None
 ) -> BaseEstimator:
     """Clone an estimator and set the random state if available."""
     estimator = clone(base_estimator)

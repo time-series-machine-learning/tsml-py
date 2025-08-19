@@ -1,7 +1,5 @@
 """Multiple Representations Sequence Learning (MrSEQL) Classifier."""
 
-from typing import List, Union
-
 import numpy as np
 import pandas as pd
 from sklearn.base import ClassifierMixin
@@ -51,7 +49,7 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         super().__init__()
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
         """Fit the estimator to training data.
 
         Parameters
@@ -98,7 +96,7 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
@@ -122,7 +120,7 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict(_convert_data(X))
 
-    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict_proba(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels probabilities for sequences in X.
 
         Parameters
@@ -154,9 +152,7 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         }
 
     @classmethod
-    def get_test_params(
-        cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, List[dict]]:
+    def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
 
         Parameters

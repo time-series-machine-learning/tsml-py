@@ -1,7 +1,5 @@
 """Random Shapelet Forest (RSF) estimators."""
 
-from typing import List, Union
-
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.utils.multiclass import check_classification_targets
@@ -61,7 +59,7 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         super().__init__()
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
         """Fit the estimator to training data.
 
         Parameters
@@ -126,7 +124,7 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
@@ -153,7 +151,7 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self.clf_.predict(X)
 
-    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict_proba(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels probabilities for sequences in X.
 
         Parameters
@@ -189,9 +187,7 @@ class RandomShapeletForestClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         }
 
     @classmethod
-    def get_test_params(
-        cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, List[dict]]:
+    def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
 
         Parameters
@@ -258,7 +254,7 @@ class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         super().__init__()
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
         """Fit the estimator to training data.
 
         Parameters
@@ -308,7 +304,7 @@ class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
@@ -340,9 +336,7 @@ class RandomShapeletForestRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         }
 
     @classmethod
-    def get_test_params(
-        cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, List[dict]]:
+    def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
 
         Parameters

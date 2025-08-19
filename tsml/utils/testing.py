@@ -11,8 +11,8 @@ __all__ = [
 
 import re
 import warnings
+from collections.abc import Callable
 from functools import partial, wraps
-from typing import Callable, List, Tuple, Union
 
 import numpy as np
 from aeon.base import BaseAeonEstimator
@@ -30,7 +30,7 @@ from tsml.utils._tags import _safe_tags
 from tsml.utils.discovery import all_estimators
 
 
-def generate_test_estimators() -> List[BaseEstimator]:
+def generate_test_estimators() -> list[BaseEstimator]:
     """Generate a list of all estimators in tsml with test parameters.
 
     Uses estimator parameters from `get_test_params` if available.
@@ -76,7 +76,7 @@ def generate_test_estimators() -> List[BaseEstimator]:
     return estimators
 
 
-def parametrize_with_checks(estimators: List[BaseEstimator]) -> Callable:
+def parametrize_with_checks(estimators: list[BaseEstimator]) -> Callable:
     """Pytest specific decorator for parametrizing estimator checks.
 
     If the estimator is a `BaseTimeSeriesEstimator` then the `tsml` checks are used,
@@ -176,8 +176,8 @@ def generate_3d_test_data(
     series_length: int = 12,
     n_labels: int = 2,
     regression_target: bool = False,
-    random_state: Union[int, None] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    random_state: int | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
     """Randomly generate 3D data for testing.
 
     Will ensure there is at least one sample per label.
@@ -236,8 +236,8 @@ def generate_2d_test_data(
     series_length: int = 8,
     n_labels: int = 2,
     regression_target: bool = False,
-    random_state: Union[int, None] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    random_state: int | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
     """Randomly generate 2D data for testing.
 
     Will ensure there is at least one sample per label.
@@ -295,8 +295,8 @@ def generate_unequal_test_data(
     max_series_length: int = 8,
     n_labels: int = 2,
     regression_target: bool = False,
-    random_state: Union[int, None] = None,
-) -> Tuple[List[np.ndarray], np.ndarray]:
+    random_state: int | None = None,
+) -> tuple[list[np.ndarray], np.ndarray]:
     """Randomly generate unequal length 3D data for testing.
 
     Will ensure there is at least one sample per label.

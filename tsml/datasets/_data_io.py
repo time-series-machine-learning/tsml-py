@@ -1,7 +1,6 @@
 """Data loading functions."""
 
 import os
-from typing import Tuple, Union
 
 import numpy as np
 
@@ -19,10 +18,10 @@ __all__ = [
 
 def load_from_ts_file(
     file_path: str,
-    replace_missing_vals_with: Union[str, int, float] = "NaN",
-    X_dtype: Union[None, type] = None,
-    y_dtype: Union[None, type] = None,
-) -> Union[np.ndarray, list, Tuple[np.ndarray, np.ndarray], Tuple[list, np.ndarray]]:
+    replace_missing_vals_with: str | int | float = "NaN",
+    X_dtype: None | type = None,
+    y_dtype: None | type = None,
+) -> np.ndarray | list | tuple[np.ndarray, np.ndarray] | tuple[list, np.ndarray]:
     """Load data from a .ts file into a 3D numpy array or list of 2D numpy arrays.
 
     If the data to be loaded is equal length, a 3D numpy array will be returned. If the
@@ -425,8 +424,8 @@ def load_from_ts_file(
 
 
 def load_minimal_chinatown(
-    split: Union[None, str] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    split: None | str = None,
+) -> tuple[np.ndarray, np.ndarray]:
     """Load MinimalChinatown time series classification problem.
 
     This is an equal length univariate time series classification problem. It is a
@@ -459,8 +458,8 @@ def load_minimal_chinatown(
 
 
 def load_unequal_minimal_chinatown(
-    split: Union[None, str] = None,
-) -> Tuple[list, np.ndarray]:
+    split: None | str = None,
+) -> tuple[list, np.ndarray]:
     """Load UnequalMinimalChinatown time series classification problem.
 
     This is an unequal length univariate time series classification problem. It is a
@@ -495,8 +494,8 @@ def load_unequal_minimal_chinatown(
 
 
 def load_equal_minimal_japanese_vowels(
-    split: Union[None, str] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    split: None | str = None,
+) -> tuple[np.ndarray, np.ndarray]:
     """Load the EqualMinimalJapaneseVowels time series classification problem.
 
     This is an equal length multivariate time series classification problem. It is a
@@ -530,8 +529,8 @@ def load_equal_minimal_japanese_vowels(
 
 
 def load_minimal_japanese_vowels(
-    split: Union[None, str] = None,
-) -> Tuple[list, np.ndarray]:
+    split: None | str = None,
+) -> tuple[list, np.ndarray]:
     """Load the MinimalJapaneseVowels time series classification problem.
 
     This is an unequal length multivariate time series classification problem. It is a
@@ -565,8 +564,8 @@ def load_minimal_japanese_vowels(
 
 
 def load_minimal_gas_prices(
-    split: Union[None, str] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    split: None | str = None,
+) -> tuple[np.ndarray, np.ndarray]:
     """Load the MinimalGasPrices time series extrinsic regression problem.
 
     This is an equal length univariate time series regression problem. It is a
@@ -596,8 +595,8 @@ def load_minimal_gas_prices(
 
 
 def load_unequal_minimal_gas_prices(
-    split: Union[None, str] = None,
-) -> Tuple[list, np.ndarray]:
+    split: None | str = None,
+) -> tuple[list, np.ndarray]:
     """Load the UnequalMinimalGasPrices time series extrinsic regression problem.
 
     This is an unequal length univariate time series regression problem. It is a
@@ -629,8 +628,8 @@ def load_unequal_minimal_gas_prices(
 
 def _load_provided_dataset(
     name: str,
-    split: Union[None, str] = None,
-) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[list, np.ndarray]]:
+    split: None | str = None,
+) -> tuple[np.ndarray, np.ndarray] | tuple[list, np.ndarray]:
     """Load baked in time series datasets.
 
     Loads data from the provided tsml dataset files only.

@@ -8,7 +8,6 @@ __author__ = ["abostrom", "MatthewMiddlehurst"]
 __all__ = ["ChannelEnsembleClassifier", "ChannelEnsembleRegressor"]
 
 from abc import ABCMeta
-from typing import List, Union
 
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
@@ -220,7 +219,7 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
     def __init__(self, estimators, remainder="drop", random_state=None):
         super().__init__(estimators, remainder, random_state)
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
         """Fit the estimator to training data.
 
         Parameters
@@ -268,7 +267,7 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
         self.estimators_ = estimators_
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
@@ -294,7 +293,7 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
             [self.classes_[int(np.argmax(prob))] for prob in self.predict_proba(X)]
         )
 
-    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict_proba(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels probabilities for sequences in X.
 
         Parameters
@@ -334,9 +333,7 @@ class ChannelEnsembleClassifier(ClassifierMixin, _BaseChannelEnsemble):
         }
 
     @classmethod
-    def get_test_params(
-        cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, List[dict]]:
+    def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
 
         Parameters
@@ -430,7 +427,7 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
     def __init__(self, estimators, remainder="drop", random_state=None):
         super().__init__(estimators, remainder, random_state)
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
         """Fit the estimator to training data.
 
         Parameters
@@ -468,7 +465,7 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
         self.estimators_ = estimators_
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
@@ -501,9 +498,7 @@ class ChannelEnsembleRegressor(RegressorMixin, _BaseChannelEnsemble):
         return {"X_types": ["np_list", "3darray"], "equal_length_only": False}
 
     @classmethod
-    def get_test_params(
-        cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, List[dict]]:
+    def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
 
         Parameters

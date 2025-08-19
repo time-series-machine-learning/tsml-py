@@ -11,7 +11,6 @@ __all__ = [
     "SupervisedIntervalClassifier",
 ]
 
-from typing import List, Union
 
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
@@ -138,7 +137,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         super().__init__()
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
         """Fit the estimator to training data.
 
         Parameters
@@ -229,7 +228,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
@@ -265,7 +264,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self._estimator.predict(X_t)
 
-    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict_proba(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels probabilities for sequences in X.
 
         Parameters
@@ -310,9 +309,7 @@ class RandomIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return dists
 
     @classmethod
-    def get_test_params(
-        cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, List[dict]]:
+    def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
 
         Parameters
@@ -441,7 +438,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         super().__init__()
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
         """Fit the estimator to training data.
 
         Parameters
@@ -525,7 +522,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
@@ -558,9 +555,7 @@ class RandomIntervalRegressor(RegressorMixin, BaseTimeSeriesEstimator):
         return self._estimator.predict(X_t)
 
     @classmethod
-    def get_test_params(
-        cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, List[dict]]:
+    def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
 
         Parameters
@@ -691,7 +686,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         super().__init__()
 
-    def fit(self, X: Union[np.ndarray, List[np.ndarray]], y: np.ndarray) -> object:
+    def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
         """Fit the estimator to training data.
 
         Parameters
@@ -757,7 +752,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self
 
-    def predict(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels for sequences in X.
 
         Parameters
@@ -783,7 +778,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         return self._estimator.predict(self._transformer.transform(X))
 
-    def predict_proba(self, X: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
+    def predict_proba(self, X: np.ndarray | list[np.ndarray]) -> np.ndarray:
         """Predicts labels probabilities for sequences in X.
 
         Parameters
@@ -818,9 +813,7 @@ class SupervisedIntervalClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             return dists
 
     @classmethod
-    def get_test_params(
-        cls, parameter_set: Union[str, None] = None
-    ) -> Union[dict, List[dict]]:
+    def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
 
         Parameters

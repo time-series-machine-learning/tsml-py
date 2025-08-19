@@ -19,7 +19,6 @@ __all__ = [
     "combinations_1d",
 ]
 
-from typing import Tuple
 
 import numpy as np
 from numba import njit
@@ -28,7 +27,7 @@ import tsml.utils.numba_functions.stats as stats
 
 
 @njit(fastmath=True, cache=True)
-def unique_count(X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def unique_count(X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Numba unique value count function for a 1d numpy array.
 
     np.unique() is supported by numba, but the return_counts parameter is not.
@@ -342,7 +341,7 @@ def get_subsequence(
 @njit(fastmath=True, cache=True)
 def get_subsequence_with_mean_std(
     X: np.ndarray, i_start: int, length: int, dilation: int
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Get a subsequence, its mean and std from a time series given a starting index.
 
     Parameters
@@ -392,7 +391,7 @@ def get_subsequence_with_mean_std(
 @njit(fastmath=True, cache=True)
 def sliding_mean_std_one_series(
     X: np.ndarray, length: int, dilation: int
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Return the mean and standard deviation for all subsequence (l,d) in X.
 
     Parameters
