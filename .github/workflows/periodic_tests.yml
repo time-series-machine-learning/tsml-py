@@ -90,7 +90,7 @@ jobs:
       - name: Disable Numba JIT
         run: echo "NUMBA_DISABLE_JIT=1" >> $GITHUB_ENV
 
-      - name: Install aeon and dependencies
+      - name: Install
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 30
@@ -101,7 +101,7 @@ jobs:
         run: python -m pip list
 
       - name: Run tests
-        run: python -m pytest -n logical --cov=aeon --cov-report=xml --timeout 1800
+        run: python -m pytest -n logical --cov=tsml --cov-report=xml --timeout 1800
 
       - uses: codecov/codecov-action@v5
         env:
