@@ -249,6 +249,9 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
     def _more_tags(self) -> dict:
         return _DEFAULT_TAGS
 
+    def _get_tags(self) -> dict:
+        return _safe_tags(self)
+
     @classmethod
     def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.

@@ -16,7 +16,6 @@ from sklearn.exceptions import DataConversionWarning, NotFittedError
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import scale
-from sklearn.utils._tags import _safe_tags as _safe_tags_sklearn
 from sklearn.utils._testing import (
     SkipTest,
     assert_allclose,
@@ -1410,7 +1409,7 @@ def check_estimator_get_tags_default_keys(name, estimator_orig):
     if not hasattr(estimator, "_get_tags"):
         return
 
-    default_tags_keys = set(_safe_tags_sklearn(estimator).keys())
+    default_tags_keys = set(_safe_tags(estimator).keys())
     tags_keys = set(estimator._get_tags().keys())
     assert tags_keys.intersection(default_tags_keys) == default_tags_keys, (
         f"{name}._get_tags() is missing entries for the following default tags: "
