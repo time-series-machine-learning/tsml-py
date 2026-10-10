@@ -178,6 +178,9 @@ def test_rsf_n_jobs():
 @pytest.mark.parametrize(
     "params, msg",
     [
+        ({"n_estimators": 0}, "n_estimators"),
+        ({"min_shapelet_size": -0.1}, "min_shapelet_size"),
+        ({"max_shapelet_size": 1.5}, "max_shapelet_size"),
         ({"min_shapelet_size": 0.6, "max_shapelet_size": 0.5}, "min_shapelet_size"),
         ({"alpha": 0.0}, "alpha"),
         ({"oob_score": True, "bootstrap": False}, "bootstrap"),
@@ -189,4 +192,4 @@ def test_rsf_invalid_params(params, msg):
     """Test invalid parameters raise an error."""
     X, y = generate_3d_test_data(random_state=0)
     with pytest.raises(ValueError, match=msg):
-        RandomShapeletForestClassifier(n_estimators=2, **params).fit(X, y)
+        RandomShapeletForestClassifier(**{"n_estimators": 2, **params}).fit(X, y)

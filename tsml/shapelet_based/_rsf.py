@@ -97,6 +97,16 @@ class _BaseRandomShapeletForest(BaseTimeSeriesEstimator):
         super().__init__()
 
     def _fit_forest(self, X, y_cls, y_reg, sample_weight, n_outputs, criterion):
+        if self.n_estimators < 1:
+            raise ValueError(f"n_estimators must be >= 1, got {self.n_estimators}.")
+        if not 0 <= self.min_shapelet_size <= 1:
+            raise ValueError(
+                f"min_shapelet_size must be in [0, 1], got {self.min_shapelet_size}."
+            )
+        if not 0 <= self.max_shapelet_size <= 1:
+            raise ValueError(
+                f"max_shapelet_size must be in [0, 1], got {self.max_shapelet_size}."
+            )
         if self.min_shapelet_size > self.max_shapelet_size:
             raise ValueError(
                 f"The min_shapelet_size parameter of {type(self).__name__} must be "
