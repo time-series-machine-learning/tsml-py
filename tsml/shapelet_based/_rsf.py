@@ -26,6 +26,8 @@ from tsml.utils.validation import check_n_jobs
 
 RAND_R_MAX = 2147483647
 ATTRIBUTE_THRESHOLD = 1e-7
+# number of values added to a distance between checks of whether to abandon it
+ABANDON_INTERVAL = 8
 
 GINI = 0
 ENTROPY = 1
@@ -42,6 +44,7 @@ class _ShapeletTree:
         self.value = value
 
         self.shapelet_dim = np.maximum(shapelet_info[:, 1], 0)
+        self.shapelet_start = np.maximum(shapelet_info[:, 2], 0)
         lengths = np.maximum(shapelet_info[:, 3], 0)
         self.shapelet_offset = np.zeros(len(left) + 1, dtype=np.int64)
         np.cumsum(lengths, out=self.shapelet_offset[1:])
@@ -59,6 +62,7 @@ class _ShapeletTree:
             self.threshold,
             self.right,
             self.shapelet_dim,
+            self.shapelet_start,
             self.shapelet_offset,
             self.shapelets,
         )
@@ -704,22 +708,97 @@ def _rand_int(min_val, max_val, seed):
 
 
 @njit(cache=True)
-def _euclidean_distance(x, s):
-    """Minimum Euclidean distance between shapelet s and all subsequences of x."""
+def _euclidean_distance(x, s, start):
+    """Minimum Euclidean distance between shapelet s and all subsequences of x.
+
+    The subsequence at start is compared first. This is where the shapelet was taken
+    from in its own series and is often a close match in other series, which lets
+    more of the remaining subsequences be abandoned early. The order subsequences
+    are compared in does not change the result.
+    """
     s_length = s.shape[0]
-    min_dist = np.inf
+    n_blocks = s_length // ABANDON_INTERVAL
+    min_dist = 0.0
+    for j in range(s_length):
+        v = x[start + j] - s[j]
+        min_dist += v * v
+
     for i in range(x.shape[0] - s_length + 1):
+        if i == start:
+            continue
+
+        # the values are still added in order, so an abandoned subsequence is one
+        # which would not have been the minimum
         dist = 0.0
-        for j in range(s_length):
+        j = 0
+        for _ in range(n_blocks):
             if dist >= min_dist:
                 break
-            v = x[i + j] - s[j]
-            dist += v * v
+            for k in range(ABANDON_INTERVAL):
+                v = x[i + j + k] - s[j + k]
+                dist += v * v
+            j += ABANDON_INTERVAL
 
         if dist < min_dist:
-            min_dist = dist
+            while j < s_length:
+                v = x[i + j] - s[j]
+                dist += v * v
+                j += 1
+
+            if dist < min_dist:
+                min_dist = dist
 
     return np.sqrt(min_dist)
+
+
+@njit(cache=True)
+def _within_threshold(x, s, start, threshold):
+    """Whether the minimum Euclidean distance between s and x is <= threshold.
+
+    Returns the same as ``_euclidean_distance(x, s, start) <= threshold``, but stops
+    at the first subsequence which is close enough and abandons a subsequence once
+    it cannot be.
+    """
+    s_length = s.shape[0]
+    n_blocks = s_length // ABANDON_INTERVAL
+    # A sum of squares above bound has a square root above threshold. The margin
+    # is far larger than the rounding error of the product and the square root.
+    # Sums which are not above bound are compared using their square root, as in
+    # _euclidean_distance. Nothing is abandoned for thresholds small enough for the
+    # product to underflow.
+    bound = threshold * threshold * (1 + 1e-9) if threshold > 1e-100 else np.inf
+
+    dist = 0.0
+    for j in range(s_length):
+        v = x[start + j] - s[j]
+        dist += v * v
+    if np.sqrt(dist) <= threshold:
+        return True
+
+    for i in range(x.shape[0] - s_length + 1):
+        if i == start:
+            continue
+
+        dist = 0.0
+        j = 0
+        for _ in range(n_blocks):
+            if dist > bound:
+                break
+            for k in range(ABANDON_INTERVAL):
+                v = x[i + j + k] - s[j + k]
+                dist += v * v
+            j += ABANDON_INTERVAL
+
+        if dist <= bound:
+            while j < s_length:
+                v = x[i + j] - s[j]
+                dist += v * v
+                j += 1
+
+            if np.sqrt(dist) <= threshold:
+                return True
+
+    return False
 
 
 @njit(cache=True)
@@ -1171,7 +1250,7 @@ def _build_tree(  # noqa: PLR0912, PLR0915
                 ]
                 for i in range(start, end):
                     attribute_buffer[i] = _euclidean_distance(
-                        X[samples[i], shapelet_dim], shapelet
+                        X[samples[i], shapelet_dim], shapelet, shapelet_start
                     )
                 _argsort(attribute_buffer, samples, start, n_node_samples)
 
@@ -1333,7 +1412,9 @@ def _build_tree(  # noqa: PLR0912, PLR0915
 
 
 @njit(cache=True, nogil=True)
-def _apply_tree(X, left, threshold, right, shapelet_dim, shapelet_offset, shapelets):
+def _apply_tree(
+    X, left, threshold, right, shapelet_dim, shapelet_start, shapelet_offset, shapelets
+):
     """Return the leaf each case in X ends up in.
 
     The shapelet of branch node i is
@@ -1343,11 +1424,12 @@ def _apply_tree(X, left, threshold, right, shapelet_dim, shapelet_offset, shapel
     for i in range(X.shape[0]):
         node = 0
         while left[node] != -1:
-            dist = _euclidean_distance(
+            if _within_threshold(
                 X[i, shapelet_dim[node]],
                 shapelets[shapelet_offset[node] : shapelet_offset[node + 1]],
-            )
-            if dist <= threshold[node]:
+                shapelet_start[node],
+                threshold[node],
+            ):
                 node = left[node]
             else:
                 node = right[node]

@@ -8,7 +8,11 @@ from tsml.shapelet_based import (
     RandomShapeletForestClassifier,
     RandomShapeletForestRegressor,
 )
-from tsml.shapelet_based._rsf import _argsort, _euclidean_distance
+from tsml.shapelet_based._rsf import (
+    _argsort,
+    _euclidean_distance,
+    _within_threshold,
+)
 from tsml.utils.testing import generate_3d_test_data
 
 
@@ -94,15 +98,46 @@ def test_euclidean_distance():
     """Test the shapelet distance is the minimum distance over all subsequences."""
     rng = np.random.RandomState(0)
     X = rng.normal(size=(3, 2, 20))
-    s = rng.normal(size=10)
+    s = rng.normal(size=20)
 
-    for start, length in [(0, 1), (2, 5), (0, 10)]:
+    for start, length in [(0, 1), (2, 5), (0, 10), (1, 19), (0, 20)]:
         shapelet = s[start : start + length]
         expected = min(
             np.sqrt(np.sum((X[1, 1, i : i + length] - shapelet) ** 2))
             for i in range(20 - length + 1)
         )
-        assert np.isclose(_euclidean_distance(X[1, 1], shapelet), expected)
+        dist = _euclidean_distance(X[1, 1], shapelet, 0)
+        assert np.isclose(dist, expected)
+
+        # the subsequence compared first does not change the result
+        for first in range(20 - length + 1):
+            assert _euclidean_distance(X[1, 1], shapelet, first) == dist
+
+
+def test_within_threshold():
+    """Test the threshold check matches comparing the distance to the threshold."""
+    rng = np.random.RandomState(0)
+    X = rng.normal(size=(6, 30))
+
+    for length in [1, 2, 8, 9, 17, 30]:
+        for start in [0, (30 - length) // 2, 30 - length]:
+            shapelet = X[0, start : start + length].copy()
+            for x in X:
+                dist = _euclidean_distance(x, shapelet, start)
+                thresholds = [
+                    0.0,
+                    1e-200,
+                    dist / 2,
+                    np.nextafter(dist, 0),
+                    dist,
+                    np.nextafter(dist, np.inf),
+                    dist * 2,
+                    np.inf,
+                ]
+                for threshold in thresholds:
+                    assert _within_threshold(x, shapelet, start, threshold) == (
+                        dist <= threshold
+                    )
 
 
 @pytest.mark.parametrize(
