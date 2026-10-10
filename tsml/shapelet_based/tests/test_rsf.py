@@ -83,6 +83,8 @@ def test_rsf_classifier_params_match_wildboar():
     """
     X_train, y_train = load_minimal_chinatown("TRAIN")
     X_test, _ = load_minimal_chinatown("TEST")
+    # scikit-learn versions differ in how they match class_weight keys to string labels
+    y_train = y_train.astype(int)
 
     rsf = RandomShapeletForestClassifier(
         n_estimators=5,

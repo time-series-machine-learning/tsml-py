@@ -5,11 +5,18 @@ on:
     branches:
       - main
   pull_request:
-    branches:
-      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -17,26 +24,42 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v7
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
-      - uses: tj-actions/changed-files@v47
+      - name: Get changed files
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96  # v47.0.6
         id: changed-files
 
       - name: List changed files
+        if: ${{ github.event_name == 'pull_request' }}
         run: echo '${{ steps.changed-files.outputs.all_changed_files }}'
 
-      # only check the full repository if PR and correctly labelled
-      - if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'full pre-commit') }}
-        name: Full pre-commit
+      # Check the full repository on pushes to main
+      - name: Full pre-commit
+        if: ${{ github.event_name == 'push' }}
         uses: pre-commit/action@v3.0.1
         with:
           extra_args: --all-files
-      - if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'full pre-commit') }}
-        name: Local pre-commit
+
+      # Check the full repository on PRs that are explicitly labelled
+      - name: Full pre-commit on labelled PR
+        if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'full pre-commit') }}
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --all-files
+
+      # Otherwise only check changed files on PRs
+      - name: Local pre-commit
+        if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full pre-commit') }}
         uses: pre-commit/action@v3.0.1
         with:
           extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
