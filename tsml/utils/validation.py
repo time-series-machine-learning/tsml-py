@@ -98,7 +98,30 @@ def is_clusterer(estimator: BaseEstimator) -> bool:
     is_clusterer : bool
         True if estimator is a clusterer and False otherwise.
     """
-    return getattr(estimator, "_estimator_type", None) == "clusterer"
+    return _get_estimator_type(estimator) == "clusterer"
+
+
+def _get_estimator_type(estimator: object) -> str | None:
+    """Get the scikit-learn estimator type of an estimator.
+
+    scikit-learn 1.6 moved the estimator type from the `_estimator_type` attribute
+    to `__sklearn_tags__().estimator_type`, and later versions removed the
+    attribute. Older versions only have the attribute.
+
+    Parameters
+    ----------
+    estimator : object
+        The estimator to check.
+
+    Returns
+    -------
+    estimator_type : str or None
+        The estimator type i.e. "classifier", "regressor" or "clusterer", or None
+        if the type is not set.
+    """
+    if hasattr(estimator, "__sklearn_tags__"):
+        return estimator.__sklearn_tags__().estimator_type
+    return getattr(estimator, "_estimator_type", None)
 
 
 def _num_features(X: np.ndarray | list[np.ndarray]) -> tuple[int, int, int]:

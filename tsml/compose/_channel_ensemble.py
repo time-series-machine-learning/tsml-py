@@ -15,6 +15,7 @@ from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
+from tsml.utils.validation import _get_estimator_type
 
 
 class _BaseChannelEnsemble(BaseTimeSeriesEstimator, metaclass=ABCMeta):
@@ -51,7 +52,7 @@ class _BaseChannelEnsemble(BaseTimeSeriesEstimator, metaclass=ABCMeta):
             if t == "drop":
                 continue
             elif (
-                not t._estimator_type == base_type
+                not _get_estimator_type(t) == base_type
                 or not hasattr(t, "fit")
                 or not hasattr(t, required_predict_method)
             ):
@@ -109,7 +110,7 @@ class _BaseChannelEnsemble(BaseTimeSeriesEstimator, metaclass=ABCMeta):
         is_correct_estimator = (
             hasattr(self.remainder, "fit")
             and hasattr(self.remainder, "predict")
-            and self.remainder._estimator_type == base_type
+            and _get_estimator_type(self.remainder) == base_type
         )
         if self.remainder != "drop" and not is_correct_estimator:
             raise ValueError(
