@@ -81,7 +81,7 @@ def test_fpca_classifier_matches_scikit_fda():
     X_test, _ = load_minimal_chinatown("TEST")
 
     clf = FPCAClassifier()
-    clf.fit(X_train, y_train)
+    clf.fit(X_train, y_train.astype(int))
 
     expected = [1] * 10 + [2, 2, 1, 2, 2, 1, 2, 2, 2, 2]
     assert_array_equal(clf.predict(X_test), expected)
