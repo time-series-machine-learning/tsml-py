@@ -55,11 +55,13 @@ def load_from_ts_file(
 
     Examples
     --------
+    >>> import os
+    >>> import tsml.datasets
     >>> from tsml.datasets import load_from_ts_file
-    >>> path = (
-    ... "MinimalChinatown/MinimalChinatown_TRAIN.ts"
-    ...  if os.path.exists("MinimalChinatown/MinimalChinatown_TRAIN.ts") else
-    ... "tsml/datasets/MinimalChinatown/MinimalChinatown_TRAIN.ts"
+    >>> path = os.path.join(
+    ...     os.path.dirname(tsml.datasets.__file__),
+    ...     "MinimalChinatown",
+    ...     "MinimalChinatown_TRAIN.ts",
     ... )
     >>> X, y = load_from_ts_file(path)
     """
