@@ -8,7 +8,7 @@ from tsml.shapelet_based import (
     RandomShapeletForestClassifier,
     RandomShapeletForestRegressor,
 )
-from tsml.shapelet_based._rsf_numba import _argsort, _euclidean_distance
+from tsml.shapelet_based._rsf import _argsort, _euclidean_distance
 from tsml.utils.testing import generate_3d_test_data
 
 
