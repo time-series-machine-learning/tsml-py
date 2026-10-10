@@ -17,7 +17,7 @@ import numpy as np
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import SpecifierSet
 from scipy import sparse
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.utils.validation import (
     _assert_all_finite,
     _check_y,
@@ -98,7 +98,7 @@ def is_clusterer(estimator: BaseEstimator) -> bool:
     is_clusterer : bool
         True if estimator is a clusterer and False otherwise.
     """
-    return getattr(estimator, "_estimator_type", None) == "clusterer"
+    return isinstance(estimator, ClusterMixin) and isinstance(estimator, BaseEstimator)
 
 
 def _num_features(X: np.ndarray | list[np.ndarray]) -> tuple[int, int, int]:

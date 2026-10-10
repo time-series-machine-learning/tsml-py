@@ -2,6 +2,7 @@
 
 import pytest
 from numpy.testing import assert_array_equal
+from sklearn.mixture import GaussianMixture
 
 from tsml.compose._channel_ensemble import (
     ChannelEnsembleClassifier,
@@ -70,6 +71,47 @@ def test_remainder():
 
     assert len(ens._remainder[2]) == 2
     assert ens.predict(X).shape == (X.shape[0],)
+
+
+def test_invalid_estimator_type():
+    """Test that estimators of the wrong type are rejected."""
+    X, y = generate_3d_test_data(n_channels=3)
+
+    ens = ChannelEnsembleRegressor(estimators=[("d", DummyClassifier(), "all")])
+    with pytest.raises(TypeError, match="correct estimator type"):
+        ens.fit(X, y)
+
+    # has predict_proba, but is not a classifier
+    ens = ChannelEnsembleClassifier(estimators=[("d", GaussianMixture(), "all")])
+    with pytest.raises(TypeError, match="correct estimator type"):
+        ens.fit(X, y)
+
+    ens = ChannelEnsembleClassifier(estimators=[("d", DummyRegressor(), "all")])
+    with pytest.raises(TypeError, match="correct estimator type"):
+        ens.fit(X, y)
+
+    ens = ChannelEnsembleClassifier(estimators=[("d", "not an estimator", "all")])
+    with pytest.raises(TypeError, match="correct estimator type"):
+        ens.fit(X, y)
+
+
+def test_invalid_remainder():
+    """Test that a remainder of the wrong type is rejected."""
+    X, y = generate_3d_test_data(n_channels=3)
+
+    ens = ChannelEnsembleClassifier(
+        estimators=[("d", DummyClassifier(), 0)],
+        remainder=DummyRegressor(),
+    )
+    with pytest.raises(ValueError, match="remainder"):
+        ens.fit(X, y)
+
+    ens = ChannelEnsembleRegressor(
+        estimators=[("d", DummyRegressor(), 0)],
+        remainder=DummyClassifier(),
+    )
+    with pytest.raises(ValueError, match="remainder"):
+        ens.fit(X, y)
 
 
 @pytest.mark.parametrize(
