@@ -139,3 +139,6 @@ local.py
 local_code/
 local/local_code.py
 debug.py
+
+# coding tools
+.claude/
