@@ -1,61 +1,48 @@
-"""Tests for loading time series data from files."""
+"""Tests for loading the provided time series datasets."""
 
-import os
-
+import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
-from tsml.datasets import load_from_ts_file
+from tsml.datasets import (
+    load_equal_minimal_japanese_vowels,
+    load_minimal_chinatown,
+    load_minimal_japanese_vowels,
+    load_unequal_minimal_chinatown,
+)
 
-# the datasets directory, so the tests do not depend on the working directory
-_DATA_DIR = os.path.dirname(os.path.dirname(__file__))
 
-
-def test_load_from_ts_file_equal_univariate():
-    """Load an equal length univariate time series from a file."""
-    data_path = os.path.join(_DATA_DIR, "MinimalChinatown", "MinimalChinatown_TRAIN.ts")
-
-    X, y = load_from_ts_file(data_path)
+def test_load_minimal_chinatown():
+    """Load an equal length univariate time series dataset."""
+    X, y = load_minimal_chinatown("TRAIN")
 
     assert_array_almost_equal(X, equal_univariate_X)
-    assert_array_equal(y, equal_univariate_y)
+    assert_array_equal(y, np.array(equal_univariate_y, dtype=str))
 
 
-def test_load_from_ts_file_unequal_univariate():
-    """Load an unequal length univariate time series from a file."""
-    data_path = os.path.join(
-        _DATA_DIR, "UnequalMinimalChinatown", "UnequalMinimalChinatown_TRAIN.ts"
-    )
-
-    X, y = load_from_ts_file(data_path)
+def test_load_unequal_minimal_chinatown():
+    """Load an unequal length univariate time series dataset."""
+    X, y = load_unequal_minimal_chinatown("TRAIN")
 
     for i, x in enumerate(X):
         assert_array_almost_equal(x, unequal_univariate_X[i])
-    assert_array_equal(y, unequal_univariate_y)
+    assert_array_equal(y, np.array(unequal_univariate_y, dtype=str))
 
 
-def test_load_from_ts_file_equal_multivariate():
-    """Load an equal length multivariate time series from a file."""
-    data_path = os.path.join(
-        _DATA_DIR, "EqualMinimalJapaneseVowels", "EqualMinimalJapaneseVowels_TRAIN.ts"
-    )
-
-    X, y = load_from_ts_file(data_path)
+def test_load_equal_minimal_japanese_vowels():
+    """Load an equal length multivariate time series dataset."""
+    X, y = load_equal_minimal_japanese_vowels("TRAIN")
 
     assert_array_almost_equal(X, equal_multivariate_X)
-    assert_array_equal(y, equal_multivariate_y)
+    assert_array_equal(y, np.array(equal_multivariate_y, dtype=str))
 
 
-def test_load_from_ts_file_unequal_multivariate():
-    """Load an unequal length multivariate time series from a file."""
-    data_path = os.path.join(
-        _DATA_DIR, "MinimalJapaneseVowels", "MinimalJapaneseVowels_TRAIN.ts"
-    )
-
-    X, y = load_from_ts_file(data_path)
+def test_load_minimal_japanese_vowels():
+    """Load an unequal length multivariate time series dataset."""
+    X, y = load_minimal_japanese_vowels("TRAIN")
 
     for i, x in enumerate(X):
         assert_array_almost_equal(x, unequal_multivariate_X[i])
-    assert_array_equal(y, unequal_multivariate_y)
+    assert_array_equal(y, np.array(unequal_multivariate_y, dtype=str))
 
 
 equal_univariate_X = [
