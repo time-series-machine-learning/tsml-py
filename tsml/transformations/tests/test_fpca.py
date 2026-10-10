@@ -256,6 +256,9 @@ def test_fpca_transformer_fitted_attributes(params):
     if not fpca.bspline:
         assert_allclose(fpca.mean_, X.mean(axis=0))
 
+    # fitting then transforming gives the same scores as doing both together
+    assert_allclose(FPCATransformer(**params).fit(X).transform(X), X_t)
+
 
 def test_fpca_transformer_n_basis_and_order():
     """Test n_basis is raised to order and limits the number of components."""

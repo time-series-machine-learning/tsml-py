@@ -129,48 +129,28 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
             Reference to self.
         """
         X = self._fit_setup(X)
-
-        n_features = self._n_basis if self.bspline else self.series_length_
-        self.components_ = np.zeros((self.n_dims_, self._n_components, n_features))
-        self.mean_ = np.zeros((self.n_dims_, n_features))
-        self.explained_variance_ = np.zeros((self.n_dims_, self._n_components))
-        self.explained_variance_ratio_ = np.zeros((self.n_dims_, self._n_components))
-        self.singular_values_ = np.zeros((self.n_dims_, self._n_components))
-
-        if self.bspline:
-            gram_cholesky = np.linalg.cholesky(self._gram)
-        else:
-            sqrt_weights = np.sqrt(self._weights)
-
-        for j in range(self.n_dims_):
-            pca = PCA(n_components=self._n_components)
-
-            if self.bspline:
-                # smooth the series, giving their basis coefficients
-                coefs = lstsq(self._basis_values, X[:, j, :].T)[0].T
-
-                self.mean_[j] = coefs.mean(axis=0)
-                if self.centering:
-                    coefs = coefs - self.mean_[j]
-
-                # PCA using the inner product of the basis
-                pca.fit(coefs @ gram_cholesky)
-                self.components_[j] = solve_triangular(
-                    gram_cholesky.T, pca.components_.T, lower=False
-                ).T
-            else:
-                self.mean_[j] = X[:, j, :].mean(axis=0)
-
-                # PCA using the inner product given by the quadrature weights, the
-                # PCA centers the series whether centering is set or not
-                pca.fit(X[:, j, :] * sqrt_weights)
-                self.components_[j] = pca.components_ / sqrt_weights
-
-            self.explained_variance_[j] = pca.explained_variance_
-            self.explained_variance_ratio_[j] = pca.explained_variance_ratio_
-            self.singular_values_[j] = pca.singular_values_
-
+        self._fit_pca(self._functional_form(X))
         return self
+
+    def fit_transform(self, X, y=None):
+        """Fit the functional principal components and transform X into its scores.
+
+        Parameters
+        ----------
+        X : 3D np.ndarray of shape (n_instances, n_channels, n_timepoints)
+            The training data.
+        y : None
+            Ignored.
+
+        Returns
+        -------
+        X_t : 3D np.ndarray of shape (n_instances, n_channels, n_components)
+            The scores of each dimension on its top functional principal components.
+        """
+        X = self._fit_setup(X)
+        fd = self._functional_form(X)
+        self._fit_pca(fd)
+        return self._scores(fd)
 
     def transform(self, X):
         """Transform X into its functional principal component scores.
@@ -190,22 +170,67 @@ class FPCATransformer(TransformerMixin, BaseTimeSeriesEstimator):
         X = self._validate_data(X=X, reset=False, ensure_equal_length=True)
         X = self._convert_X(X)
 
-        X_t = np.zeros((X.shape[0], self.n_dims_, self._n_components))
-        for j in range(self.n_dims_):
-            if self.bspline:
-                # smooth the series, giving their basis coefficients
-                fd = lstsq(self._basis_values, X[:, j, :].T)[0].T
-            else:
-                fd = X[:, j, :]
+        return self._scores(self._functional_form(X))
 
-            if self.centering:
-                fd = fd - self.mean_[j]
+    def _functional_form(self, X):
+        # the series of each dimension, smoothed to their basis coefficients if needed
+        if self.bspline:
+            return [
+                lstsq(self._basis_values, X[:, j, :].T)[0].T
+                for j in range(self.n_dims_)
+            ]
+        return [X[:, j, :] for j in range(self.n_dims_)]
+
+    def _fit_pca(self, fd):
+        n_features = self._n_basis if self.bspline else self.series_length_
+        self.components_ = np.zeros((self.n_dims_, self._n_components, n_features))
+        self.mean_ = np.zeros((self.n_dims_, n_features))
+        self.explained_variance_ = np.zeros((self.n_dims_, self._n_components))
+        self.explained_variance_ratio_ = np.zeros((self.n_dims_, self._n_components))
+        self.singular_values_ = np.zeros((self.n_dims_, self._n_components))
+
+        if self.bspline:
+            gram_cholesky = np.linalg.cholesky(self._gram)
+        else:
+            sqrt_weights = np.sqrt(self._weights)
+
+        for j in range(self.n_dims_):
+            self.mean_[j] = fd[j].mean(axis=0)
+            # the input is a new array each time, so the PCA can center it in place
+            pca = PCA(n_components=self._n_components, copy=False)
+
+            if self.bspline:
+                coefs = fd[j] - self.mean_[j] if self.centering else fd[j]
+
+                # PCA using the inner product of the basis
+                pca.fit(coefs @ gram_cholesky)
+                self.components_[j] = solve_triangular(
+                    gram_cholesky.T, pca.components_.T, lower=False
+                ).T
+            else:
+                # PCA using the inner product given by the quadrature weights, the
+                # PCA centers the series whether centering is set or not
+                pca.fit(fd[j] * sqrt_weights)
+                self.components_[j] = pca.components_ / sqrt_weights
+
+            self.explained_variance_[j] = pca.explained_variance_
+            self.explained_variance_ratio_[j] = pca.explained_variance_ratio_
+            self.singular_values_[j] = pca.singular_values_
+
+    def _scores(self, fd):
+        X_t = np.zeros((fd[0].shape[0], self.n_dims_, self._n_components))
+        for j in range(self.n_dims_):
+            fd_j = fd[j] - self.mean_[j] if self.centering else fd[j]
 
             # inner product of each function with each component
             if self.bspline:
-                X_t[:, j, :] = fd @ self._gram @ self.components_[j].T
+                X_t[:, j, :] = fd_j @ self._gram @ self.components_[j].T
             else:
-                X_t[:, j, :] = (fd * self._weights) @ self.components_[j].T
+                # the centered series are a new array, so are weighted in place
+                fd_j = np.multiply(
+                    fd_j, self._weights, out=fd_j if self.centering else None
+                )
+                X_t[:, j, :] = fd_j @ self.components_[j].T
 
         return X_t
 
