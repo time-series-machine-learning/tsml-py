@@ -3,13 +3,19 @@
 import numpy as np
 import pytest
 
-from tsml.datasets import load_minimal_chinatown, load_minimal_gas_prices
+from tsml.datasets import (
+    load_equal_minimal_japanese_vowels,
+    load_minimal_chinatown,
+    load_minimal_gas_prices,
+)
 from tsml.shapelet_based import (
     RandomShapeletForestClassifier,
     RandomShapeletForestRegressor,
 )
 from tsml.shapelet_based._rsf import (
+    SQUARED_ERROR,
     _argsort,
+    _build_tree,
     _euclidean_distance,
     _within_threshold,
 )
@@ -32,6 +38,65 @@ def test_rsf_classifier_matches_wildboar():
     expected = np.array(
         [0.8, 0.8, 0.6, 1.0, 1.0, 1.0, 0.8, 0.8, 0.6, 0.8]
         + [0.2, 0.2, 0.8, 0.0, 0.2, 0.8, 0.2, 0.2, 0.2, 0.4]
+    )
+    np.testing.assert_array_equal(proba[:, 0], expected)
+
+
+def test_rsf_classifier_multivariate_matches_wildboar():
+    """Test multivariate predictions match those of wildboar 1.2.0.
+
+    Expected values were generated as in test_rsf_classifier_matches_wildboar, using
+    the Gini criterion, alpha and min_samples_leaf.
+    """
+    X_train, y_train = load_equal_minimal_japanese_vowels("TRAIN")
+    X_test, _ = load_equal_minimal_japanese_vowels("TEST")
+
+    rsf = RandomShapeletForestClassifier(
+        n_estimators=5,
+        criterion="gini",
+        alpha=0.5,
+        min_samples_leaf=2,
+        random_state=0,
+    )
+    rsf.fit(X_train, y_train)
+    proba = rsf.predict_proba(X_test)
+
+    expected = np.array(
+        [
+            [0.48, 0.0, 0.0, 0.08, 0.3, 0.0, 0.1, 0.0, 0.04],
+            [2 / 15, 41 / 75, 0.0, 0.12, 0.0, 0.2, 0.0, 0.0, 0.0],
+            [1 / 3, 1 / 15, 0.0, 0.0, 0.1, 7 / 30, 4 / 15, 0.0, 0.0],
+            [0.24, 0.28, 0.0, 0.12, 0.2, 0.0, 0.08, 0.0, 0.08],
+        ]
+    )
+    np.testing.assert_allclose(proba[:4], expected, rtol=0, atol=1e-12)
+
+    expected_labels = [0, 1, 0, 1, 1, 0, 2, 2, 1, 3, 4, 1, 5, 5, 1, 1, 1, 1, 1, 6]
+    np.testing.assert_array_equal(np.argmax(proba, axis=1), expected_labels)
+
+
+def test_rsf_classifier_params_match_wildboar():
+    """Test predictions match those of wildboar 1.2.0 with non-default parameters.
+
+    Expected values were generated as in test_rsf_classifier_matches_wildboar, using
+    class weights and limits on the shapelet length.
+    """
+    X_train, y_train = load_minimal_chinatown("TRAIN")
+    X_test, _ = load_minimal_chinatown("TEST")
+
+    rsf = RandomShapeletForestClassifier(
+        n_estimators=5,
+        class_weight={1: 1, 2: 3},
+        min_shapelet_size=0.2,
+        max_shapelet_size=0.6,
+        random_state=0,
+    )
+    rsf.fit(X_train, y_train)
+    proba = rsf.predict_proba(X_test)
+
+    expected = np.array(
+        [1.0, 0.8, 0.8, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        + [0.0, 0.2, 0.8, 0.2, 0.2, 1.0, 0.0, 0.0, 0.0, 0.6]
     )
     np.testing.assert_array_equal(proba[:, 0], expected)
 
@@ -77,6 +142,52 @@ def test_rsf_regressor_matches_wildboar():
     np.testing.assert_array_equal(pred, expected)
 
 
+def test_rsf_squared_error_weight_scale():
+    """Test regression trees do not change when every case weight is doubled.
+
+    The squared error impurity is a weighted variance, which does not depend on the
+    scale of the weights. wildboar 1.2.0 squares the weights when summing the squared
+    targets of a node, so its trees do change.
+    """
+    X, y = load_minimal_gas_prices("TRAIN")
+    X = np.ascontiguousarray(X, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    n_cases, _, n_timepoints = X.shape
+
+    rng = np.random.RandomState(0)
+    weights = np.bincount(rng.randint(0, n_cases, n_cases), minlength=n_cases)
+    weights = weights.astype(np.float64)
+
+    def build(w):
+        y_cls = np.zeros(0, dtype=np.int64)
+        return _build_tree(
+            X,
+            y_cls,
+            y,
+            w,
+            1,
+            SQUARED_ERROR,
+            10,
+            0.0,
+            2,
+            n_timepoints,
+            100,
+            2,
+            1,
+            0.0,
+            0,
+        )
+
+    tree = build(weights)
+    scaled_tree = build(weights * 2)
+
+    # every node is split until it holds a single case
+    assert tree[0] == 2 * np.count_nonzero(weights) - 1
+    assert scaled_tree[0] == tree[0]
+    for a, b in zip(tree[1:], scaled_tree[1:]):
+        np.testing.assert_array_equal(a, b)
+
+
 def test_argsort():
     """Test the introsort port sorts values and applies the same swaps."""
     rng = np.random.RandomState(0)
@@ -94,24 +205,37 @@ def test_argsort():
         np.testing.assert_array_equal(values[n + 2 :], original[n + 2 :])
 
 
+def _reference_distance(x, s):
+    """Shapelet distance, adding values in the same order as _euclidean_distance."""
+    min_dist = np.inf
+    for i in range(len(x) - len(s) + 1):
+        dist = 0.0
+        for j in range(len(s)):
+            v = x[i + j] - s[j]
+            dist += v * v
+        min_dist = min(min_dist, dist)
+    return np.sqrt(min_dist)
+
+
 def test_euclidean_distance():
     """Test the shapelet distance is the minimum distance over all subsequences."""
     rng = np.random.RandomState(0)
-    X = rng.normal(size=(3, 2, 20))
-    s = rng.normal(size=20)
+    X = rng.normal(size=(4, 60)).cumsum(axis=1)
 
-    for start, length in [(0, 1), (2, 5), (0, 10), (1, 19), (0, 20)]:
-        shapelet = s[start : start + length]
-        expected = min(
-            np.sqrt(np.sum((X[1, 1, i : i + length] - shapelet) ** 2))
-            for i in range(20 - length + 1)
-        )
-        dist = _euclidean_distance(X[1, 1], shapelet, 0)
-        assert np.isclose(dist, expected)
-
+    for length in [1, 7, 8, 9, 16, 17, 40, 60]:
         # the subsequence compared first does not change the result
-        for first in range(20 - length + 1):
-            assert _euclidean_distance(X[1, 1], shapelet, first) == dist
+        for start in [0, (60 - length) // 2, 60 - length]:
+            shapelet = X[0, start : start + length].copy()
+            for x in X:
+                assert _euclidean_distance(x, shapelet, start) == _reference_distance(
+                    x, shapelet
+                )
+
+            other = rng.normal(size=length).cumsum()
+            for x in X:
+                assert _euclidean_distance(x, other, start) == _reference_distance(
+                    x, other
+                )
 
 
 def test_within_threshold():
@@ -192,6 +316,29 @@ def test_rsf_oob_score():
     rsf.fit(X, y)
     assert rsf.oob_prediction_.shape == (20,)
     assert np.isfinite(rsf.oob_score_)
+
+
+def test_rsf_oob_uses_unseen_cases():
+    """Test out-of-bag estimates only use trees which were not given the case.
+
+    With random targets a tree is only right about the cases it was built from.
+    """
+    rng = np.random.RandomState(0)
+    X = rng.normal(size=(30, 1, 12))
+
+    y = rng.randint(0, 2, size=30)
+    rsf = RandomShapeletForestClassifier(
+        n_estimators=20, oob_score=True, random_state=0
+    )
+    rsf.fit(X, y)
+    assert rsf.score(X, y) == 1
+    assert rsf.oob_score_ < 0.75
+
+    y = rng.normal(size=30)
+    rsf = RandomShapeletForestRegressor(n_estimators=20, oob_score=True, random_state=0)
+    rsf.fit(X, y)
+    assert rsf.score(X, y) > 0.7
+    assert rsf.oob_score_ < 0.3
 
 
 def test_rsf_n_jobs():
