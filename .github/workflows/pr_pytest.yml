@@ -93,7 +93,7 @@ jobs:
         with:
           timeout_minutes: 30
           max_attempts: 3
-          command: python -m pip install .[all_extras,dev,unstable_extras]
+          command: python -m pip install .[all_extras,dev]
 
       - name: Tests
         run: python -m pytest -n logical --cov=tsml --cov-report=xml --timeout 1800
