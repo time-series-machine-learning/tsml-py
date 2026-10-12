@@ -129,7 +129,7 @@ class BaseTimeSeriesEstimator(BaseEstimator, metaclass=ABCMeta):
                         f"{X.shape[1]} channels."
                     )
             elif dtypes[0] == "np_list":
-                return [x for x in X]
+                return [*X]
         elif isinstance(X, np.ndarray) and X.ndim == 2:
             if "2darray" in dtypes:
                 return X

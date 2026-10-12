@@ -234,7 +234,7 @@ def check_estimator_input_types(name, estimator_orig):
 
     if "np_list" in type_tag:
         estimator = _clone_estimator(estimator_orig, 1)
-        X_t = [x for x in X]
+        X_t = [*X]
 
         func = _get_func(estimator)
         estimator.fit(X_t, y)
