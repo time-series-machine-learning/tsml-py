@@ -16,7 +16,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from tsml.base import BaseTimeSeriesEstimator, _clone_estimator
 from tsml.transformations import FPCATransformer
-from tsml.utils.validation import _check_optional_dependency, check_n_jobs
+from tsml.utils.validation import check_n_jobs
 
 
 class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
@@ -94,8 +94,6 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         self.estimator = estimator
         self.random_state = random_state
         self.n_jobs = n_jobs
-
-        _check_optional_dependency("scikit-fda", "skfda", self)
 
         super().__init__()
 
@@ -217,11 +215,6 @@ class FPCAClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
                 dists[i, self.class_dictionary_[preds[i]]] = 1
             return dists
 
-    def _more_tags(self) -> dict:
-        return {
-            "optional_dependency": True,
-        }
-
     @classmethod
     def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:
         """Return unit test parameter settings for the estimator.
@@ -312,8 +305,6 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
         self.n_jobs = n_jobs
         self.random_state = random_state
 
-        _check_optional_dependency("scikit-fda", "skfda", self)
-
         super().__init__()
 
     def fit(self, X: np.ndarray | list[np.ndarray], y: np.ndarray) -> object:
@@ -383,11 +374,6 @@ class FPCARegressor(RegressorMixin, BaseTimeSeriesEstimator):
         return self._estimator.predict(
             self._transformer.transform(X).reshape((X.shape[0], -1))
         )
-
-    def _more_tags(self) -> dict:
-        return {
-            "optional_dependency": True,
-        }
 
     @classmethod
     def get_test_params(cls, parameter_set: str | None = None) -> dict | list[dict]:

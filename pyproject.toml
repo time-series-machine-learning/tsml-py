@@ -49,8 +49,6 @@ dependencies = [
 [project.optional-dependencies]
 all_extras = [
     "grailts",
-    "scikit-fda>=0.7.0; python_version < '3.13'",
-    "multimethod<2.1; python_version < '3.13'",  # multimethod 2.1 breaks scikit-fda imports (TypeError: metaclass conflict)
     "statsmodels>=0.12.1",
 ]
 unstable_extras = [
