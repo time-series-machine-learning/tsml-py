@@ -3,7 +3,7 @@
 A Python and numba implementation of MrSEQL. The symbolic transformations and the
 sequence learner are written for tsml, inspired by the mrseql package
 (https://github.com/mlgig/mrseql). They follow its settings and its order of
-floating point operations so that the same symbolic words and features are found.
+floating point operations so that the output can be compared with it.
 """
 
 __author__ = ["MatthewMiddlehurst"]
@@ -30,12 +30,6 @@ CONVERGENCE_THRESHOLD = 0.005
 MIN_COEFFICIENT_CHANGE = 1e-8
 # the line search stops once the interval it has narrowed to is this small
 SEARCH_TOLERANCE = 1e-3
-
-# The mrseql sequence learner treats the character "*" as a gap. It is also the
-# tenth character of the SFA alphabet, so an n-gram of more than one symbol ending in
-# that symbol is never considered as a feature there. This is kept to select the same
-# features.
-SFA_UNSCORED_SYMBOL = 9
 
 # columns of the n-gram tree, a row of zeros is a node which has not been extended
 SYMBOL = 0
@@ -104,9 +98,16 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     ``range(16, n_timepoints, int(sqrt(n_timepoints)))``, or a single window of the
     whole series for series of length 16 or less.
 
-    The scikit-learn logistic regression used by mrseql for two class problems is no
-    longer available. ``C=2.0`` is used for two class problems, which gives the same
-    model up to the tolerance of the solver.
+    Differences from mrseql 0.0.4 [3]_:
+
+    - The logistic regression mrseql uses for two class problems is no longer
+      available in scikit-learn. ``C=2.0`` is used for two class problems, which
+      gives the same model up to the tolerance of the solver.
+    - mrseql writes SFA symbols as characters and its sequence learner treats "*" as
+      a gap, so n-grams of more than one symbol ending in that SFA symbol are never
+      selected. All n-grams are considered here.
+    - With three or more classes in "fs" mode, an n-gram selected for more than one
+      class is used as a single feature, not once for each class.
 
     References
     ----------
@@ -189,9 +190,8 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
                         np.repeat(np.arange(X.shape[0]), np.diff(offsets)),
                         target,
                         n_symbols,
-                        unscored,
                     )
-                    for words, offsets, n_symbols, unscored in representations
+                    for words, offsets, n_symbols in representations
                 ]
             )
 
@@ -204,12 +204,19 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
             if n_models == 1:
                 features, lengths, _ = models[0][i]
             else:
-                # n-grams which indicate one of the classes
+                # n-grams which indicate one of the classes, once each in the order
+                # they are first found
                 selected = [m[i][2] > 0 for m in models]
                 features = np.concatenate(
                     [m[i][0][s] for m, s in zip(models, selected)]
                 )
                 lengths = np.concatenate([m[i][1][s] for m, s in zip(models, selected)])
+                _, first = np.unique(
+                    np.column_stack((lengths, features)), axis=0, return_index=True
+                )
+                first = np.sort(first)
+                features = features[first]
+                lengths = lengths[first]
             self._features.append((features, lengths))
 
         X_t = self._feature_matrix(representations)
@@ -273,7 +280,7 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
 
         scores = np.zeros((X.shape[0], self.n_classes_))
         for cls, model in enumerate(self._models):
-            for (words, offsets, _, _), (features, lengths, coefficients) in zip(
+            for (words, offsets, _), (features, lengths, coefficients) in zip(
                 representations, model
             ):
                 _add_scores(
@@ -354,8 +361,8 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
     def _transform(self, X, fit=False):
         """Transform each channel with each of the symbolic transforms.
 
-        Returns the words, the index of the first word of each case, the number of
-        symbols and the symbol which is not scored for each representation.
+        Returns the words, the index of the first word of each case and the number
+        of symbols for each representation.
         """
         representations = []
         for method, window, word_length, alphabet_size in self._config:
@@ -367,7 +374,7 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
                     words, offsets = _sax_words(
                         X_c, window, word_length, sax_breakpoints
                     )
-                    representations.append((words, offsets, alphabet_size, -1))
+                    representations.append((words, offsets, alphabet_size))
                     if fit:
                         self._breakpoints.append(None)
                 else:
@@ -396,12 +403,7 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
                     )
                     offsets = np.arange(X.shape[0] + 1) * (X.shape[2] - window + 1)
                     representations.append(
-                        (
-                            words,
-                            offsets,
-                            word_length * alphabet_size,
-                            SFA_UNSCORED_SYMBOL,
-                        )
+                        (words, offsets, word_length * alphabet_size)
                     )
         return representations
 
@@ -410,7 +412,7 @@ class MrSEQLClassifier(ClassifierMixin, BaseTimeSeriesEstimator):
         X_t = np.hstack(
             [
                 _contains(words, offsets, features, lengths)
-                for (words, offsets, _, _), (features, lengths) in zip(
+                for (words, offsets, _), (features, lengths) in zip(
                     representations, self._features
                 )
             ]
@@ -955,7 +957,7 @@ def _line_search(
 
 
 @njit(cache=True)
-def _seql_fit(words, word_case, y, n_symbols, unscored_symbol):
+def _seql_fit(words, word_case, y, n_symbols):
     """Fit a linear model on the n-grams of symbols found in the words of each case.
 
     Each iteration finds the n-gram with the largest gradient of the logistic loss
@@ -975,8 +977,6 @@ def _seql_fit(words, word_case, y, n_symbols, unscored_symbol):
         The target, 1 or -1.
     n_symbols : int
         The number of different symbols.
-    unscored_symbol : int
-        A symbol which is not considered as the end of an n-gram longer than 1.
 
     Returns
     -------
@@ -1045,54 +1045,47 @@ def _seql_fit(words, word_case, y, n_symbols, unscored_symbol):
 
                 first = nodes[node, FIRST_CHILD]
                 for child in range(first, first + nodes[node, N_CHILDREN]):
-                    keep = True
-                    if (
-                        nodes[child, DEPTH] == 1
-                        or nodes[child, SYMBOL] != unscored_symbol
-                    ):
-                        gradient = 0.0
-                        positive = 0.0
-                        negative = 0.0
-                        first_case = nodes[child, FIRST_CASE]
-                        for i in range(first_case, first_case + nodes[child, N_CASES]):
-                            case = cases[i]
-                            v = y[case] * fractions[case]
-                            gradient -= v
-                            if y[case] > 0:
-                                positive -= v
-                            else:
-                                negative -= v
-
-                        # the gradient of an n-gram extending this one is between
-                        # the gradient from just the positive or negative cases
-                        if nodes[child, N_MODEL_BELOW] > 0:
-                            if nodes[child, MODEL] > 0:
-                                gradient += model_penalty_gradient[
-                                    nodes[child, MODEL] - 1
-                                ]
-
-                            keep = False
-                            for m in range(n_model):
-                                other = model_node[m]
-                                while nodes[other, DEPTH] > nodes[child, DEPTH]:
-                                    other = nodes[other, PARENT]
-                                if (
-                                    other == child
-                                    and max(
-                                        abs(positive + model_penalty_gradient[m]),
-                                        abs(negative + model_penalty_gradient[m]),
-                                    )
-                                    > largest
-                                ):
-                                    keep = True
-                                    break
+                    gradient = 0.0
+                    positive = 0.0
+                    negative = 0.0
+                    first_case = nodes[child, FIRST_CASE]
+                    for i in range(first_case, first_case + nodes[child, N_CASES]):
+                        case = cases[i]
+                        v = y[case] * fractions[case]
+                        gradient -= v
+                        if y[case] > 0:
+                            positive -= v
                         else:
-                            keep = max(abs(positive), abs(negative)) > largest
+                            negative -= v
 
-                        if keep and abs(gradient) > largest:
-                            largest = abs(gradient)
-                            best = child
-                            best_gradient = gradient
+                    # the gradient of an n-gram extending this one is between
+                    # the gradient from just the positive or negative cases
+                    if nodes[child, N_MODEL_BELOW] > 0:
+                        if nodes[child, MODEL] > 0:
+                            gradient += model_penalty_gradient[nodes[child, MODEL] - 1]
+
+                        keep = False
+                        for m in range(n_model):
+                            other = model_node[m]
+                            while nodes[other, DEPTH] > nodes[child, DEPTH]:
+                                other = nodes[other, PARENT]
+                            if (
+                                other == child
+                                and max(
+                                    abs(positive + model_penalty_gradient[m]),
+                                    abs(negative + model_penalty_gradient[m]),
+                                )
+                                > largest
+                            ):
+                                keep = True
+                                break
+                    else:
+                        keep = max(abs(positive), abs(negative)) > largest
+
+                    if keep and abs(gradient) > largest:
+                        largest = abs(gradient)
+                        best = child
+                        best_gradient = gradient
 
                     if keep:
                         if n_next == next_level.shape[0]:

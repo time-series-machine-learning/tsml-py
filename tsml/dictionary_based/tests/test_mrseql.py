@@ -23,31 +23,31 @@ def test_mrseql_clf_matches_mrseql():
     X_train, y_train = load_minimal_chinatown("TRAIN")
     X_test, _ = load_minimal_chinatown("TEST")
 
-    clf = MrSEQLClassifier(seql_mode="clf", symrep=["sax", "sfa"])
+    clf = MrSEQLClassifier(seql_mode="clf")
     clf.fit(X_train, y_train)
     proba = clf.predict_proba(X_test)
 
     expected = [
-        0.7674681838307049,
-        0.8255871813072916,
-        0.7638002143866941,
-        0.7521982489330485,
-        0.659766524510283,
-        0.8235879848820743,
-        0.7763717142571152,
-        0.7969347633335608,
-        0.7651055471744491,
-        0.6408523116211802,
-        0.22107177883095047,
-        0.28510290607585,
-        0.7101415833633606,
-        0.4927590461306886,
-        0.22711409058264123,
-        0.7493900344854658,
-        0.1940807387970838,
-        0.17108037800679576,
-        0.17163722345992427,
-        0.5471783181431128,
+        0.7041517647933933,
+        0.7190372144160097,
+        0.7337025919824764,
+        0.6463927656857874,
+        0.6171923243979979,
+        0.7005530277499687,
+        0.6637805439500529,
+        0.7194276055391291,
+        0.6676173501013013,
+        0.6687125169414799,
+        0.3176813992514109,
+        0.3909839241227649,
+        0.6566100287401706,
+        0.4930896799796093,
+        0.29131353089176565,
+        0.6647493628954276,
+        0.305673819605062,
+        0.2967946897787642,
+        0.2713047874447127,
+        0.488827607817585,
     ]
     assert_allclose(proba[:, 0], expected, rtol=0, atol=1e-10)
 
@@ -96,91 +96,121 @@ def test_mrseql_fs_matches_mrseql():
     assert_array_equal(clf.predict(X_test), expected_labels)
 
 
-@pytest.mark.parametrize(
-    "seql_mode, atol, expected, expected_labels",
-    [
-        (
-            "fs",
-            1e-6,
-            [
-                [
-                    0.22457465792050524,
-                    0.14797854104406086,
-                    0.11559077824258573,
-                    0.06526744293764082,
-                    0.0998299836584759,
-                    0.08020616496551519,
-                    0.13176434463038514,
-                    0.07118207512260598,
-                    0.06360601147822516,
-                ],
-                [
-                    0.19078292410775877,
-                    0.07793550469417368,
-                    0.11141281220425461,
-                    0.09688820323120279,
-                    0.09013573299120335,
-                    0.08810464614520029,
-                    0.13780569289035222,
-                    0.11069178722150887,
-                    0.09624269651434551,
-                ],
-            ],
-            [0, 0, 0, 1, 1, 1, 4, 1, 3, 0, 1, 4, 1, 1, 0, 0, 4, 4, 0, 4],
-        ),
-        (
-            "clf",
-            1e-10,
-            [
-                [
-                    0.8895505182201873,
-                    0.10760027156966742,
-                    0.0006232953305800468,
-                    0.00011255925873137578,
-                    0.0014422705701896048,
-                    0.0003981402239716688,
-                    0.00015482337284118512,
-                    1.480912374135141e-05,
-                    0.00010331233009001912,
-                ],
-                [
-                    0.8305014966377848,
-                    0.09872987482027909,
-                    0.01579288304830277,
-                    0.019000440799342815,
-                    0.01153903460943793,
-                    0.0028697147813391273,
-                    0.005191201276688645,
-                    0.011894978836453572,
-                    0.0044803751903712925,
-                ],
-            ],
-            [0, 0, 0, 1, 1, 1, 4, 1, 3, 0, 1, 4, 1, 1, 0, 0, 4, 4, 0, 1],
-        ),
-    ],
-)
-def test_mrseql_multivariate_matches_mrseql(seql_mode, atol, expected, expected_labels):
+def test_mrseql_multivariate_matches_mrseql():
     """Test multivariate and multiclass predictions match those of mrseql 0.0.4."""
     X_train, y_train = load_equal_minimal_japanese_vowels("TRAIN")
     X_test, _ = load_equal_minimal_japanese_vowels("TEST")
 
-    clf = MrSEQLClassifier(seql_mode=seql_mode, symrep=["sax", "sfa"])
+    clf = MrSEQLClassifier(seql_mode="clf")
     clf.fit(X_train, y_train)
     proba = clf.predict_proba(X_test)
 
-    assert_allclose(proba[:2], expected, rtol=0, atol=atol)
+    expected = [
+        [
+            0.6610599101192106,
+            0.26161304236883814,
+            0.024880486127077866,
+            0.003307988201384647,
+            0.019882092060685762,
+            0.01967397107669918,
+            0.005290060002727036,
+            0.002685396683224139,
+            0.0016070533601527243,
+        ],
+        [
+            0.472927683668076,
+            0.18071926590200227,
+            0.06820956062104573,
+            0.026928185248274554,
+            0.04668521979281279,
+            0.03866854862331842,
+            0.08093182351479916,
+            0.05241196133885344,
+            0.03251775129081751,
+        ],
+    ]
+    assert_allclose(proba[:2], expected, rtol=0, atol=1e-10)
+
+    expected_labels = [0, 0, 0, 1, 1, 1, 4, 1, 3, 0, 4, 4, 1, 1, 0, 0, 4, 4, 0, 1]
     assert_array_equal(np.argmax(proba, axis=1), expected_labels)
+
+
+def test_mrseql_multivariate_sfa():
+    """Test multivariate and multiclass predictions using both representations.
+
+    Expected values are from this implementation. mrseql 0.0.4 differs as it never
+    selects some SFA n-grams and repeats n-grams selected for more than one class.
+    """
+    X_train, y_train = load_equal_minimal_japanese_vowels("TRAIN")
+    X_test, _ = load_equal_minimal_japanese_vowels("TEST")
+
+    clf = MrSEQLClassifier(symrep=["sax", "sfa"])
+    clf.fit(X_train, y_train)
+    proba = clf.predict_proba(X_test)
+
+    assert clf.n_features_ == 4033
+    for features, lengths in clf._features:
+        ngrams = [tuple(f[:n]) for f, n in zip(features, lengths)]
+        assert len(set(ngrams)) == len(ngrams)
+
+    expected = [
+        [
+            0.2240927754793991,
+            0.14445150114474722,
+            0.1185900415977093,
+            0.06525331347350213,
+            0.09922118130023476,
+            0.08167134655402211,
+            0.13118151168230383,
+            0.07270402323180479,
+            0.06283430553627672,
+        ],
+        [
+            0.19338695603854386,
+            0.07597331501219443,
+            0.1125120305205668,
+            0.09377131100031229,
+            0.08717995743325177,
+            0.08865820405032647,
+            0.14037806100426464,
+            0.1144938562887377,
+            0.09364630865180204,
+        ],
+    ]
+    assert_allclose(proba[:2], expected, rtol=0, atol=1e-6)
+
+    expected_labels = [0, 0, 0, 1, 1, 1, 4, 1, 3, 0, 4, 4, 1, 1, 0, 0, 4, 4, 0, 4]
+    assert_array_equal(np.argmax(proba, axis=1), expected_labels)
+
+
+def test_mrseql_sfa_ngrams_ending_in_any_symbol():
+    """Test SFA n-grams can end in the symbol mrseql writes as "*".
+
+    The mrseql sequence learner treats "*" as a gap, so it never selects an n-gram of
+    more than one symbol ending in it.
+    """
+    X_train, y_train = load_equal_minimal_japanese_vowels("TRAIN")
+
+    clf = MrSEQLClassifier(seql_mode="clf", symrep="sfa")
+    clf.fit(X_train, y_train)
+
+    star = ord("*") - ord("!")
+    found = 0
+    for model in clf._models:
+        for features, lengths, _ in model:
+            last = features[np.arange(len(lengths)), lengths - 1]
+            found += np.count_nonzero((last == star) & (lengths > 1))
+    assert found > 0
 
 
 def test_mrseql_features_match_mrseql():
     """Test the n-grams and coefficients found by SEQL match those of mrseql 0.0.4.
 
-    Uses the model for the first class from SAX with a window size of 20, and from
-    SFA with a window size of 16.
+    Uses the model from SAX with a window size of 20.
     """
     X_train, y_train = load_minimal_chinatown("TRAIN")
 
-    clf = MrSEQLClassifier(seql_mode="clf", symrep=["sax", "sfa"])
+    clf = MrSEQLClassifier(seql_mode="clf")
     clf.fit(X_train, y_train)
 
     features, lengths, coefficients = clf._models[0][1]
@@ -226,14 +256,6 @@ def test_mrseql_features_match_mrseql():
     ]
     assert_allclose(coefficients, expected_coefficients, rtol=0, atol=1e-12)
 
-    features, lengths, _ = clf._models[0][2]
-    expected = (
-        "$%,-489@ $%,0159 $%,04 $& %)- %)-4 %)-48 %,-489@ %,0159 %,04 &) &*. ' ( "
-        ",-489@ ,/ ,0159 ,0159= ,04 -489@ .1 .4 .48 / /4 046 0469 0469= 15 2 28 38 46 "
-        "469 469= 489@ 69 69= 79 7<= 89@ 8; 9@ : :="
-    )
-    assert _to_strings(features, lengths, ord("!")) == expected.split()
-
 
 def test_mrseql_words_match_mrseql():
     """Test the SAX and SFA words of a series match those of mrseql 0.0.4."""
@@ -245,7 +267,7 @@ def test_mrseql_words_match_mrseql():
     representations = clf._transform(X)
 
     # a window size of 16
-    words, offsets, n_symbols, _ = representations[0]
+    words, offsets, n_symbols = representations[0]
     expected = (
         "cbbbaaaaaabcdddd bbbaaaaaabcddddd bbaaaaaabcdddddd aaaaaaabcddddcdd "
         "aaaaaabbddddcddd aaaaaabddddcddcc aaaaabddddcddccb aaaabddddcddccba "
@@ -255,7 +277,7 @@ def test_mrseql_words_match_mrseql():
     assert_array_equal(offsets, [0, 9])
     assert n_symbols == 4
 
-    words, offsets, n_symbols, _ = representations[2]
+    words, offsets, n_symbols = representations[2]
     expected = (
         "$(,/47<@ $&)-48<= $%)0489= $%)0489= $%*0459= $%,045:= $%,018<= $%,.28<= "
         "$%,-489>"
@@ -297,7 +319,7 @@ def test_seql_fit():
     offsets = np.arange(7)
     y = np.array([1.0, 1.0, 1.0, -1.0, -1.0, -1.0])
 
-    features, lengths, coefficients = _seql_fit(words, word_case, y, 3, -1)
+    features, lengths, coefficients = _seql_fit(words, word_case, y, 3)
 
     ngrams = [tuple(f[:n]) for f, n in zip(features, lengths)]
     assert ngrams == sorted(ngrams)
@@ -309,27 +331,10 @@ def test_seql_fit():
     assert_array_equal(np.sign(contains @ coefficients), y)
 
     # the model for the other class is the same with the opposite sign
-    other = _seql_fit(words, word_case, -y, 3, -1)
+    other = _seql_fit(words, word_case, -y, 3)
     assert_array_equal(other[0], features)
     assert_array_equal(other[1], lengths)
     assert_allclose(other[2], -coefficients)
-
-
-def test_seql_fit_unscored_symbol():
-    """Test n-grams of more than one symbol do not end in the unscored symbol."""
-    rng = np.random.RandomState(0)
-    words = rng.randint(0, 3, size=(40, 4)).astype(np.uint8)
-    word_case = np.repeat(np.arange(10), 4)
-    y = np.where(np.arange(10) < 5, 1.0, -1.0)
-
-    features, lengths, _ = _seql_fit(words, word_case, y, 3, -1)
-    last = features[np.arange(len(lengths)), lengths - 1]
-    assert ((last == 1) & (lengths > 1)).any()
-
-    features, lengths, _ = _seql_fit(words, word_case, y, 3, 1)
-    last = features[np.arange(len(lengths)), lengths - 1]
-    assert len(lengths) > 0
-    assert not ((last == 1) & (lengths > 1)).any()
 
 
 def test_contains():
