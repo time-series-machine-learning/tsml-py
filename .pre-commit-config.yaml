@@ -26,7 +26,7 @@ repos:
         args: [ "--create", "--python-folders", "tsml" ]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.0
+    rev: v0.17.5
     hooks:
       - id: ruff
         args: [ "--fix" ]
@@ -38,14 +38,14 @@ repos:
         args: [ "--py310-plus" ]
 
   - repo: https://github.com/pycqa/isort
-    rev: 9.0.2
+    rev: 10.0.0b3
     hooks:
       - id: isort
         name: isort (python)
         args: [ "--profile=black", "--multi-line=3" ]
 
   - repo: https://github.com/pycqa/flake8
-    rev: 7.4.1
+    rev: 7.5.0
     hooks:
       - id: flake8
         additional_dependencies: [ flake8-bugbear, flake8-print, Flake8-pyproject ]
@@ -58,7 +58,7 @@ repos:
         language_version: python3
 
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.9.1
+    rev: 1.10.0
     hooks:
       - id: nbqa-isort
         additional_dependencies: [ isort ]
